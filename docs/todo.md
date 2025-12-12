@@ -11,7 +11,7 @@
 
 - [x] 5. 实现 ControlBarWindow（URL栏、导航按钮、收藏按钮、菜单按钮）
 - [x] 6. 实现 ControlBarWindow 显示/隐藏逻辑（屏幕顶部触发）
-- [ ] 7. 实现两窗口 URL 双向同步
+- [x] 7. 实现两窗口 URL 双向同步
 
 ## Phase 3: 快捷键与控制
 

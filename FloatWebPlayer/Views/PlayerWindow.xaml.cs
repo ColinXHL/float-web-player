@@ -143,6 +143,9 @@ namespace FloatWebPlayer.Views
                 // 监听 URL 变化（包括 SPA 路由变化）
                 WebView.CoreWebView2.SourceChanged += CoreWebView2_SourceChanged;
 
+                // 拦截新窗口请求，在当前窗口打开而非弹出新窗口
+                WebView.CoreWebView2.NewWindowRequested += CoreWebView2_NewWindowRequested;
+
                 // 导航到默认页面（B站）
                 WebView.CoreWebView2.Navigate("https://www.bilibili.com");
             }
@@ -208,6 +211,18 @@ namespace FloatWebPlayer.Views
 
             // 触发导航状态变化事件
             NavigationStateChanged?.Invoke(this, EventArgs.Empty);
+        }
+
+        /// <summary>
+        /// 拦截新窗口请求，在当前窗口打开
+        /// </summary>
+        private void CoreWebView2_NewWindowRequested(object? sender, CoreWebView2NewWindowRequestedEventArgs e)
+        {
+            // 阻止新窗口弹出
+            e.Handled = true;
+            
+            // 在当前 WebView 中导航到目标 URL
+            WebView.CoreWebView2.Navigate(e.Uri);
         }
 
         /// <summary>
