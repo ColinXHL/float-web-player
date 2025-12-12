@@ -36,23 +36,142 @@
 | 默认位置 | 屏幕左下角 |
 | 默认大小 | 屏幕大小的 1/16 |
 | 边框 | 自定义 2px 细边框，8方向可拖拽调整大小 |
-| 控制栏 | 覆盖（Overlay）在 WebView2 上层 |
-| 控制栏显示逻辑 | 默认隐藏；鼠标进入上1/8区域→显示细线→移到线上→展开；移开后延迟隐藏 |
-| 控制栏元素 | `[═══拖动条═══][—最小化][□最大化][×关闭]` |
+| 控制栏 | 通过 JS 注入覆盖（Overlay）在 WebView2 上层 |
+| 控制栏显示逻辑 | 默认隐藏；鼠标进入 WebView 区域→显示；离开→隐藏 |
+| 控制栏元素 | `[—最小化][□最大化][×关闭]`（14px 圆形按钮，2px 间距） |
+| 拖动区域 | WebView 顶部 10px 区域，鼠标按下触发拖动 |
 | 边缘吸附 | 窗口接近屏幕边缘时自动吸附（阈值 10px） |
 
 **布局示意图：**
 ```
 ┌─ 自定义2px细边框（可拖拽调整大小）───────────┐
-│┌────────────────────────────────────────┐│
-│  ════════                    [—][□][×]   │ ← 覆盖在WebView2上层（Overlay）
-││                                        ││
-││              WebView2                  ││
-││             (全区域)                    ││
-││                                        ││
-│└────────────────────────────────────────┘│
-└──────────────────────────────────────────┘
+│ ══════════════════════════════════════════│ ← 顶部10px拖动区域（透明）
+│                                 [−][□][×] │ ← 右上角控制按钮（JS注入）
+│                                           │
+│               WebView2                    │
+│              (全区域)                      │
+│                                           │
+└───────────────────────────────────────────┘
 ```
+
+**控制栏实现方案（JS 注入）：**
+
+1. **控制按钮**：
+   - 位置：`position: fixed; top: 2px; right: 2px`
+   - 尺寸：14px × 14px 圆形按钮
+   - 间距：2px
+   - 样式：半透明黑色背景，hover 时放大 1.2 倍
+   - 显示逻辑：鼠标进入 document 时显示，离开时隐藏
+
+2. **拖动区域**：
+   - 位置：`position: fixed; top: 0; left: 0; right: 0; height: 10px`
+   - 功能：mousedown 事件发送 `postMessage('drag')` 到 C#
+   - C# 端使用 Win32 API `WM_NCLBUTTONDOWN + HTCAPTION` 实现拖动
+
+3. **消息通信**：
+   - `window.chrome.webview.postMessage()` 发送命令
+   - C# 端 `WebMessageReceived` 事件处理 `minimize`、`maximize`、`close`、`drag` 命令
+
+---
+
+### 脚本注入架构
+
+采用开源项目最佳实践设计，实现 WebView2 脚本注入的关注点分离。
+
+#### 设计原则
+
+| 原则 | 说明 |
+|------|------|
+| **单一职责** | `ScriptInjector` 专门负责脚本注入管理 |
+| **关注点分离** | CSS/JS 脚本与 C# 代码完全分离 |
+| **使用官方 API** | 使用 `AddScriptToExecuteOnDocumentCreatedAsync` 替代手动事件监听 |
+| **嵌入资源** | 脚本作为嵌入资源编译，支持 IDE 语法高亮 |
+
+#### 架构图
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    PlayerWindow.xaml.cs                      │
+│  ┌─────────────────────────────────────────────────────────┐│
+│  │ InitializeWebView()                                     ││
+│  │   └── await ScriptInjector.InjectAllAsync(WebView)      ││
+│  └─────────────────────────────────────────────────────────┘│
+└─────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────┐
+│                    ScriptInjector.cs                         │
+│  ┌─────────────────────────────────────────────────────────┐│
+│  │ InjectAllAsync(WebView2 webView)                        ││
+│  │   ├── 1. BuildCssInjectionScript()                      ││
+│  │   │      └── 读取 InjectedStyles.css，包装为 JS         ││
+│  │   │      └── AddScriptToExecuteOnDocumentCreatedAsync() ││
+│  │   └── 2. GetEmbeddedResource("InjectedScripts.js")      ││
+│  │          └── AddScriptToExecuteOnDocumentCreatedAsync() ││
+│  └─────────────────────────────────────────────────────────┘│
+└─────────────────────────────────────────────────────────────┘
+                              │
+              ┌───────────────┴───────────────┐
+              ▼                               ▼
+┌────────────────────────────────┐  ┌────────────────────────────────┐
+│ Scripts/InjectedStyles.css     │  │ Scripts/InjectedScripts.js     │
+│ (嵌入资源)                     │  │ (嵌入资源)                     │
+│ ┌────────────────────────────┐ │  │ ┌────────────────────────────┐ │
+│ │ • 自定义滚动条样式         │ │  │ │ • 控制按钮创建             │ │
+│ │ • 控制按钮样式             │ │  │ │ • 顶部拖动区域             │ │
+│ │ • 拖动区域样式             │ │  │ │ • 鼠标悬停显示/隐藏        │ │
+│ └────────────────────────────┘ │  │ │ • postMessage 通信         │ │
+└────────────────────────────────┘  │ └────────────────────────────┘ │
+                                    └────────────────────────────────┘
+```
+
+#### 关键 API：`AddScriptToExecuteOnDocumentCreatedAsync`
+
+**为什么使用此 API？**
+
+| 对比项 | NavigationCompleted 事件 | AddScriptToExecuteOnDocumentCreatedAsync |
+|--------|-------------------------|------------------------------------------|
+| 调用时机 | 页面加载完成后 | 文档创建时（更早） |
+| 事件管理 | 需要手动注册/取消 | 一次调用，自动处理所有导航 |
+| iframe 支持 | 需要额外处理 | 自动应用于所有 frame |
+| 代码复杂度 | 较高 | 较低 |
+
+**官方文档**：[AddScriptToExecuteOnDocumentCreatedAsync](https://learn.microsoft.com/en-us/dotnet/api/microsoft.web.webview2.core.corewebview2.addscripttoexecuteondocumentcreatedasync)
+
+#### DOM 就绪检测机制
+
+由于 `AddScriptToExecuteOnDocumentCreatedAsync` 在文档创建非常早期执行，此时 `document.head` 和 `document.body` 可能尚未创建。因此所有注入脚本都实现了 DOM 就绪等待逻辑：
+
+```javascript
+function injectContent() {
+    var target = document.head || document.documentElement;
+    if (!target) {
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', injectContent);
+        } else {
+            setTimeout(injectContent, 10);
+        }
+        return;
+    }
+    // ... 执行实际注入
+}
+injectContent();
+```
+
+**设计要点**：
+- 检测 `document.head || document.documentElement` 是否可用
+- 若不可用且 `readyState === 'loading'`，监听 `DOMContentLoaded`
+- 否则使用 `setTimeout` 短暂延迟后重试
+- 所有脚本都有防重复注入检测（通过元素 ID）
+
+#### 文件说明
+
+| 文件 | 职责 |
+|------|------|
+| `Scripts/InjectedStyles.css` | 所有注入的 CSS 样式，作为嵌入资源 |
+| `Scripts/InjectedScripts.js` | 所有注入的 JS 代码（DOM 操作、事件处理），作为嵌入资源 |
+| `Helpers/ScriptInjector.cs` | 读取嵌入资源，调用 WebView2 API 注入 |
+| `Views/PlayerWindow.xaml.cs` | 仅调用 `ScriptInjector.InjectAllAsync()` |
 
 #### 两窗口关联
 
@@ -276,6 +395,9 @@ FloatWebPlayer/
 │   │   ├── HistoryWindow.xaml.cs
 │   │   ├── SettingsWindow.xaml            # 设置窗口
 │   │   └── SettingsWindow.xaml.cs
+│   ├── Scripts/
+│   │   ├── InjectedStyles.css             # WebView2 注入样式（嵌入资源）
+│   │   └── InjectedScripts.js             # WebView2 注入脚本（嵌入资源）
 │   ├── Services/
 │   │   ├── HotkeyService.cs               # 全局快捷键服务
 │   │   ├── ConfigService.cs               # 配置管理服务
@@ -283,6 +405,7 @@ FloatWebPlayer/
 │   │   └── WindowStateService.cs          # 窗口状态保存服务
 │   ├── Helpers/
 │   │   ├── Win32Helper.cs                 # Win32 API 封装
+│   │   ├── ScriptInjector.cs              # WebView2 脚本注入管理
 │   │   └── WebViewHelper.cs               # WebView2 JS 注入辅助
 │   ├── Models/
 │   │   ├── AppConfig.cs                   # 应用配置模型
@@ -371,6 +494,7 @@ function getStatus() {
 3. **全局快捷键冲突**：某些按键可能与系统或其他软件冲突，需提供自定义配置
 4. **多显示器支持**：当前版本暂不考虑，后续可扩展
 5. **管理员权限**：鼠标穿透功能在某些情况下可能需要管理员权限
+6. **链接打开行为**：默认点击链接会弹出新窗口，后续通过 `NewWindowRequested` 事件拦截并在当前窗口打开
 
 ---
 
@@ -379,3 +503,4 @@ function getStatus() {
 | 版本 | 日期 | 说明 |
 |------|------|------|
 | v0.1 | 2025-12-12 | 初始设计文档 |
+| v0.2 | 2025-12-12 | 更新脚本注入架构，CSS/JS 分离，添加 DOM 就绪检测机制 |

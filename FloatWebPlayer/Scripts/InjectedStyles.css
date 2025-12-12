@@ -1,0 +1,110 @@
+/**
+ * FloatWebPlayer - WebView2 注入样式
+ * 
+ * 此文件作为嵌入资源，在每次文档创建时自动注入。
+ */
+
+/* ========================================
+   自定义滚动条
+   ======================================== */
+
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #666;
+    border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #888;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+/* ========================================
+   控制按钮容器
+   ======================================== */
+
+#float-player-controls {
+    position: fixed;
+    top: 2px;
+    right: 2px;
+    z-index: 2147483647;
+    display: flex;
+    gap: 2px;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    pointer-events: none;
+}
+
+#float-player-controls.visible {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+/* ========================================
+   控制按钮 - 全黑色实心设计
+   ======================================== */
+
+#float-player-controls button {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    border: none;
+    background: #000;
+    color: #888;
+    font-size: 10px;
+    font-weight: bold;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.12s ease, color 0.12s ease;
+    line-height: 1;
+    padding: 0;
+}
+
+/* 悬停效果 - 高亮背景 */
+#float-player-controls button:hover {
+    background: #333;
+    color: #fff;
+}
+
+/* 点击效果 - 更深的背景 */
+#float-player-controls button:active {
+    background: #555;
+    color: #fff;
+}
+
+/* 关闭按钮悬停 - 红色高亮 */
+#float-player-controls button.close:hover {
+    background: #c0392b;
+    color: #fff;
+}
+
+/* 关闭按钮点击 */
+#float-player-controls button.close:active {
+    background: #e74c3c;
+    color: #fff;
+}
+
+/* ========================================
+   顶部拖动区域
+   ======================================== */
+
+#float-player-drag-zone {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 10px;
+    z-index: 2147483646;
+    cursor: move;
+    user-select: none;
+    -webkit-user-select: none;
+}
