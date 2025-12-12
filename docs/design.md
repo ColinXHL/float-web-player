@@ -303,12 +303,32 @@ HotkeyBinding (快捷键绑定)
 
 ### 6. 数据存储
 
+采用 **JSON + Profile 目录结构**，便于插件扩展和数据隔离。
+
+#### 存储结构
+
+```
+Data/
+├── config.json              # 全局配置（非 Profile 相关）
+├── window_state.json        # 窗口状态
+└── Profiles/
+    └── Default/
+        ├── profile.json     # Profile 配置（必需）
+        ├── hotkeys.json     # 快捷键绑定（可选，不存在则用默认）
+        ├── bookmarks.json   # 收藏夹（可选，用户添加后创建）
+        └── history.json     # 历史记录（系统自动生成）
+```
+
+#### 数据类型说明
+
 | 数据类型 | 存储方式 | 说明 |
 |----------|---------|------|
-| 应用配置 | JSON (`config.json`) | 快捷键、透明度默认值、快进秒数等 |
+| 全局配置 | JSON (`config.json`) | 透明度默认值、快进秒数、边缘吸附等全局设置 |
 | 窗口状态 | JSON (`window_state.json`) | 位置、大小、透明度 |
-| 历史记录 | SQLite (`data.db`) | URL、标题、访问时间 |
-| 收藏夹 | SQLite (`data.db`) | URL、标题、添加时间 |
+| Profile 配置 | JSON (`Profiles/{name}/profile.json`) | 名称、激活进程、快速链接、工具等 |
+| 快捷键 | JSON (`Profiles/{name}/hotkeys.json`) | 可选，不存在则继承 Default |
+| 历史记录 | JSON (`Profiles/{name}/history.json`) | URL、标题、访问时间，按 Profile 隔离 |
+| 收藏夹 | JSON (`Profiles/{name}/bookmarks.json`) | URL、标题、添加时间，按 Profile 隔离 |
 | Cookie | WebView2 UserDataFolder | 自动持久化 |
 
 ---
@@ -343,7 +363,6 @@ HotkeyBinding (快捷键绑定)
 | 运行时 | .NET | 8.0 |
 | UI 框架 | WPF | - |
 | 浏览器引擎 | Microsoft.Web.WebView2 | 最新 |
-| 数据库 | Microsoft.Data.Sqlite | 最新 |
 | JSON 处理 | System.Text.Json | 内置 |
 | 全局快捷键 | Win32 API `RegisterHotKey` | - |
 | 鼠标穿透 | Win32 API `SetWindowLong` | - |
@@ -371,7 +390,6 @@ HotkeyBinding (快捷键绑定)
 ```xml
 <ItemGroup>
   <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.2420.47" />
-  <PackageReference Include="Microsoft.Data.Sqlite" Version="8.0.0" />
 </ItemGroup>
 ```
 
@@ -390,7 +408,6 @@ dotnet sln add FloatWebPlayer/FloatWebPlayer.csproj
 # 添加 NuGet 包
 cd FloatWebPlayer
 dotnet add package Microsoft.Web.WebView2
-dotnet add package Microsoft.Data.Sqlite
 ```
 
 ### 项目配置（.csproj）
@@ -471,7 +488,8 @@ FloatWebPlayer/
 │   ├── Services/
 │   │   ├── HotkeyService.cs               # 全局快捷键服务
 │   │   ├── ConfigService.cs               # 配置管理服务
-│   │   ├── DatabaseService.cs             # SQLite 数据库服务
+│   │   ├── ProfileManager.cs              # Profile 管理服务（加载/切换/Default 兜底）
+│   │   ├── DataService.cs                 # JSON 数据服务（历史/收藏 CRUD）
 │   │   └── WindowStateService.cs          # 窗口状态保存服务
 │   ├── Helpers/
 │   │   ├── Win32Helper.cs                 # Win32 API 封装
@@ -512,8 +530,8 @@ FloatWebPlayer/
 
 ### Phase 4: 数据与设置
 13. 实现边缘吸附功能
-14. 实现 SQLite 数据库服务（历史记录、收藏夹 CRUD）
-15. 实现 JSON 配置存储（窗口状态、用户设置）
+14. 实现 JSON 数据服务（历史记录、收藏夹 CRUD，按 Profile 隔离）
+15. 实现 ProfileManager 服务（加载/切换 Profile，Default 兜底）+ JSON 配置存储
 16. 实现历史记录 UI 窗口
 17. 实现收藏夹 UI
 18. 实现设置窗口
@@ -595,16 +613,28 @@ function getStatus() {
 ```
 Profiles/
 ├── Default/
-│   └── profile.json          # 默认配置
+│   ├── profile.json          # 默认配置（必需）
+│   ├── hotkeys.json          # 快捷键绑定（可选）
+│   ├── bookmarks.json        # 收藏夹（系统生成）
+│   └── history.json          # 历史记录（系统生成）
 ├── Genshin/
-│   ├── profile.json          # 原神配置
-│   ├── bookmarks.json        # 独立收藏夹
+│   ├── profile.json          # 原神配置（必需）
+│   ├── hotkeys.json          # 可选，不存在则继承 Default
+│   ├── bookmarks.json        # 独立收藏夹（系统生成）
 │   └── custom.js             # 可选：网页注入脚本
 ├── Minecraft/
-│   ├── profile.json
-│   └── bookmarks.json
+│   └── profile.json          # 最简配置，只需这一个文件
 └── ...
 ```
+
+#### 文件必需性说明
+
+| 文件 | 必需性 | 说明 |
+|------|--------|------|
+| `profile.json` | ✅ **必需** | 核心配置（ID、名称、激活进程、快速链接等） |
+| `hotkeys.json` | ❌ 可选 | 不提供则继承 Default 的快捷键 |
+| `bookmarks.json` | ❌ 可选 | 用户添加收藏后系统自动创建 |
+| `history.json` | ❌ 可选 | 系统自动生成，开发者无需编写 |
 
 ---
 
