@@ -270,6 +270,7 @@
                                 <MenuItem x:Name="MenuBookmarks" Header="⭐ 收藏夹" Style="{StaticResource DarkMenuItemStyle}" Click="MenuBookmarks_Click"/>
                                 <Separator Style="{StaticResource DarkSeparatorStyle}"/>
                                 <MenuItem x:Name="MenuSettings" Header="⚙️ 设置" Style="{StaticResource DarkMenuItemStyle}" Click="MenuSettings_Click"/>
+                                <MenuItem x:Name="MenuAbout" Header="ℹ️ 关于" Style="{StaticResource DarkMenuItemStyle}" Click="MenuAbout_Click"/>
                             </ContextMenu>
                         </Button.ContextMenu>
                     </Button>

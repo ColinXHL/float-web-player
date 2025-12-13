@@ -1,7 +1,9 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Input;
 using FloatWebPlayer.Helpers;
 using FloatWebPlayer.Models;
@@ -18,24 +20,18 @@ namespace FloatWebPlayer.Views
 
         private AppConfig _config;
         private bool _isInitializing = true;
-
-        #endregion
-
-        #region Events
-
-        /// <summary>
-        /// 设置保存事件
-        /// </summary>
-        public event EventHandler<AppConfig>? SettingsSaved;
+        private TextBox? _currentHotkeyTextBox;
+        private readonly Dictionary<TextBox, uint> _hotkeyValues = new();
+        private readonly Dictionary<TextBox, Models.ModifierKeys> _hotkeyModifiers = new();
 
         #endregion
 
         #region Constructor
 
-        public SettingsWindow(AppConfig config)
+        public SettingsWindow()
         {
             InitializeComponent();
-            _config = config;
+            _config = ConfigService.Instance.Config;
             LoadSettings();
             _isInitializing = false;
         }
@@ -49,11 +45,9 @@ namespace FloatWebPlayer.Views
         /// </summary>
         private void LoadSettings()
         {
-            // 视频控制
+            // 基础设置
             SeekSecondsSlider.Value = _config.SeekSeconds;
             SeekSecondsValue.Text = $"{_config.SeekSeconds}s";
-
-            // 透明度
             OpacitySlider.Value = _config.DefaultOpacity * 100;
             OpacityValue.Text = $"{(int)(_config.DefaultOpacity * 100)}%";
 
@@ -62,8 +56,26 @@ namespace FloatWebPlayer.Views
             SnapThresholdSlider.Value = _config.SnapThreshold;
             SnapThresholdValue.Text = $"{_config.SnapThreshold}px";
 
+            // 快捷键
+            LoadHotkey(HotkeySeekBackward, _config.HotkeySeekBackward, _config.HotkeySeekBackwardMod);
+            LoadHotkey(HotkeySeekForward, _config.HotkeySeekForward, _config.HotkeySeekForwardMod);
+            LoadHotkey(HotkeyTogglePlay, _config.HotkeyTogglePlay, _config.HotkeyTogglePlayMod);
+            LoadHotkey(HotkeyDecreaseOpacity, _config.HotkeyDecreaseOpacity, _config.HotkeyDecreaseOpacityMod);
+            LoadHotkey(HotkeyIncreaseOpacity, _config.HotkeyIncreaseOpacity, _config.HotkeyIncreaseOpacityMod);
+            LoadHotkey(HotkeyToggleClickThrough, _config.HotkeyToggleClickThrough, _config.HotkeyToggleClickThroughMod);
+
             // Profile
             CurrentProfileText.Text = $"{ProfileManager.Instance.CurrentProfile.Icon} {ProfileManager.Instance.CurrentProfile.Name}";
+        }
+
+        /// <summary>
+        /// 加载单个快捷键到输入框
+        /// </summary>
+        private void LoadHotkey(TextBox textBox, uint vkCode, Models.ModifierKeys modifiers)
+        {
+            textBox.Text = Win32Helper.GetHotkeyDisplayName(vkCode, modifiers);
+            _hotkeyValues[textBox] = vkCode;
+            _hotkeyModifiers[textBox] = modifiers;
         }
 
         /// <summary>
@@ -71,10 +83,32 @@ namespace FloatWebPlayer.Views
         /// </summary>
         private void SaveSettingsToConfig()
         {
+            // 基础设置
             _config.SeekSeconds = (int)SeekSecondsSlider.Value;
             _config.DefaultOpacity = OpacitySlider.Value / 100.0;
+            
+            // 窗口行为
             _config.EnableEdgeSnap = EdgeSnapCheckBox.IsChecked ?? true;
             _config.SnapThreshold = (int)SnapThresholdSlider.Value;
+            
+            // 快捷键
+            SaveHotkey(HotkeySeekBackward, v => _config.HotkeySeekBackward = v, m => _config.HotkeySeekBackwardMod = m);
+            SaveHotkey(HotkeySeekForward, v => _config.HotkeySeekForward = v, m => _config.HotkeySeekForwardMod = m);
+            SaveHotkey(HotkeyTogglePlay, v => _config.HotkeyTogglePlay = v, m => _config.HotkeyTogglePlayMod = m);
+            SaveHotkey(HotkeyDecreaseOpacity, v => _config.HotkeyDecreaseOpacity = v, m => _config.HotkeyDecreaseOpacityMod = m);
+            SaveHotkey(HotkeyIncreaseOpacity, v => _config.HotkeyIncreaseOpacity = v, m => _config.HotkeyIncreaseOpacityMod = m);
+            SaveHotkey(HotkeyToggleClickThrough, v => _config.HotkeyToggleClickThrough = v, m => _config.HotkeyToggleClickThroughMod = m);
+        }
+
+        /// <summary>
+        /// 保存单个快捷键
+        /// </summary>
+        private void SaveHotkey(TextBox textBox, Action<uint> setKey, Action<Models.ModifierKeys> setMod)
+        {
+            if (_hotkeyValues.TryGetValue(textBox, out var vk))
+                setKey(vk);
+            if (_hotkeyModifiers.TryGetValue(textBox, out var mod))
+                setMod(mod);
         }
 
         #endregion
@@ -139,18 +173,92 @@ namespace FloatWebPlayer.Views
         {
             _isInitializing = true;
             
-            // 重置为默认值
+            // 重置基础设置
             SeekSecondsSlider.Value = AppConstants.DefaultSeekSeconds;
             SeekSecondsValue.Text = $"{AppConstants.DefaultSeekSeconds}s";
-            
             OpacitySlider.Value = AppConstants.MaxOpacity * 100;
             OpacityValue.Text = $"{(int)(AppConstants.MaxOpacity * 100)}%";
             
+            // 重置窗口行为
             EdgeSnapCheckBox.IsChecked = true;
             SnapThresholdSlider.Value = AppConstants.SnapThreshold;
             SnapThresholdValue.Text = $"{AppConstants.SnapThreshold}px";
             
+            // 重置快捷键
+            var defaultConfig = new AppConfig();
+            LoadHotkey(HotkeySeekBackward, defaultConfig.HotkeySeekBackward, defaultConfig.HotkeySeekBackwardMod);
+            LoadHotkey(HotkeySeekForward, defaultConfig.HotkeySeekForward, defaultConfig.HotkeySeekForwardMod);
+            LoadHotkey(HotkeyTogglePlay, defaultConfig.HotkeyTogglePlay, defaultConfig.HotkeyTogglePlayMod);
+            LoadHotkey(HotkeyDecreaseOpacity, defaultConfig.HotkeyDecreaseOpacity, defaultConfig.HotkeyDecreaseOpacityMod);
+            LoadHotkey(HotkeyIncreaseOpacity, defaultConfig.HotkeyIncreaseOpacity, defaultConfig.HotkeyIncreaseOpacityMod);
+            LoadHotkey(HotkeyToggleClickThrough, defaultConfig.HotkeyToggleClickThrough, defaultConfig.HotkeyToggleClickThroughMod);
+            
             _isInitializing = false;
+        }
+
+        /// <summary>
+        /// 快捷键输入框获得焦点
+        /// </summary>
+        private void Hotkey_GotFocus(object sender, RoutedEventArgs e)
+        {
+            if (sender is TextBox textBox)
+            {
+                _currentHotkeyTextBox = textBox;
+                textBox.Text = "按下新快捷键...";
+            }
+        }
+
+        /// <summary>
+        /// 快捷键输入框失去焦点
+        /// </summary>
+        private void Hotkey_LostFocus(object sender, RoutedEventArgs e)
+        {
+            if (sender is TextBox textBox && _hotkeyValues.TryGetValue(textBox, out var vkCode))
+            {
+                var modifiers = _hotkeyModifiers.TryGetValue(textBox, out var m) ? m : Models.ModifierKeys.None;
+                textBox.Text = Win32Helper.GetHotkeyDisplayName(vkCode, modifiers);
+            }
+            _currentHotkeyTextBox = null;
+        }
+
+        /// <summary>
+        /// 快捷键按键捕获
+        /// </summary>
+        private void Hotkey_PreviewKeyDown(object sender, KeyEventArgs e)
+        {
+            if (sender is not TextBox textBox) return;
+            
+            e.Handled = true;
+            
+            // 忽略修饰键本身
+            if (e.Key == Key.LeftCtrl || e.Key == Key.RightCtrl ||
+                e.Key == Key.LeftAlt || e.Key == Key.RightAlt ||
+                e.Key == Key.LeftShift || e.Key == Key.RightShift ||
+                e.Key == Key.LWin || e.Key == Key.RWin ||
+                e.Key == Key.System)
+            {
+                return;
+            }
+            
+            // 获取虚拟键码
+            var vkCode = (uint)KeyInterop.VirtualKeyFromKey(e.Key == Key.System ? e.SystemKey : e.Key);
+            
+            // 获取当前修饰键状态
+            var modifiers = Models.ModifierKeys.None;
+            if (Keyboard.Modifiers.HasFlag(System.Windows.Input.ModifierKeys.Control))
+                modifiers |= Models.ModifierKeys.Ctrl;
+            if (Keyboard.Modifiers.HasFlag(System.Windows.Input.ModifierKeys.Alt))
+                modifiers |= Models.ModifierKeys.Alt;
+            if (Keyboard.Modifiers.HasFlag(System.Windows.Input.ModifierKeys.Shift))
+                modifiers |= Models.ModifierKeys.Shift;
+            
+            // 更新显示和存储
+            textBox.Text = Win32Helper.GetHotkeyDisplayName(vkCode, modifiers);
+            _hotkeyValues[textBox] = vkCode;
+            _hotkeyModifiers[textBox] = modifiers;
+            
+            // 移动焦点到下一个控件
+            textBox.MoveFocus(new TraversalRequest(FocusNavigationDirection.Next));
         }
 
         /// <summary>
@@ -167,7 +275,8 @@ namespace FloatWebPlayer.Views
         private void BtnSave_Click(object sender, RoutedEventArgs e)
         {
             SaveSettingsToConfig();
-            CloseWithAnimation(() => SettingsSaved?.Invoke(this, _config));
+            ConfigService.Instance.UpdateConfig(_config);
+            CloseWithAnimation();
         }
 
         #endregion

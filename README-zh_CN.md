@@ -35,6 +35,7 @@
 - **操作系统**: Windows 10/11
 - **运行时**: [.NET 8.0 桌面运行时](https://dotnet.microsoft.com/download/dotnet/8.0)
 - **浏览器引擎**: [WebView2 Runtime](https://developer.microsoft.com/en-us/microsoft-edge/webview2/)（Windows 10/11 通常已预装）
+- **权限**: 需要管理员权限（用于在游戏中使用全局快捷键）
 
 ---
 

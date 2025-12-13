@@ -6,6 +6,7 @@ using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Threading;
 using FloatWebPlayer.Helpers;
+using FloatWebPlayer.Models;
 using FloatWebPlayer.Services;
 using Microsoft.Web.WebView2.Core;
 using Cursors = System.Windows.Input.Cursors;
@@ -71,6 +72,11 @@ namespace FloatWebPlayer.Views
         private bool _isCursorInWindowWhileClickThrough;
 
         /// <summary>
+        /// 当前配置引用
+        /// </summary>
+        private AppConfig _config;
+
+        /// <summary>
         /// 拖动开始时鼠标相对窗口左上角的偏移（物理像素）
         /// </summary>
         private Win32Helper.POINT _dragOffset;
@@ -87,6 +93,7 @@ namespace FloatWebPlayer.Views
         public PlayerWindow()
         {
             InitializeComponent();
+            _config = ConfigService.Instance.Config;
             InitializeWindowPosition();
             InitializeWebView();
             
@@ -264,7 +271,7 @@ namespace FloatWebPlayer.Views
             switch (message)
             {
                 case "minimize":
-                    WindowState = WindowState.Minimized;
+                    WindowState = System.Windows.WindowState.Minimized;
                     break;
                     
                 case "maximize":
@@ -619,6 +626,15 @@ namespace FloatWebPlayer.Views
         /// </summary>
         public bool IsClickThrough => _isClickThrough;
 
+        /// <summary>
+        /// 更新配置
+        /// </summary>
+        /// <param name="config">新配置</param>
+        public void UpdateConfig(AppConfig config)
+        {
+            _config = config;
+        }
+
         #endregion
 
         #region Event Handlers
@@ -687,8 +703,9 @@ namespace FloatWebPlayer.Views
             var source = PresentationSource.FromVisual(this);
             double dpiScale = source?.CompositionTarget?.TransformToDevice.M11 ?? 1.0;
 
-            // 计算物理像素阈值
-            int threshold = (int)(AppConstants.SnapThreshold * dpiScale);
+            // 计算物理像素阈值（使用配置值）
+            int snapThreshold = _config.EnableEdgeSnap ? _config.SnapThreshold : 0;
+            int threshold = (int)(snapThreshold * dpiScale);
 
             // 获取工作区（物理像素）- 排除任务栏
             var workAreaWpf = SystemParameters.WorkArea;
@@ -761,8 +778,9 @@ namespace FloatWebPlayer.Views
             var source = PresentationSource.FromVisual(this);
             double dpiScale = source?.CompositionTarget?.TransformToDevice.M11 ?? 1.0;
 
-            // 计算物理像素阈值
-            int threshold = (int)(AppConstants.SnapThreshold * dpiScale);
+            // 计算物理像素阈值（使用配置值）
+            int snapThreshold = _config.EnableEdgeSnap ? _config.SnapThreshold : 0;
+            int threshold = (int)(snapThreshold * dpiScale);
 
             // 获取工作区（物理像素）
             var workAreaWpf = SystemParameters.WorkArea;

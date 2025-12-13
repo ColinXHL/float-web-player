@@ -16,7 +16,7 @@ namespace FloatWebPlayer
         private ControlBarWindow? _controlBarWindow;
         private HotkeyService? _hotkeyService;
         private OsdWindow? _osdWindow;
-        private AppConfig _config = new();
+        private AppConfig _config = null!;
 
         #endregion
 
@@ -27,11 +27,19 @@ namespace FloatWebPlayer
         /// </summary>
         private void Application_Startup(object sender, StartupEventArgs e)
         {
-            // 初始化 ProfileManager（这会自动创建 Default Profile）
+            // 初始化服务（单例）
             _ = ProfileManager.Instance;
-            
-            // 初始化 DataService
             _ = DataService.Instance;
+            
+            // 加载配置
+            _config = ConfigService.Instance.Config;
+            
+            // 订阅配置变更事件
+            ConfigService.Instance.ConfigChanged += (s, config) =>
+            {
+                _config = config;
+                ApplySettings();
+            };
 
             // 创建主窗口（播放器）
             _playerWindow = new PlayerWindow();
@@ -138,13 +146,7 @@ namespace FloatWebPlayer
             // 设置菜单事件
             _controlBarWindow.SettingsRequested += (s, e) =>
             {
-                var settingsWindow = new SettingsWindow(_config);
-                settingsWindow.SettingsSaved += (sender, config) =>
-                {
-                    _config = config;
-                    // 应用设置变更
-                    ApplySettings();
-                };
+                var settingsWindow = new SettingsWindow();
                 settingsWindow.ShowDialog();
             };
 
@@ -163,18 +165,24 @@ namespace FloatWebPlayer
         private void StartHotkeyService()
         {
             _hotkeyService = new HotkeyService();
+            
+            // 使用 AppConfig 中的快捷键配置初始化
+            var hotkeyConfig = CreateHotkeyConfigFromAppConfig(_config);
+            _hotkeyService.UpdateConfig(hotkeyConfig);
 
             // 绑定快捷键事件
             _hotkeyService.SeekBackward += (s, e) =>
             {
-                _playerWindow?.SeekAsync(-AppConstants.DefaultSeekSeconds);
-                ShowOsd($"-{AppConstants.DefaultSeekSeconds}s", "⏪");
+                var seconds = _config.SeekSeconds;
+                _playerWindow?.SeekAsync(-seconds);
+                ShowOsd($"-{seconds}s", "⏪");
             };
 
             _hotkeyService.SeekForward += (s, e) =>
             {
-                _playerWindow?.SeekAsync(AppConstants.DefaultSeekSeconds);
-                ShowOsd($"+{AppConstants.DefaultSeekSeconds}s", "⏩");
+                var seconds = _config.SeekSeconds;
+                _playerWindow?.SeekAsync(seconds);
+                ShowOsd($"+{seconds}s", "⏩");
             };
 
             _hotkeyService.TogglePlay += (s, e) =>
@@ -231,8 +239,44 @@ namespace FloatWebPlayer
         /// </summary>
         private void ApplySettings()
         {
-            // 设置变更后的逻辑（如透明度、快进秒数等）
-            // 可以在这里保存配置到文件
+            // 更新 PlayerWindow 配置
+            _playerWindow?.UpdateConfig(_config);
+            
+            // 更新 HotkeyService 配置
+            if (_hotkeyService != null)
+            {
+                var hotkeyConfig = CreateHotkeyConfigFromAppConfig(_config);
+                _hotkeyService.UpdateConfig(hotkeyConfig);
+            }
+        }
+
+        /// <summary>
+        /// 根据 AppConfig 创建 HotkeyConfig
+        /// </summary>
+        private static HotkeyConfig CreateHotkeyConfigFromAppConfig(AppConfig config)
+        {
+            return new HotkeyConfig
+            {
+                ActiveProfileName = "Default",
+                AutoSwitchProfile = false,
+                Profiles = new System.Collections.Generic.List<HotkeyProfile>
+                {
+                    new HotkeyProfile
+                    {
+                        Name = "Default",
+                        ActivationProcesses = null,
+                        Bindings = new System.Collections.Generic.List<HotkeyBinding>
+                        {
+                            new HotkeyBinding { Key = config.HotkeySeekBackward, Modifiers = config.HotkeySeekBackwardMod, Action = "SeekBackward" },
+                            new HotkeyBinding { Key = config.HotkeySeekForward, Modifiers = config.HotkeySeekForwardMod, Action = "SeekForward" },
+                            new HotkeyBinding { Key = config.HotkeyTogglePlay, Modifiers = config.HotkeyTogglePlayMod, Action = "TogglePlay" },
+                            new HotkeyBinding { Key = config.HotkeyDecreaseOpacity, Modifiers = config.HotkeyDecreaseOpacityMod, Action = "DecreaseOpacity" },
+                            new HotkeyBinding { Key = config.HotkeyIncreaseOpacity, Modifiers = config.HotkeyIncreaseOpacityMod, Action = "IncreaseOpacity" },
+                            new HotkeyBinding { Key = config.HotkeyToggleClickThrough, Modifiers = config.HotkeyToggleClickThroughMod, Action = "ToggleClickThrough" }
+                        }
+                    }
+                }
+            };
         }
 
         /// <summary>

@@ -413,6 +413,15 @@ namespace FloatWebPlayer.Views
             SettingsRequested?.Invoke(this, EventArgs.Empty);
         }
 
+        /// <summary>
+        /// 关于菜单点击
+        /// </summary>
+        private void MenuAbout_Click(object sender, RoutedEventArgs e)
+        {
+            var aboutWindow = new AboutWindow();
+            aboutWindow.ShowDialog();
+        }
+
         #endregion
 
         #region Auto Show/Hide Logic

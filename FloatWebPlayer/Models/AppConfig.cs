@@ -26,35 +26,29 @@ namespace FloatWebPlayer.Models
 
         #region Hotkeys
 
-        /// <summary>
-        /// 快进键（虚拟键码）
-        /// </summary>
+        // 快进键
         public uint HotkeySeekForward { get; set; } = Helpers.Win32Helper.VK_6;
+        public ModifierKeys HotkeySeekForwardMod { get; set; } = ModifierKeys.None;
 
-        /// <summary>
-        /// 倒退键（虚拟键码）
-        /// </summary>
+        // 倒退键
         public uint HotkeySeekBackward { get; set; } = Helpers.Win32Helper.VK_5;
+        public ModifierKeys HotkeySeekBackwardMod { get; set; } = ModifierKeys.None;
 
-        /// <summary>
-        /// 播放/暂停键（虚拟键码）
-        /// </summary>
+        // 播放/暂停键
         public uint HotkeyTogglePlay { get; set; } = Helpers.Win32Helper.VK_OEM_3;
+        public ModifierKeys HotkeyTogglePlayMod { get; set; } = ModifierKeys.None;
 
-        /// <summary>
-        /// 增加透明度键（虚拟键码）
-        /// </summary>
+        // 增加透明度键
         public uint HotkeyIncreaseOpacity { get; set; } = Helpers.Win32Helper.VK_8;
+        public ModifierKeys HotkeyIncreaseOpacityMod { get; set; } = ModifierKeys.None;
 
-        /// <summary>
-        /// 降低透明度键（虚拟键码）
-        /// </summary>
+        // 降低透明度键
         public uint HotkeyDecreaseOpacity { get; set; } = Helpers.Win32Helper.VK_7;
+        public ModifierKeys HotkeyDecreaseOpacityMod { get; set; } = ModifierKeys.None;
 
-        /// <summary>
-        /// 切换鼠标穿透键（虚拟键码）
-        /// </summary>
+        // 切换鼠标穿透键
         public uint HotkeyToggleClickThrough { get; set; } = Helpers.Win32Helper.VK_0;
+        public ModifierKeys HotkeyToggleClickThroughMod { get; set; } = ModifierKeys.None;
 
         #endregion
 

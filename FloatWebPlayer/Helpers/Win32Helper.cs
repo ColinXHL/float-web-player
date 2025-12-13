@@ -168,6 +168,89 @@ namespace FloatWebPlayer.Helpers
 
         #endregion
 
+        #region Key Name Mapping
+
+        /// <summary>
+        /// 获取虚拟键码的显示名称
+        /// </summary>
+        public static string GetKeyName(uint vkCode)
+        {
+            return vkCode switch
+            {
+                // 数字键
+                >= 0x30 and <= 0x39 => ((char)vkCode).ToString(),
+                
+                // 字母键
+                >= 0x41 and <= 0x5A => ((char)vkCode).ToString(),
+                
+                // 功能键
+                >= 0x70 and <= 0x7B => $"F{vkCode - 0x70 + 1}",
+                
+                // 数字小键盘
+                >= 0x60 and <= 0x69 => $"Num{vkCode - 0x60}",
+                
+                // 特殊键
+                0x08 => "Backspace",
+                0x09 => "Tab",
+                0x0D => "Enter",
+                0x1B => "Esc",
+                0x20 => "Space",
+                0x21 => "PageUp",
+                0x22 => "PageDown",
+                0x23 => "End",
+                0x24 => "Home",
+                0x25 => "←",
+                0x26 => "↑",
+                0x27 => "→",
+                0x28 => "↓",
+                0x2D => "Insert",
+                0x2E => "Delete",
+                
+                // OEM 键
+                0xBA => ";",
+                0xBB => "=",
+                0xBC => ",",
+                0xBD => "-",
+                0xBE => ".",
+                0xBF => "/",
+                0xC0 => "`",  // OEM_3 波浪键
+                0xDB => "[",
+                0xDC => "\\",
+                0xDD => "]",
+                0xDE => "'",
+                
+                // 数字小键盘运算符
+                0x6A => "*",
+                0x6B => "+",
+                0x6D => "-",
+                0x6E => ".",
+                0x6F => "/",
+                
+                _ => $"0x{vkCode:X2}"
+            };
+        }
+
+        /// <summary>
+        /// 获取组合键的显示名称（包含修饰键）
+        /// </summary>
+        public static string GetHotkeyDisplayName(uint vkCode, Models.ModifierKeys modifiers)
+        {
+            var parts = new System.Collections.Generic.List<string>();
+            
+            if (modifiers.HasFlag(Models.ModifierKeys.Ctrl))
+                parts.Add("Ctrl");
+            if (modifiers.HasFlag(Models.ModifierKeys.Alt))
+                parts.Add("Alt");
+            if (modifiers.HasFlag(Models.ModifierKeys.Shift))
+                parts.Add("Shift");
+            
+            parts.Add(GetKeyName(vkCode));
+            
+            return string.Join("+", parts);
+        }
+
+        #endregion
+
         #region Resize Direction Enum
 
         /// <summary>
