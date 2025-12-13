@@ -121,3 +121,6 @@ WebView2Data/
 
 # Release packages
 *.zip
+
+#kiro
+.kiro/*
