@@ -4,9 +4,9 @@
   <img src="assets/float-web-player-logo.png" alt="Float Web Player Logo" width="128">
 </p>
 
-[简体中文](README-zh_CN.md) | English
+简体中文 | [English](README-en.md)
 
-**A floating web player for Windows, designed for watching tutorial videos while gaming.**
+**Windows 悬浮网页播放器，专为游戏时观看攻略视频设计。**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![.NET](https://img.shields.io/badge/.NET-8.0-512BD4)](https://dotnet.microsoft.com/)
@@ -14,128 +14,128 @@
 
 ---
 
-## ✨ Features
+## ✨ 功能特性
 
-- **🪟 Always on Top** - Floating window stays above other applications
-- **⌨️ Global Hotkeys** - Control playback without leaving your game (customizable)
-- **👻 Mouse Click-Through** - Interact with apps behind the player
-- **🎚️ Adjustable Opacity** - Set transparency from 20% to 100%
-- **🎯 Edge Snapping** - Window snaps to screen edges
-- **🍪 Cookie Persistence** - Stay logged in to websites
-- **🎨 Minimal UI** - Clean borderless design with custom controls
-- **📚 History & Bookmarks** - Track browsing history and save favorites
-- **⚙️ Settings Window** - Visual configuration interface
-
----
-
-## 📸 Screenshots
-
-> *Coming soon...*
+- **🪟 始终置顶** - 悬浮窗口始终显示在其他应用上方
+- **⌨️ 全局快捷键** - 无需切换窗口即可控制播放（支持自定义）
+- **👻 鼠标穿透** - 开启后可与播放器下方的应用交互
+- **🎚️ 透明度调节** - 支持 20% 到 100% 透明度设置
+- **🎯 边缘吸附** - 窗口自动吸附到屏幕边缘
+- **🍪 Cookie 持久化** - 保持网站登录状态
+- **🎨 简洁界面** - 无边框设计，自定义控制按钮
+- **📚 历史与收藏** - 浏览历史记录，收藏常用页面
+- **⚙️ 设置窗口** - 可视化配置界面
 
 ---
 
-## 🖥️ System Requirements
+## 📸 截图
 
-- **OS**: Windows 10/11
-- **Runtime**: [.NET 8.0 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/8.0)
-- **Browser Engine**: [WebView2 Runtime](https://developer.microsoft.com/en-us/microsoft-edge/webview2/) (usually pre-installed on Windows 10/11)
-- **Permissions**: Administrator privileges (required for global hotkeys in games)
+> *即将添加...*
 
 ---
 
-## 📥 Installation
+## 🖥️ 系统要求
 
-### Option 1: Download Release
+- **操作系统**: Windows 10/11
+- **运行时**: [.NET 8.0 桌面运行时](https://dotnet.microsoft.com/download/dotnet/8.0)
+- **浏览器引擎**: [WebView2 Runtime](https://developer.microsoft.com/en-us/microsoft-edge/webview2/)（Windows 10/11 通常已预装）
+- **权限**: 需要管理员权限（用于在游戏中使用全局快捷键）
 
-> *Release builds coming soon...*
+---
 
-### Option 2: Build from Source
+## 📥 安装
+
+### 方式一：下载发布版
+
+> *发布版即将推出...*
+
+### 方式二：从源码构建
 
 ```powershell
-# Clone the repository
+# 克隆仓库
 git clone https://github.com/ColinXHL/float-web-player.git
 cd float-web-player
 
-# Build
+# 构建
 dotnet build -c Release
 
-# Run
+# 运行
 dotnet run --project FloatWebPlayer
 ```
 
 ---
 
-## ⌨️ Default Hotkeys
+## ⌨️ 默认快捷键
 
-| Key | Function |
-|-----|----------|
-| `` ` `` | Play / Pause |
-| `5` | Seek Backward (5s) |
-| `6` | Seek Forward (5s) |
-| `7` | Decrease Opacity |
-| `8` | Increase Opacity |
-| `0` | Toggle Click-Through |
+| 按键 | 功能 |
+|------|------|
+| `` ` `` | 播放 / 暂停 |
+| `5` | 后退 5 秒 |
+| `6` | 前进 5 秒 |
+| `7` | 降低透明度 |
+| `8` | 增加透明度 |
+| `0` | 切换鼠标穿透 |
 
-> 💡 Hotkeys are fully customizable in Settings. Modifier keys (Ctrl, Alt, Shift) are supported.
-
----
-
-## 🛠️ Tech Stack
-
-| Component | Technology |
-|-----------|------------|
-| Framework | .NET 8.0 + WPF |
-| Browser Engine | Microsoft WebView2 |
-| Global Hotkeys | Win32 API (Low-level Keyboard Hook) |
-| Click-Through | Win32 API (WS_EX_TRANSPARENT) |
-| Window Control | Win32 API (SendMessage) |
+> 💡 快捷键可在设置中自定义，支持组合键（Ctrl、Alt、Shift）。
 
 ---
 
-## 📁 Project Structure
+## 🛠️ 技术栈
+
+| 组件 | 技术 |
+|------|------|
+| 框架 | .NET 8.0 + WPF |
+| 浏览器引擎 | Microsoft WebView2 |
+| 全局快捷键 | Win32 API（低级键盘钩子） |
+| 鼠标穿透 | Win32 API (WS_EX_TRANSPARENT) |
+| 窗口控制 | Win32 API (SendMessage) |
+
+---
+
+## 📁 项目结构
 
 ```
 FloatWebPlayer/
-├── Views/              # WPF Windows (Player, ControlBar, OSD, History, Bookmark, Settings)
-├── Services/           # HotkeyService, ProfileManager, DataService, WindowStateService
-├── Helpers/            # Win32Helper, ScriptInjector, AnimatedWindow
-├── Models/             # AppConfig, GameProfile, HotkeyBinding, etc.
-├── Scripts/            # Injected JS/CSS for WebView2
-└── docs/               # Design documents
+├── Views/              # WPF 窗口（播放器、控制栏、OSD、历史、收藏、设置）
+├── Services/           # HotkeyService、ProfileManager、DataService、WindowStateService
+├── Helpers/            # Win32Helper、ScriptInjector、AnimatedWindow
+├── Models/             # AppConfig、GameProfile、HotkeyBinding 等
+├── Scripts/            # WebView2 注入的 JS/CSS
+└── docs/               # 设计文档
 ```
 
 ---
 
-## 🚧 Development Status
+## 🚧 开发状态
 
-- [x] Basic player window with WebView2
-- [x] Floating control bar (top of screen)
-- [x] Global hotkey support (customizable)
-- [x] Opacity adjustment
-- [x] Mouse click-through mode
-- [x] OSD notifications
-- [x] Edge snapping
-- [x] History & Bookmarks
-- [x] Settings window
-- [ ] Auto cursor detection (auto opacity)
-- [ ] Process detection + Profile auto-switch
-- [ ] External tools launcher
-
----
-
-## 🤝 Contributing
-
-Issues and Pull Requests are welcome!
+- [x] WebView2 基础播放器窗口
+- [x] 悬浮控制栏（屏幕顶部）
+- [x] 全局快捷键支持（可自定义）
+- [x] 透明度调节
+- [x] 鼠标穿透模式
+- [x] OSD 操作提示
+- [x] 边缘吸附
+- [x] 历史记录与收藏夹
+- [x] 设置窗口
+- [ ] 游戏内鼠标指针检测（自动透明度）
+- [ ] 进程检测 + Profile 自动切换
+- [ ] 外部工具启动
 
 ---
 
-## 📄 License
+## 🤝 贡献
 
-This project is licensed under the [MIT License](LICENSE).
+欢迎提交 Issue 和 Pull Request！
 
 ---
 
-## 🙏 Acknowledgments
+## 📄 许可证
+
+本项目采用 [MIT 许可证](LICENSE) 开源。
+
+---
+
+## 🙏 致谢
 
 - [Microsoft WebView2](https://developer.microsoft.com/en-us/microsoft-edge/webview2/)
-- [Bilibili](https://www.bilibili.com/) - Primary use case inspiration
+- [Bilibili](https://www.bilibili.com/) - 主要使用场景灵感来源
