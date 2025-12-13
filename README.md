@@ -47,7 +47,9 @@
 
 ### 方式一：下载发布版
 
-> *发布版即将推出...*
+从 [Releases](https://github.com/ColinXHL/float-web-player/releases) 页面下载最新版本，解压后运行 `FloatWebPlayer.exe` 即可。
+
+> 💡 便携版，所有数据存储在程序目录的 `User/` 文件夹中。
 
 ### 方式二：从源码构建
 

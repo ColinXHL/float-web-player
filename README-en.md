@@ -47,7 +47,9 @@
 
 ### Option 1: Download Release
 
-> *Release builds coming soon...*
+Download the latest version from [Releases](https://github.com/ColinXHL/float-web-player/releases), extract and run `FloatWebPlayer.exe`.
+
+> 💡 Portable version - all data stored in `User/` folder.
 
 ### Option 2: Build from Source
 
