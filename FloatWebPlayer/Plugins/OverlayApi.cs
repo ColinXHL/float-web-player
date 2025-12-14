@@ -121,16 +121,29 @@ namespace FloatWebPlayer.Plugins
         /// <param name="duration">显示时长（毫秒），0 表示常驻</param>
         public void ShowMarker(string direction, int duration = 0)
         {
+            Services.LogService.Instance.Debug("OverlayApi", $"ShowMarker called: direction={direction}, duration={duration}");
+
             if (string.IsNullOrWhiteSpace(direction))
+            {
+                Services.LogService.Instance.Warn("OverlayApi", "ShowMarker: direction is null or whitespace");
                 return;
+            }
 
             var dir = ParseDirection(direction);
             if (dir == null)
+            {
+                Services.LogService.Instance.Warn("OverlayApi", $"ShowMarker: invalid direction '{direction}'");
                 return;
+            }
+
+            Services.LogService.Instance.Debug("OverlayApi", $"ShowMarker: parsed direction = {dir.Value}");
 
             EnsureOverlay();
+            Services.LogService.Instance.Debug("OverlayApi", $"ShowMarker: overlay ensured, _overlay is null = {_overlay == null}");
+
             InvokeOnUI(() =>
             {
+                Services.LogService.Instance.Debug("OverlayApi", $"ShowMarker: InvokeOnUI executing, _overlay is null = {_overlay == null}");
                 _overlay?.Show();
                 _overlay?.ShowDirectionMarker(dir.Value, duration);
             });
@@ -190,12 +203,18 @@ namespace FloatWebPlayer.Plugins
         /// </summary>
         private void EnsureOverlay()
         {
+            Services.LogService.Instance.Debug("OverlayApi", $"EnsureOverlay called, _overlay is null = {_overlay == null}");
+
             if (_overlay != null)
                 return;
 
             InvokeOnUI(() =>
             {
+                Services.LogService.Instance.Debug("OverlayApi", $"EnsureOverlay: InvokeOnUI executing for plugin {_context.PluginId}");
+
                 _overlay = OverlayManager.Instance.GetOverlay(_context.PluginId);
+                Services.LogService.Instance.Debug("OverlayApi", $"EnsureOverlay: GetOverlay returned {(_overlay == null ? "null" : "existing overlay")}");
+
                 if (_overlay == null)
                 {
                     // 从配置读取初始位置和大小
@@ -203,6 +222,8 @@ namespace FloatWebPlayer.Plugins
                     var y = _configApi.Get("overlay.y", 50);
                     var width = _configApi.Get("overlay.width", 200);
                     var height = _configApi.Get("overlay.height", 200);
+
+                    Services.LogService.Instance.Debug("OverlayApi", $"EnsureOverlay: Creating overlay at ({x}, {y}) size ({width}, {height})");
 
                     var options = new OverlayOptions
                     {
@@ -213,6 +234,7 @@ namespace FloatWebPlayer.Plugins
                     };
 
                     _overlay = OverlayManager.Instance.CreateOverlay(_context.PluginId, options);
+                    Services.LogService.Instance.Debug("OverlayApi", $"EnsureOverlay: CreateOverlay returned {(_overlay == null ? "null" : "new overlay")}");
                     
                     // 订阅编辑模式退出事件
                     if (_overlay != null)

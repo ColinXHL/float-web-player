@@ -114,8 +114,39 @@ namespace FloatWebPlayer.Views
         private void Window_SourceInitialized(object sender, EventArgs e)
         {
             // 设置鼠标穿透，使点击可以穿透到下层窗口
-            Win32Helper.SetClickThrough(this, true);
+            // 注意：WPF AllowsTransparency 窗口已自动设置 WS_EX_LAYERED，
+            // 只需添加 WS_EX_TRANSPARENT 即可实现点击穿透
+            SetClickThroughOnly(true);
         }
+
+        /// <summary>
+        /// 仅设置点击穿透，不影响 WPF 透明度渲染
+        /// </summary>
+        private void SetClickThroughOnly(bool enable)
+        {
+            var hwnd = new System.Windows.Interop.WindowInteropHelper(this).Handle;
+            if (hwnd == IntPtr.Zero) return;
+
+            const int GWL_EXSTYLE = -20;
+            const int WS_EX_TRANSPARENT = 0x00000020;
+
+            int exStyle = GetWindowLong(hwnd, GWL_EXSTYLE);
+            if (enable)
+            {
+                exStyle |= WS_EX_TRANSPARENT;
+            }
+            else
+            {
+                exStyle &= ~WS_EX_TRANSPARENT;
+            }
+            SetWindowLong(hwnd, GWL_EXSTYLE, exStyle);
+        }
+
+        [System.Runtime.InteropServices.DllImport("user32.dll")]
+        private static extern int GetWindowLong(IntPtr hWnd, int nIndex);
+
+        [System.Runtime.InteropServices.DllImport("user32.dll")]
+        private static extern int SetWindowLong(IntPtr hWnd, int nIndex, int dwNewLong);
 
         /// <summary>
         /// 键盘按下事件 - ESC 退出编辑模式
@@ -140,6 +171,8 @@ namespace FloatWebPlayer.Views
         /// <param name="durationMs">显示时长（毫秒），0 表示常驻</param>
         public void ShowDirectionMarker(Direction direction, int durationMs = 0)
         {
+            Services.LogService.Instance.Debug("OverlayWindow", $"ShowDirectionMarker: {direction}, duration={durationMs}, IsVisible={IsVisible}, Left={Left}, Top={Top}, Width={Width}, Height={Height}");
+
             // 停止之前的定时器
             StopHideTimer();
 
@@ -151,6 +184,11 @@ namespace FloatWebPlayer.Views
             {
                 marker.Visibility = Visibility.Visible;
                 _currentDirection = direction;
+                Services.LogService.Instance.Debug("OverlayWindow", $"Marker {direction} set to Visible");
+            }
+            else
+            {
+                Services.LogService.Instance.Warn("OverlayWindow", $"Marker {direction} not found in _markers dictionary");
             }
 
             // 如果指定了时长，设置定时隐藏
@@ -213,7 +251,7 @@ namespace FloatWebPlayer.Views
             _isEditMode = true;
 
             // 禁用鼠标穿透
-            Win32Helper.SetClickThrough(this, false);
+            SetClickThroughOnly(false);
 
             // 显示编辑模式 UI
             EditBorder.Visibility = Visibility.Visible;
@@ -244,7 +282,7 @@ namespace FloatWebPlayer.Views
             _isEditMode = false;
 
             // 启用鼠标穿透
-            Win32Helper.SetClickThrough(this, true);
+            SetClickThroughOnly(true);
 
             // 隐藏编辑模式 UI
             EditBorder.Visibility = Visibility.Collapsed;

@@ -17,7 +17,7 @@ namespace FloatWebPlayer.Views
 
         /// <summary>
         /// 选择收藏项事件
-        /// </summary>
+        /// </summary>000
         public event EventHandler<string>? BookmarkItemSelected;
 
         #endregion

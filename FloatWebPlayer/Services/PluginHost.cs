@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using FloatWebPlayer.Helpers;
@@ -9,6 +8,32 @@ using FloatWebPlayer.Plugins;
 
 namespace FloatWebPlayer.Services
 {
+    /// <summary>
+    /// 取消订阅操作结果
+    /// </summary>
+    public class UnsubscribeResult
+    {
+        /// <summary>
+        /// 操作是否成功
+        /// </summary>
+        public bool Success { get; set; }
+
+        /// <summary>
+        /// 错误消息（失败时）
+        /// </summary>
+        public string? ErrorMessage { get; set; }
+
+        /// <summary>
+        /// 创建成功结果
+        /// </summary>
+        public static UnsubscribeResult Succeeded() => new() { Success = true };
+
+        /// <summary>
+        /// 创建失败结果
+        /// </summary>
+        public static UnsubscribeResult Failed(string errorMessage) => new() { Success = false, ErrorMessage = errorMessage };
+    }
+
     /// <summary>
     /// 插件宿主服务
     /// 负责插件的加载、执行和生命周期管理
@@ -183,6 +208,92 @@ namespace FloatWebPlayer.Services
             return _loadedPlugins.FirstOrDefault(p => p.PluginId == pluginId);
         }
 
+        /// <summary>
+        /// 获取插件配置
+        /// </summary>
+        /// <param name="pluginId">插件 ID</param>
+        /// <returns>插件配置，不存在则返回 null</returns>
+        public PluginConfig? GetPluginConfig(string pluginId)
+        {
+            return _pluginConfigs.TryGetValue(pluginId, out var config) ? config : null;
+        }
+
+        /// <summary>
+        /// 保存插件配置
+        /// </summary>
+        /// <param name="pluginId">插件 ID</param>
+        public void SavePluginConfig(string pluginId)
+        {
+            var plugin = GetPlugin(pluginId);
+            if (plugin == null) return;
+
+            if (_pluginConfigs.TryGetValue(pluginId, out var config))
+            {
+                SavePluginConfig(config, plugin.PluginDirectory);
+            }
+        }
+
+        /// <summary>
+        /// 取消订阅插件（停止运行并删除插件目录）
+        /// </summary>
+        /// <param name="pluginId">插件 ID</param>
+        /// <returns>操作结果</returns>
+        public UnsubscribeResult UnsubscribePlugin(string pluginId)
+        {
+            if (string.IsNullOrWhiteSpace(pluginId))
+            {
+                return UnsubscribeResult.Failed("插件 ID 不能为空");
+            }
+
+            // 查找插件
+            var plugin = _loadedPlugins.FirstOrDefault(p => p.PluginId == pluginId);
+            if (plugin == null)
+            {
+                // 插件不存在，静默成功（可能已被卸载）
+                Log($"插件 {pluginId} 不存在，跳过取消订阅");
+                return UnsubscribeResult.Succeeded();
+            }
+
+            var pluginDir = plugin.PluginDirectory;
+
+            try
+            {
+                // 停止插件运行（调用 onUnload）
+                UnloadPlugin(plugin);
+
+                // 从列表移除
+                _loadedPlugins.Remove(plugin);
+
+                // 从配置字典移除
+                _pluginConfigs.Remove(pluginId);
+
+                // 删除插件目录
+                if (Directory.Exists(pluginDir))
+                {
+                    Directory.Delete(pluginDir, recursive: true);
+                    Log($"已删除插件目录: {pluginDir}");
+                }
+
+                Log($"插件 {pluginId} 已取消订阅");
+                return UnsubscribeResult.Succeeded();
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                Log($"删除插件目录失败（权限不足）: {ex.Message}");
+                return UnsubscribeResult.Failed($"删除插件目录失败：权限不足。请确保没有其他程序正在使用该目录。");
+            }
+            catch (IOException ex)
+            {
+                Log($"删除插件目录失败（文件被占用）: {ex.Message}");
+                return UnsubscribeResult.Failed($"删除插件目录失败：文件被占用。请关闭相关程序后重试。");
+            }
+            catch (Exception ex)
+            {
+                Log($"取消订阅插件失败: {ex.Message}");
+                return UnsubscribeResult.Failed($"取消订阅失败：{ex.Message}");
+            }
+        }
+
         #endregion
 
 
@@ -241,9 +352,16 @@ namespace FloatWebPlayer.Services
                 return;
             }
 
+            // 创建 PluginApi 并传入 onLoad
+            var profileInfo = new ProfileInfo(
+                _currentProfileId ?? string.Empty,
+                _currentProfileId ?? string.Empty,
+                GetPluginsDirectory(_currentProfileId ?? string.Empty)
+            );
+            var pluginApi = new PluginApi(context, config, profileInfo);
+
             // 调用 onLoad
-            // 注意：这里暂时不传入 API，后续任务会实现 PluginApi
-            if (!context.CallOnLoad())
+            if (!context.CallOnLoad(pluginApi))
             {
                 Log($"插件 {manifest.Id} onLoad 调用失败: {context.LastError}");
                 // 即使 onLoad 失败，也保留插件（异常隔离）
@@ -294,7 +412,7 @@ namespace FloatWebPlayer.Services
         /// </summary>
         private void Log(string message)
         {
-            Debug.WriteLine($"[PluginHost] {message}");
+            LogService.Instance.Info("PluginHost", message);
         }
 
         #endregion

@@ -52,6 +52,11 @@ namespace FloatWebPlayer.Models
         /// 自定义脚本文件名
         /// </summary>
         public string? CustomScript { get; set; }
+
+        /// <summary>
+        /// 鼠标检测配置
+        /// </summary>
+        public CursorDetectionConfig? CursorDetection { get; set; }
     }
 
     /// <summary>
@@ -146,5 +151,26 @@ namespace FloatWebPlayer.Models
         /// 是否以管理员身份运行
         /// </summary>
         public bool RunAsAdmin { get; set; }
+    }
+
+    /// <summary>
+    /// 鼠标检测配置
+    /// </summary>
+    public class CursorDetectionConfig
+    {
+        /// <summary>
+        /// 是否启用鼠标检测
+        /// </summary>
+        public bool Enabled { get; set; } = false;
+
+        /// <summary>
+        /// 鼠标显示时的最低透明度（0.0-1.0）
+        /// </summary>
+        public double MinOpacity { get; set; } = 0.3;
+
+        /// <summary>
+        /// 检测间隔（毫秒）
+        /// </summary>
+        public int CheckIntervalMs { get; set; } = 200;
     }
 }

@@ -1,5 +1,4 @@
 using System;
-using System.Diagnostics;
 using System.IO;
 using FloatWebPlayer.Models;
 using Jint;
@@ -272,7 +271,7 @@ namespace FloatWebPlayer.Plugins
         /// </summary>
         private void Log(string message)
         {
-            Debug.WriteLine($"[Plugin:{PluginId}] {message}");
+            Services.LogService.Instance.Info($"Plugin:{PluginId}", message);
         }
 
         #endregion

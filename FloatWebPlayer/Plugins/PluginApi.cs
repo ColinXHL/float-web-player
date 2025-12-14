@@ -76,6 +76,9 @@ namespace FloatWebPlayer.Plugins
                 StringComparer.OrdinalIgnoreCase
             );
 
+            Services.LogService.Instance.Debug("PluginApi", $"Plugin {context.PluginId} permissions: [{string.Join(", ", _permissions)}]");
+            Services.LogService.Instance.Debug("PluginApi", $"HasPermission('overlay') = {HasPermission("overlay")}, HasPermission('audio') = {HasPermission("audio")}");
+
             // 初始化子 API
             Core = new CoreApi(context);
             Config = new ConfigApi(config);
@@ -84,6 +87,8 @@ namespace FloatWebPlayer.Plugins
             // 初始化需要权限的 API
             _speechApi = new SpeechApi(context);
             _overlayApi = new OverlayApi(context, Config);
+
+            Services.LogService.Instance.Debug("PluginApi", $"_overlayApi is null = {_overlayApi == null}, Overlay property is null = {Overlay == null}");
         }
 
         #endregion

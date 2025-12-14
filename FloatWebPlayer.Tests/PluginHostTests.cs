@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text.Json;
 using FloatWebPlayer.Models;
 using FloatWebPlayer.Plugins;
@@ -234,6 +236,311 @@ function onUnload() {
         #endregion
 
 
+        #region Property 7: Profile 插件隔离
+
+        /// <summary>
+        /// **Feature: game-plugin-system, Property 7: Profile 插件隔离**
+        /// *对于任意*两个不同的 Profile，切换 Profile 后应只加载目标 Profile 的插件，原 Profile 的插件应被卸载
+        /// **Validates: Requirements 5.3, 5.4**
+        /// </summary>
+        [Property(MaxTest = 50)]
+        public Property ProfilePluginIsolation_ShouldUnloadOldAndLoadNew(PositiveInt profile1PluginCount, PositiveInt profile2PluginCount)
+        {
+            // 限制插件数量在合理范围内
+            var count1 = Math.Min(profile1PluginCount.Get % 3 + 1, 3);
+            var count2 = Math.Min(profile2PluginCount.Get % 3 + 1, 3);
+
+            // 为每次测试创建唯一的 profile ID
+            var profile1Id = $"profile1-{Guid.NewGuid():N}";
+            var profile2Id = $"profile2-{Guid.NewGuid():N}";
+
+            var jsCode = @"
+function onLoad() {
+    // onLoad called
+}
+
+function onUnload() {
+    // onUnload called
+}
+";
+
+            // 创建 Profile 1 的插件
+            var profile1PluginIds = new List<string>();
+            for (int i = 0; i < count1; i++)
+            {
+                var pluginId = $"p1-plugin-{i}";
+                profile1PluginIds.Add(pluginId);
+                CreateTestPluginForProfile(profile1Id, pluginId, jsCode);
+            }
+
+            // 创建 Profile 2 的插件
+            var profile2PluginIds = new List<string>();
+            for (int i = 0; i < count2; i++)
+            {
+                var pluginId = $"p2-plugin-{i}";
+                profile2PluginIds.Add(pluginId);
+                CreateTestPluginForProfile(profile2Id, pluginId, jsCode);
+            }
+
+            var host = new TestablePluginHost(_tempProfilesDir);
+
+            // 加载 Profile 1
+            host.LoadPluginsForProfile(profile1Id);
+            var profile1Loaded = host.LoadedPlugins.Count == count1;
+            var profile1PluginsCorrect = host.LoadedPlugins.All(p => profile1PluginIds.Contains(p.PluginId));
+
+            // 切换到 Profile 2
+            host.LoadPluginsForProfile(profile2Id);
+            var profile2Loaded = host.LoadedPlugins.Count == count2;
+            var profile2PluginsCorrect = host.LoadedPlugins.All(p => profile2PluginIds.Contains(p.PluginId));
+            
+            // 验证 Profile 1 的插件不再存在
+            var profile1PluginsUnloaded = !host.LoadedPlugins.Any(p => profile1PluginIds.Contains(p.PluginId));
+
+            host.Dispose();
+
+            return (profile1Loaded && profile1PluginsCorrect && profile2Loaded && profile2PluginsCorrect && profile1PluginsUnloaded)
+                .Label($"P1: {count1} plugins loaded={profile1Loaded}, correct={profile1PluginsCorrect}; " +
+                       $"P2: {count2} plugins loaded={profile2Loaded}, correct={profile2PluginsCorrect}; " +
+                       $"P1 unloaded={profile1PluginsUnloaded}");
+        }
+
+        /// <summary>
+        /// **Feature: game-plugin-system, Property 7: Profile 插件隔离（无交叉）**
+        /// *对于任意* Profile 切换，新 Profile 的插件列表不应包含旧 Profile 的任何插件
+        /// **Validates: Requirements 5.3, 5.4**
+        /// </summary>
+        [Property(MaxTest = 50)]
+        public Property ProfilePluginIsolation_NoPluginCrossover(PositiveInt switchCount)
+        {
+            // 限制切换次数
+            var switches = Math.Min(switchCount.Get % 5 + 2, 5);
+
+            var jsCode = @"
+function onLoad() {}
+function onUnload() {}
+";
+
+            // 创建多个 Profile，每个有不同的插件
+            var profiles = new List<(string Id, List<string> PluginIds)>();
+            for (int i = 0; i < switches; i++)
+            {
+                var profileId = $"profile-{Guid.NewGuid():N}";
+                var pluginIds = new List<string>();
+                
+                // 每个 Profile 有 1-2 个插件
+                var pluginCount = (i % 2) + 1;
+                for (int j = 0; j < pluginCount; j++)
+                {
+                    var pluginId = $"profile{i}-plugin{j}";
+                    pluginIds.Add(pluginId);
+                    CreateTestPluginForProfile(profileId, pluginId, jsCode);
+                }
+                
+                profiles.Add((profileId, pluginIds));
+            }
+
+            var host = new TestablePluginHost(_tempProfilesDir);
+            var allIsolated = true;
+
+            // 依次切换 Profile 并验证隔离性
+            for (int i = 0; i < profiles.Count; i++)
+            {
+                var (profileId, expectedPluginIds) = profiles[i];
+                host.LoadPluginsForProfile(profileId);
+
+                // 验证当前加载的插件只属于当前 Profile
+                var currentPluginIds = host.LoadedPlugins.Select(p => p.PluginId).ToList();
+                
+                // 检查是否只包含当前 Profile 的插件
+                var onlyCurrentProfilePlugins = currentPluginIds.All(id => expectedPluginIds.Contains(id));
+                
+                // 检查是否不包含其他 Profile 的插件
+                var noOtherProfilePlugins = true;
+                for (int j = 0; j < profiles.Count; j++)
+                {
+                    if (j != i)
+                    {
+                        var otherPluginIds = profiles[j].PluginIds;
+                        if (currentPluginIds.Any(id => otherPluginIds.Contains(id)))
+                        {
+                            noOtherProfilePlugins = false;
+                            break;
+                        }
+                    }
+                }
+
+                if (!onlyCurrentProfilePlugins || !noOtherProfilePlugins)
+                {
+                    allIsolated = false;
+                    break;
+                }
+            }
+
+            host.Dispose();
+
+            return allIsolated.Label($"Tested {switches} profile switches, all isolated: {allIsolated}");
+        }
+
+        #endregion
+
+        #region Property 1: 取消订阅后插件目录被删除
+
+        /// <summary>
+        /// **Feature: ui-improvements, Property 1: 取消订阅后插件目录被删除**
+        /// *For any* 已加载的插件，当调用 UnsubscribePlugin 方法并成功返回后，
+        /// 该插件的目录应不再存在于文件系统中，且该插件应从 LoadedPlugins 列表中移除。
+        /// **Validates: Requirements 1.3**
+        /// </summary>
+        [Property(MaxTest = 100)]
+        public Property UnsubscribePlugin_ShouldDeleteDirectoryAndRemoveFromList(PositiveInt pluginIndex)
+        {
+            // 使用预定义的有效插件 ID 列表
+            var validPluginIds = new[] { "test-plugin", "my-plugin", "sample", "demo", "example" };
+            var pluginId = validPluginIds[pluginIndex.Get % validPluginIds.Length];
+
+            // 为每次测试创建唯一的 profile ID
+            var uniqueProfileId = $"profile-{Guid.NewGuid():N}";
+
+            var jsCode = @"
+function onLoad() {
+    // onLoad called
+}
+
+function onUnload() {
+    // onUnload called
+}
+";
+            // 创建插件
+            var pluginDir = CreateTestPluginForProfile(uniqueProfileId, pluginId, jsCode);
+
+            // 验证插件目录存在
+            var dirExistsBefore = Directory.Exists(pluginDir);
+
+            // 创建 PluginHost 实例
+            var host = new TestablePluginHost(_tempProfilesDir);
+
+            // 加载插件
+            host.LoadPluginsForProfile(uniqueProfileId);
+
+            // 验证插件已加载
+            var pluginLoadedBefore = host.LoadedPlugins.Any(p => p.PluginId == pluginId);
+            var loadedCountBefore = host.LoadedPlugins.Count;
+
+            // 取消订阅
+            var result = host.UnsubscribePlugin(pluginId);
+
+            // 验证结果
+            var unsubscribeSuccess = result.Success;
+            var dirExistsAfter = Directory.Exists(pluginDir);
+            var pluginInListAfter = host.LoadedPlugins.Any(p => p.PluginId == pluginId);
+            var loadedCountAfter = host.LoadedPlugins.Count;
+
+            host.Dispose();
+
+            // 属性：取消订阅成功后，目录应被删除，插件应从列表移除
+            var property = dirExistsBefore && 
+                           pluginLoadedBefore && 
+                           unsubscribeSuccess && 
+                           !dirExistsAfter && 
+                           !pluginInListAfter &&
+                           loadedCountAfter == loadedCountBefore - 1;
+
+            return property.Label(
+                $"PluginId: {pluginId}, " +
+                $"DirBefore: {dirExistsBefore}, LoadedBefore: {pluginLoadedBefore}, " +
+                $"Success: {unsubscribeSuccess}, DirAfter: {dirExistsAfter}, " +
+                $"InListAfter: {pluginInListAfter}, CountBefore: {loadedCountBefore}, CountAfter: {loadedCountAfter}");
+        }
+
+        /// <summary>
+        /// **Feature: ui-improvements, Property 1: 取消订阅后插件目录被删除（多插件场景）**
+        /// *For any* 多个已加载的插件，取消订阅其中一个不应影响其他插件
+        /// **Validates: Requirements 1.3**
+        /// </summary>
+        [Property(MaxTest = 50)]
+        public Property UnsubscribePlugin_ShouldNotAffectOtherPlugins(PositiveInt pluginCount, PositiveInt targetIndex)
+        {
+            // 限制插件数量在 2-5 之间
+            var count = Math.Max(2, Math.Min(pluginCount.Get % 5 + 1, 5));
+            var targetIdx = targetIndex.Get % count;
+
+            // 为每次测试创建唯一的 profile ID
+            var uniqueProfileId = $"profile-{Guid.NewGuid():N}";
+
+            var jsCode = @"
+function onLoad() {}
+function onUnload() {}
+";
+            // 创建多个插件
+            var pluginIds = new List<string>();
+            var pluginDirs = new List<string>();
+            for (int i = 0; i < count; i++)
+            {
+                var pluginId = $"plugin-{i}";
+                pluginIds.Add(pluginId);
+                var dir = CreateTestPluginForProfile(uniqueProfileId, pluginId, jsCode);
+                pluginDirs.Add(dir);
+            }
+
+            var targetPluginId = pluginIds[targetIdx];
+            var targetPluginDir = pluginDirs[targetIdx];
+
+            // 创建 PluginHost 实例
+            var host = new TestablePluginHost(_tempProfilesDir);
+
+            // 加载插件
+            host.LoadPluginsForProfile(uniqueProfileId);
+
+            // 验证所有插件都已加载
+            var allLoadedBefore = host.LoadedPlugins.Count == count;
+
+            // 取消订阅目标插件
+            var result = host.UnsubscribePlugin(targetPluginId);
+
+            // 验证结果
+            var unsubscribeSuccess = result.Success;
+            var targetDirDeleted = !Directory.Exists(targetPluginDir);
+            var targetRemovedFromList = !host.LoadedPlugins.Any(p => p.PluginId == targetPluginId);
+            
+            // 验证其他插件不受影响
+            var otherPluginsIntact = true;
+            for (int i = 0; i < count; i++)
+            {
+                if (i != targetIdx)
+                {
+                    var otherId = pluginIds[i];
+                    var otherDir = pluginDirs[i];
+                    
+                    if (!host.LoadedPlugins.Any(p => p.PluginId == otherId) || !Directory.Exists(otherDir))
+                    {
+                        otherPluginsIntact = false;
+                        break;
+                    }
+                }
+            }
+
+            var expectedCountAfter = count - 1;
+            var correctCountAfter = host.LoadedPlugins.Count == expectedCountAfter;
+
+            host.Dispose();
+
+            var property = allLoadedBefore && 
+                           unsubscribeSuccess && 
+                           targetDirDeleted && 
+                           targetRemovedFromList && 
+                           otherPluginsIntact &&
+                           correctCountAfter;
+
+            return property.Label(
+                $"Count: {count}, Target: {targetIdx}, " +
+                $"AllLoadedBefore: {allLoadedBefore}, Success: {unsubscribeSuccess}, " +
+                $"TargetDeleted: {targetDirDeleted}, TargetRemoved: {targetRemovedFromList}, " +
+                $"OthersIntact: {otherPluginsIntact}, CorrectCount: {correctCountAfter}");
+        }
+
+        #endregion
+
         #region Unit Tests
 
         /// <summary>
@@ -410,6 +717,44 @@ function onUnload() {
         public PluginContext? GetPlugin(string pluginId)
         {
             return _loadedPlugins.FirstOrDefault(p => p.PluginId == pluginId);
+        }
+
+        /// <summary>
+        /// 取消订阅插件（停止运行并删除插件目录）
+        /// </summary>
+        public UnsubscribeResult UnsubscribePlugin(string pluginId)
+        {
+            if (string.IsNullOrWhiteSpace(pluginId))
+            {
+                return UnsubscribeResult.Failed("插件 ID 不能为空");
+            }
+
+            var plugin = _loadedPlugins.FirstOrDefault(p => p.PluginId == pluginId);
+            if (plugin == null)
+            {
+                return UnsubscribeResult.Succeeded();
+            }
+
+            var pluginDir = plugin.PluginDirectory;
+
+            try
+            {
+                plugin.CallOnUnload();
+                plugin.Dispose();
+                _loadedPlugins.Remove(plugin);
+                _pluginConfigs.Remove(pluginId);
+
+                if (Directory.Exists(pluginDir))
+                {
+                    Directory.Delete(pluginDir, recursive: true);
+                }
+
+                return UnsubscribeResult.Succeeded();
+            }
+            catch (Exception ex)
+            {
+                return UnsubscribeResult.Failed(ex.Message);
+            }
         }
 
         private void LoadPlugin(string pluginDir)

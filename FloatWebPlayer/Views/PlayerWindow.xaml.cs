@@ -86,6 +86,21 @@ namespace FloatWebPlayer.Views
         /// </summary>
         private bool _isDragging;
 
+        /// <summary>
+        /// 鼠标检测前保存的透明度
+        /// </summary>
+        private double _opacityBeforeCursorDetection = 1.0;
+
+        /// <summary>
+        /// 鼠标检测配置的最低透明度
+        /// </summary>
+        private double _cursorDetectionMinOpacity = 0.3;
+
+        /// <summary>
+        /// 是否因鼠标检测而降低了透明度
+        /// </summary>
+        private bool _isOpacityReducedByCursorDetection;
+
         #endregion
 
         #region Constructor
@@ -97,6 +112,12 @@ namespace FloatWebPlayer.Views
             InitializeWindowPosition();
             InitializeWebView();
             
+            // 订阅 Profile 切换事件
+            ProfileManager.Instance.ProfileChanged += OnProfileChanged;
+            
+            // 初始化鼠标检测（如果当前 Profile 启用了）
+            InitializeCursorDetection();
+            
             // 窗口关闭时清理
             Closing += (s, e) =>
             {
@@ -105,6 +126,12 @@ namespace FloatWebPlayer.Views
                 
                 // 停止穿透模式定时器
                 StopClickThroughTimer();
+                
+                // 停止鼠标检测
+                StopCursorDetection();
+                
+                // 取消 Profile 事件订阅
+                ProfileManager.Instance.ProfileChanged -= OnProfileChanged;
                 
                 // 取消事件订阅
                 if (WebView.CoreWebView2 != null)
@@ -499,8 +526,15 @@ namespace FloatWebPlayer.Views
         /// <returns>当前透明度</returns>
         public double DecreaseOpacity()
         {
-            if (_isClickThrough) return _windowOpacity;
+            if (_isClickThrough)
+            {
+                // 穿透模式下：修改保存的透明度设置
+                _opacityBeforeClickThrough = Math.Max(AppConstants.MinOpacity, 
+                    _opacityBeforeClickThrough - AppConstants.OpacityStep);
+                return _opacityBeforeClickThrough;
+            }
 
+            // 非穿透模式：直接修改当前透明度
             _windowOpacity = Math.Max(AppConstants.MinOpacity, _windowOpacity - AppConstants.OpacityStep);
             Win32Helper.SetWindowOpacity(this, _windowOpacity);
             return _windowOpacity;
@@ -512,8 +546,15 @@ namespace FloatWebPlayer.Views
         /// <returns>当前透明度</returns>
         public double IncreaseOpacity()
         {
-            if (_isClickThrough) return _windowOpacity;
+            if (_isClickThrough)
+            {
+                // 穿透模式下：修改保存的透明度设置
+                _opacityBeforeClickThrough = Math.Min(AppConstants.MaxOpacity, 
+                    _opacityBeforeClickThrough + AppConstants.OpacityStep);
+                return _opacityBeforeClickThrough;
+            }
 
+            // 非穿透模式：直接修改当前透明度
             _windowOpacity = Math.Min(AppConstants.MaxOpacity, _windowOpacity + AppConstants.OpacityStep);
             Win32Helper.SetWindowOpacity(this, _windowOpacity);
             return _windowOpacity;
@@ -614,8 +655,11 @@ namespace FloatWebPlayer.Views
 
         /// <summary>
         /// 获取当前透明度百分比
+        /// 穿透模式下返回保存的透明度设置，非穿透模式下返回当前窗口透明度
         /// </summary>
-        public int OpacityPercent => (int)(_windowOpacity * 100);
+        public int OpacityPercent => _isClickThrough 
+            ? (int)(_opacityBeforeClickThrough * 100)
+            : (int)(_windowOpacity * 100);
 
         /// <summary>
         /// 是否处于鼠标穿透模式
@@ -832,6 +876,129 @@ namespace FloatWebPlayer.Views
                 Win32Helper.ResizeDirection.BottomLeft => Cursors.SizeNESW,
                 _ => Cursors.Arrow
             };
+        }
+
+        #endregion
+
+        #region Cursor Detection
+
+        /// <summary>
+        /// 初始化鼠标检测
+        /// </summary>
+        private void InitializeCursorDetection()
+        {
+            var profile = ProfileManager.Instance.CurrentProfile;
+            var config = profile.CursorDetection;
+            
+            if (config?.Enabled == true)
+            {
+                StartCursorDetection(profile);
+            }
+        }
+
+        /// <summary>
+        /// 启动鼠标检测
+        /// </summary>
+        private void StartCursorDetection(GameProfile profile)
+        {
+            var config = profile.CursorDetection;
+            if (config == null || !config.Enabled)
+                return;
+
+            // 保存配置
+            _cursorDetectionMinOpacity = config.MinOpacity;
+            
+            // 获取目标进程名（从 Activation.Processes 获取第一个）
+            string? targetProcess = null;
+            if (profile.Activation?.Processes?.Count > 0)
+            {
+                targetProcess = profile.Activation.Processes[0];
+            }
+
+            // 订阅事件
+            CursorDetectionService.Instance.CursorShown += OnCursorShown;
+            CursorDetectionService.Instance.CursorHidden += OnCursorHidden;
+            
+            // 启动检测
+            CursorDetectionService.Instance.Start(targetProcess, config.CheckIntervalMs);
+        }
+
+        /// <summary>
+        /// 停止鼠标检测
+        /// </summary>
+        private void StopCursorDetection()
+        {
+            CursorDetectionService.Instance.CursorShown -= OnCursorShown;
+            CursorDetectionService.Instance.CursorHidden -= OnCursorHidden;
+            CursorDetectionService.Instance.Stop();
+            
+            // 如果之前因鼠标检测降低了透明度，恢复
+            if (_isOpacityReducedByCursorDetection)
+            {
+                _windowOpacity = _opacityBeforeCursorDetection;
+                Win32Helper.SetWindowOpacity(this, _windowOpacity);
+                _isOpacityReducedByCursorDetection = false;
+            }
+        }
+
+        /// <summary>
+        /// Profile 切换事件处理
+        /// </summary>
+        private void OnProfileChanged(object? sender, GameProfile profile)
+        {
+            // 停止当前鼠标检测
+            StopCursorDetection();
+            
+            // 如果新 Profile 启用了鼠标检测，启动它
+            if (profile.CursorDetection?.Enabled == true)
+            {
+                StartCursorDetection(profile);
+            }
+        }
+
+        /// <summary>
+        /// 鼠标显示事件处理
+        /// </summary>
+        private void OnCursorShown(object? sender, EventArgs e)
+        {
+            // 在 UI 线程执行
+            Dispatcher.BeginInvoke(() =>
+            {
+                // 如果处于穿透模式，不处理
+                if (_isClickThrough)
+                    return;
+
+                // 保存当前透明度并降低
+                if (!_isOpacityReducedByCursorDetection)
+                {
+                    _opacityBeforeCursorDetection = _windowOpacity;
+                    _isOpacityReducedByCursorDetection = true;
+                }
+                
+                Win32Helper.SetWindowOpacity(this, _cursorDetectionMinOpacity);
+            });
+        }
+
+        /// <summary>
+        /// 鼠标隐藏事件处理
+        /// </summary>
+        private void OnCursorHidden(object? sender, EventArgs e)
+        {
+            // 在 UI 线程执行
+            Dispatcher.BeginInvoke(() =>
+            {
+                // 如果处于穿透模式，不处理
+                if (_isClickThrough)
+                    return;
+
+                // 恢复之前的透明度
+                if (_isOpacityReducedByCursorDetection)
+                {
+                    _windowOpacity = _opacityBeforeCursorDetection;
+                    Win32Helper.SetWindowOpacity(this, _windowOpacity);
+                    _isOpacityReducedByCursorDetection = false;
+                }
+            });
         }
 
         #endregion

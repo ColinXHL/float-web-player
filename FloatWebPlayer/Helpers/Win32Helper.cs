@@ -34,6 +34,10 @@ namespace FloatWebPlayer.Helpers
 
         [DllImport("user32.dll")]
         [return: MarshalAs(UnmanagedType.Bool)]
+        private static extern bool GetCursorInfo(ref CURSORINFO pci);
+
+        [DllImport("user32.dll")]
+        [return: MarshalAs(UnmanagedType.Bool)]
         private static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
 
         [DllImport("user32.dll")]
@@ -75,6 +79,37 @@ namespace FloatWebPlayer.Helpers
 
         #endregion
 
+        #region Win32 API - IME (Input Method Editor)
+
+        /// <summary>
+        /// 获取窗口的输入法上下文句柄
+        /// </summary>
+        [DllImport("imm32.dll")]
+        private static extern IntPtr ImmGetContext(IntPtr hWnd);
+
+        /// <summary>
+        /// 释放输入法上下文句柄
+        /// </summary>
+        [DllImport("imm32.dll")]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static extern bool ImmReleaseContext(IntPtr hWnd, IntPtr hIMC);
+
+        /// <summary>
+        /// 设置输入法开启/关闭状态
+        /// </summary>
+        [DllImport("imm32.dll")]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static extern bool ImmSetOpenStatus(IntPtr hIMC, [MarshalAs(UnmanagedType.Bool)] bool fOpen);
+
+        /// <summary>
+        /// 获取输入法开启/关闭状态
+        /// </summary>
+        [DllImport("imm32.dll")]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static extern bool ImmGetOpenStatus(IntPtr hIMC);
+
+        #endregion
+
         #region Win32 Structures
 
         [StructLayout(LayoutKind.Sequential)]
@@ -104,6 +139,18 @@ namespace FloatWebPlayer.Helpers
             public uint flags;
             public uint time;
             public IntPtr dwExtraInfo;
+        }
+
+        /// <summary>
+        /// 鼠标光标信息结构体
+        /// </summary>
+        [StructLayout(LayoutKind.Sequential)]
+        public struct CURSORINFO
+        {
+            public int cbSize;
+            public int flags;
+            public IntPtr hCursor;
+            public POINT ptScreenPos;
         }
 
         #endregion
@@ -145,6 +192,9 @@ namespace FloatWebPlayer.Helpers
 
         // 虚拟键码
         public const int VK_LBUTTON = 0x01;
+
+        // 光标信息标志
+        public const int CURSOR_SHOWING = 0x00000001;
 
         #endregion
 
@@ -464,6 +514,25 @@ namespace FloatWebPlayer.Helpers
             return (GetAsyncKeyState(vKey) & 0x8000) != 0;
         }
 
+        /// <summary>
+        /// 检查系统鼠标光标是否可见
+        /// 用于检测游戏是否隐藏了鼠标（如 FPS 模式）
+        /// </summary>
+        /// <returns>鼠标是否可见</returns>
+        public static bool IsCursorVisible()
+        {
+            var cursorInfo = new CURSORINFO();
+            cursorInfo.cbSize = Marshal.SizeOf(typeof(CURSORINFO));
+            
+            if (GetCursorInfo(ref cursorInfo))
+            {
+                return (cursorInfo.flags & CURSOR_SHOWING) != 0;
+            }
+            
+            // 如果获取失败，默认返回 true（假设可见）
+            return true;
+        }
+
         #endregion
 
         #region Window Style Methods
@@ -702,6 +771,52 @@ namespace FloatWebPlayer.Helpers
                 modifiers |= Models.ModifierKeys.Shift;
 
             return modifiers;
+        }
+
+        #endregion
+
+        #region IME Methods
+
+        /// <summary>
+        /// 获取窗口的 IME 上下文
+        /// </summary>
+        /// <param name="hwnd">窗口句柄</param>
+        /// <returns>IME 上下文句柄，失败返回 IntPtr.Zero</returns>
+        public static IntPtr GetImeContext(IntPtr hwnd)
+        {
+            return ImmGetContext(hwnd);
+        }
+
+        /// <summary>
+        /// 释放 IME 上下文
+        /// </summary>
+        /// <param name="hwnd">窗口句柄</param>
+        /// <param name="hIMC">IME 上下文句柄</param>
+        /// <returns>是否成功</returns>
+        public static bool ReleaseImeContext(IntPtr hwnd, IntPtr hIMC)
+        {
+            return ImmReleaseContext(hwnd, hIMC);
+        }
+
+        /// <summary>
+        /// 设置 IME 开启/关闭状态
+        /// </summary>
+        /// <param name="hIMC">IME 上下文句柄</param>
+        /// <param name="open">true 开启，false 关闭（切换到英文）</param>
+        /// <returns>是否成功</returns>
+        public static bool SetImeOpenStatus(IntPtr hIMC, bool open)
+        {
+            return ImmSetOpenStatus(hIMC, open);
+        }
+
+        /// <summary>
+        /// 获取 IME 开启/关闭状态
+        /// </summary>
+        /// <param name="hIMC">IME 上下文句柄</param>
+        /// <returns>true 表示 IME 开启（中文模式），false 表示关闭（英文模式）</returns>
+        public static bool GetImeOpenStatus(IntPtr hIMC)
+        {
+            return ImmGetOpenStatus(hIMC);
         }
 
         #endregion

@@ -1,5 +1,4 @@
 using System;
-using System.Diagnostics;
 
 namespace FloatWebPlayer.Plugins
 {
@@ -47,7 +46,7 @@ namespace FloatWebPlayer.Plugins
         public void Log(object message)
         {
             var text = message?.ToString() ?? "null";
-            Debug.WriteLine($"[Plugin:{_context.PluginId}] {text}");
+            Services.LogService.Instance.Info($"Plugin:{_context.PluginId}", text);
         }
 
         /// <summary>
@@ -57,7 +56,7 @@ namespace FloatWebPlayer.Plugins
         public void Warn(object message)
         {
             var text = message?.ToString() ?? "null";
-            Debug.WriteLine($"[Plugin:{_context.PluginId}] [WARN] {text}");
+            Services.LogService.Instance.Warn($"Plugin:{_context.PluginId}", text);
         }
 
         /// <summary>
@@ -67,7 +66,7 @@ namespace FloatWebPlayer.Plugins
         public void Error(object message)
         {
             var text = message?.ToString() ?? "null";
-            Debug.WriteLine($"[Plugin:{_context.PluginId}] [ERROR] {text}");
+            Services.LogService.Instance.Error($"Plugin:{_context.PluginId}", text);
         }
 
         #endregion

@@ -60,6 +60,11 @@ namespace FloatWebPlayer.Services
         public List<GameProfile> Profiles { get; } = new();
 
         /// <summary>
+        /// 已安装的 Profile 只读列表
+        /// </summary>
+        public IReadOnlyList<GameProfile> InstalledProfiles => Profiles.AsReadOnly();
+
+        /// <summary>
         /// 数据根目录
         /// </summary>
         public string DataDirectory { get; }
@@ -99,7 +104,14 @@ namespace FloatWebPlayer.Services
             if (profile == null)
                 return false;
 
+            // 卸载当前 Profile 的插件
+            PluginHost.Instance.UnloadAllPlugins();
+
             CurrentProfile = profile;
+            
+            // 加载新 Profile 的插件
+            PluginHost.Instance.LoadPluginsForProfile(profileId);
+            
             ProfileChanged?.Invoke(this, profile);
             return true;
         }
@@ -152,6 +164,72 @@ namespace FloatWebPlayer.Services
             };
             var json = JsonSerializer.Serialize(profile, options);
             File.WriteAllText(profilePath, json);
+        }
+
+        /// <summary>
+        /// 取消订阅 Profile（删除 Profile 目录）
+        /// </summary>
+        /// <param name="profileId">Profile ID</param>
+        /// <returns>操作结果</returns>
+        public UnsubscribeResult UnsubscribeProfile(string profileId)
+        {
+            if (string.IsNullOrWhiteSpace(profileId))
+            {
+                return UnsubscribeResult.Failed("Profile ID 不能为空");
+            }
+
+            // 不允许删除默认 Profile
+            if (profileId.Equals("default", StringComparison.OrdinalIgnoreCase))
+            {
+                return UnsubscribeResult.Failed("不能删除默认 Profile");
+            }
+
+            // 查找 Profile
+            var profile = GetProfileById(profileId);
+            if (profile == null)
+            {
+                // Profile 不存在，静默成功
+                return UnsubscribeResult.Succeeded();
+            }
+
+            var profileDir = GetProfileDirectory(profileId);
+
+            try
+            {
+                // 如果是当前 Profile，先切换到默认 Profile
+                if (CurrentProfile.Id.Equals(profileId, StringComparison.OrdinalIgnoreCase))
+                {
+                    SwitchProfile("default");
+                }
+                else
+                {
+                    // 卸载该 Profile 的插件（如果有加载的话）
+                    // 注意：由于我们已经切换了 Profile，这里不需要额外卸载
+                }
+
+                // 从列表中移除
+                Profiles.RemoveAll(p => p.Id.Equals(profileId, StringComparison.OrdinalIgnoreCase));
+
+                // 删除 Profile 目录
+                if (Directory.Exists(profileDir))
+                {
+                    Directory.Delete(profileDir, recursive: true);
+                }
+
+                return UnsubscribeResult.Succeeded();
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return UnsubscribeResult.Failed($"删除 Profile 目录失败：权限不足。{ex.Message}");
+            }
+            catch (IOException ex)
+            {
+                return UnsubscribeResult.Failed($"删除 Profile 目录失败：文件被占用。{ex.Message}");
+            }
+            catch (Exception ex)
+            {
+                return UnsubscribeResult.Failed($"取消订阅失败：{ex.Message}");
+            }
         }
 
         /// <summary>

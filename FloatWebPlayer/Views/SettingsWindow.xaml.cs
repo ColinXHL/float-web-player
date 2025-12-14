@@ -23,6 +23,7 @@ namespace FloatWebPlayer.Views
         private TextBox? _currentHotkeyTextBox;
         private readonly Dictionary<TextBox, uint> _hotkeyValues = new();
         private readonly Dictionary<TextBox, Models.ModifierKeys> _hotkeyModifiers = new();
+        private ImeHelper.ImeState _savedImeState;
 
         #endregion
 
@@ -65,7 +66,7 @@ namespace FloatWebPlayer.Views
             LoadHotkey(HotkeyToggleClickThrough, _config.HotkeyToggleClickThrough, _config.HotkeyToggleClickThroughMod);
 
             // Profile
-            CurrentProfileText.Text = $"{ProfileManager.Instance.CurrentProfile.Icon} {ProfileManager.Instance.CurrentProfile.Name}";
+            LoadProfileList();
         }
 
         /// <summary>
@@ -205,6 +206,9 @@ namespace FloatWebPlayer.Views
             {
                 _currentHotkeyTextBox = textBox;
                 textBox.Text = "按下新快捷键...";
+                
+                // 切换到英文输入模式（需求 2.1）
+                _savedImeState = ImeHelper.SwitchToEnglish(this);
             }
         }
 
@@ -219,6 +223,9 @@ namespace FloatWebPlayer.Views
                 textBox.Text = Win32Helper.GetHotkeyDisplayName(vkCode, modifiers);
             }
             _currentHotkeyTextBox = null;
+            
+            // 恢复之前的输入法状态（需求 2.2, 2.3）
+            ImeHelper.RestoreImeState(_savedImeState);
         }
 
         /// <summary>
@@ -277,6 +284,119 @@ namespace FloatWebPlayer.Views
             SaveSettingsToConfig();
             ConfigService.Instance.UpdateConfig(_config);
             CloseWithAnimation();
+        }
+
+        /// <summary>
+        /// 加载 Profile 列表到 ComboBox
+        /// </summary>
+        private void LoadProfileList()
+        {
+            var profiles = ProfileManager.Instance.InstalledProfiles;
+            ProfileComboBox.ItemsSource = profiles;
+            
+            // 选中当前 Profile
+            var currentProfile = ProfileManager.Instance.CurrentProfile;
+            for (int i = 0; i < profiles.Count; i++)
+            {
+                if (profiles[i].Id.Equals(currentProfile.Id, StringComparison.OrdinalIgnoreCase))
+                {
+                    ProfileComboBox.SelectedIndex = i;
+                    break;
+                }
+            }
+            
+            // 更新取消订阅按钮状态
+            UpdateUnsubscribeButtonState();
+        }
+
+        /// <summary>
+        /// 更新取消订阅按钮状态
+        /// </summary>
+        private void UpdateUnsubscribeButtonState()
+        {
+            if (ProfileComboBox.SelectedItem is GameProfile profile)
+            {
+                // 默认 Profile 不能取消订阅
+                BtnUnsubscribeProfile.IsEnabled = !profile.Id.Equals("default", StringComparison.OrdinalIgnoreCase);
+            }
+        }
+
+        /// <summary>
+        /// Profile 选择变化
+        /// </summary>
+        private void ProfileComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (_isInitializing) return;
+            
+            if (ProfileComboBox.SelectedItem is GameProfile selectedProfile)
+            {
+                var currentProfile = ProfileManager.Instance.CurrentProfile;
+                
+                // 如果选择了不同的 Profile，切换
+                if (!selectedProfile.Id.Equals(currentProfile.Id, StringComparison.OrdinalIgnoreCase))
+                {
+                    ProfileManager.Instance.SwitchProfile(selectedProfile.Id);
+                    
+                    // 刷新插件设置页面
+                    PluginSettingsPage?.RefreshAll();
+                    
+                    Debug.WriteLine($"[Settings] 已切换到 Profile: {selectedProfile.Name}");
+                }
+                
+                // 更新取消订阅按钮状态
+                UpdateUnsubscribeButtonState();
+            }
+        }
+
+        /// <summary>
+        /// 取消订阅 Profile 按钮点击
+        /// </summary>
+        private void BtnUnsubscribeProfile_Click(object sender, RoutedEventArgs e)
+        {
+            if (ProfileComboBox.SelectedItem is not GameProfile selectedProfile)
+                return;
+            
+            // 不能删除默认 Profile
+            if (selectedProfile.Id.Equals("default", StringComparison.OrdinalIgnoreCase))
+            {
+                MessageBox.Show("不能取消订阅默认 Profile。", "提示", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+            
+            // 显示确认对话框
+            var result = MessageBox.Show(
+                $"确定要取消订阅 Profile \"{selectedProfile.Name}\" 吗？\n\n此操作将删除该 Profile 及其所有插件，无法撤销。",
+                "确认取消订阅",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Warning);
+            
+            if (result != MessageBoxResult.Yes)
+                return;
+            
+            // 调用 ProfileManager.UnsubscribeProfile
+            var unsubscribeResult = ProfileManager.Instance.UnsubscribeProfile(selectedProfile.Id);
+            
+            if (unsubscribeResult.Success)
+            {
+                Debug.WriteLine($"[Settings] Profile {selectedProfile.Id} 已取消订阅");
+                
+                // 刷新 Profile 列表
+                _isInitializing = true;
+                LoadProfileList();
+                _isInitializing = false;
+                
+                // 刷新插件设置页面
+                PluginSettingsPage?.RefreshAll();
+            }
+            else
+            {
+                MessageBox.Show(
+                    unsubscribeResult.ErrorMessage ?? "取消订阅失败",
+                    "错误",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+                Debug.WriteLine($"[Settings] 取消订阅 Profile 失败: {unsubscribeResult.ErrorMessage}");
+            }
         }
 
         #endregion

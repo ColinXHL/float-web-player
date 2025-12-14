@@ -1,0 +1,187 @@
+<UserControl x:Class="FloatWebPlayer.Views.PluginSettingsPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Background="Transparent"
+             Cursor="Arrow">
+    
+    <UserControl.Resources>
+        <!-- 分组标题样式 -->
+        <Style x:Key="GroupHeaderStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="#0078D4"/>
+            <Setter Property="Margin" Value="0,16,0,8"/>
+        </Style>
+
+        <!-- 深色主题 ToggleButton 开关样式 -->
+        <Style x:Key="ToggleSwitchStyle" TargetType="ToggleButton">
+            <Setter Property="Width" Value="44"/>
+            <Setter Property="Height" Value="22"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ToggleButton">
+                        <Grid>
+                            <Border x:Name="track" Background="#555" CornerRadius="11" />
+                            <Border x:Name="thumb" Width="18" Height="18" CornerRadius="9" 
+                                    Background="White" HorizontalAlignment="Left" Margin="2,0,0,0"/>
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="track" Property="Background" Value="#0078D4"/>
+                                <Setter TargetName="thumb" Property="Margin" Value="24,0,0,0"/>
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Cursor" Value="Hand"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- 按钮样式 -->
+        <Style x:Key="ActionButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="#333"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="12,6"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}"
+                                CornerRadius="4"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" Value="#444"/>
+                                <Setter Property="Cursor" Value="Hand"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter Property="Background" Value="#555"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Background" Value="#2A2A2A"/>
+                                <Setter Property="Foreground" Value="#666"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- 危险按钮样式（红色警告色调） -->
+        <Style x:Key="DangerButtonStyle" TargetType="Button" BasedOn="{StaticResource ActionButtonStyle}">
+            <Setter Property="Background" Value="#5C2020"/>
+            <Setter Property="Foreground" Value="#F87171"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#7F1D1D"/>
+                </Trigger>
+                <Trigger Property="IsPressed" Value="True">
+                    <Setter Property="Background" Value="#991B1B"/>
+                </Trigger>
+                <Trigger Property="IsEnabled" Value="False">
+                    <Setter Property="Background" Value="#3A1A1A"/>
+                    <Setter Property="Foreground" Value="#666"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- 权限标签样式 -->
+        <Style x:Key="PermissionTagStyle" TargetType="Border">
+            <Setter Property="Background" Value="#333"/>
+            <Setter Property="CornerRadius" Value="3"/>
+            <Setter Property="Padding" Value="6,2"/>
+            <Setter Property="Margin" Value="0,0,4,0"/>
+        </Style>
+
+        <!-- 插件卡片样式 -->
+        <Style x:Key="PluginCardStyle" TargetType="Border">
+            <Setter Property="Background" Value="#2A2A2A"/>
+            <Setter Property="CornerRadius" Value="6"/>
+            <Setter Property="Padding" Value="12"/>
+            <Setter Property="Margin" Value="0,0,0,8"/>
+        </Style>
+    </UserControl.Resources>
+
+    <StackPanel Margin="0">
+        <!-- 插件列表 -->
+        <TextBlock Text="已安装插件" Style="{StaticResource GroupHeaderStyle}" Margin="0,0,0,8"/>
+        
+        <!-- 无插件提示 -->
+        <TextBlock x:Name="NoPluginsText" Text="当前 Profile 没有安装插件" 
+                   Foreground="#666" FontSize="12" Margin="0,0,0,8"/>
+        
+        <!-- 插件列表 -->
+        <ItemsControl x:Name="PluginList">
+            <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                    <Border Style="{StaticResource PluginCardStyle}">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            
+                            <!-- 插件名称和版本 -->
+                            <StackPanel Grid.Row="0" Grid.Column="0" Orientation="Horizontal">
+                                <TextBlock Text="{Binding Name}" Foreground="White" FontSize="14" FontWeight="SemiBold"/>
+                                <TextBlock Text="{Binding Version, StringFormat=' v{0}'}" Foreground="#888" FontSize="12" 
+                                           VerticalAlignment="Center" Margin="4,0,0,0"/>
+                            </StackPanel>
+                            
+                            <!-- 启用开关和取消订阅按钮 -->
+                            <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                <Button Content="取消订阅" Style="{StaticResource DangerButtonStyle}"
+                                        Click="BtnUnsubscribe_Click" Tag="{Binding Id}"
+                                        Margin="0,0,12,0" Padding="8,4"/>
+                                <ToggleButton Style="{StaticResource ToggleSwitchStyle}"
+                                              IsChecked="{Binding IsEnabled, Mode=TwoWay}"
+                                              Checked="PluginToggle_Changed" Unchecked="PluginToggle_Changed"
+                                              Tag="{Binding Id}"/>
+                            </StackPanel>
+                            
+                            <!-- 描述 -->
+                            <TextBlock Grid.Row="1" Grid.ColumnSpan="2" Text="{Binding Description}" 
+                                       Foreground="#AAA" FontSize="12" Margin="0,4,0,0"
+                                       TextWrapping="Wrap" Visibility="{Binding HasDescription}"/>
+                            
+                            <!-- 权限标签 -->
+                            <ItemsControl Grid.Row="2" Grid.ColumnSpan="2" ItemsSource="{Binding Permissions}" 
+                                          Margin="0,8,0,0" Visibility="{Binding HasPermissions}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <WrapPanel/>
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Style="{StaticResource PermissionTagStyle}">
+                                            <TextBlock Text="{Binding}" Foreground="#AAA" FontSize="10"/>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                            
+                            <!-- 操作按钮 -->
+                            <StackPanel Grid.Row="3" Grid.ColumnSpan="2" Orientation="Horizontal" Margin="0,8,0,0"
+                                        Visibility="{Binding HasOverlayPermission}">
+                                <Button Content="📍 调整覆盖层位置" Style="{StaticResource ActionButtonStyle}"
+                                        Click="BtnEditOverlay_Click" Tag="{Binding Id}"/>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+    </StackPanel>
+</UserControl>
