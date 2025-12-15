@@ -1,6 +1,6 @@
 using System;
 using System.IO;
-using System.Text.Json;
+using FloatWebPlayer.Helpers;
 using FloatWebPlayer.Models;
 
 namespace FloatWebPlayer.Services
@@ -38,7 +38,6 @@ namespace FloatWebPlayer.Services
 
         #region Fields
 
-        private readonly JsonSerializerOptions _jsonOptions;
         private WindowState? _cachedState;
 
         #endregion
@@ -47,12 +46,6 @@ namespace FloatWebPlayer.Services
 
         private WindowStateService()
         {
-            _jsonOptions = new JsonSerializerOptions
-            {
-                WriteIndented = true,
-                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                PropertyNameCaseInsensitive = true
-            };
         }
 
         #endregion
@@ -68,17 +61,14 @@ namespace FloatWebPlayer.Services
                 return _cachedState;
 
             var filePath = GetFilePath();
-            if (File.Exists(filePath))
+            try
             {
-                try
-                {
-                    var json = File.ReadAllText(filePath);
-                    _cachedState = JsonSerializer.Deserialize<WindowState>(json, _jsonOptions);
-                }
-                catch
-                {
-                    _cachedState = null;
-                }
+                _cachedState = JsonHelper.LoadFromFile<WindowState>(filePath);
+            }
+            catch (Exception ex)
+            {
+                LogService.Instance.Warn("WindowStateService", $"加载窗口状态失败 [{filePath}]: {ex.Message}");
+                _cachedState = null;
             }
 
             // 返回默认状态
@@ -97,20 +87,14 @@ namespace FloatWebPlayer.Services
         {
             _cachedState = state;
 
+            var filePath = GetFilePath();
             try
             {
-                var filePath = GetFilePath();
-                var dir = Path.GetDirectoryName(filePath);
-                if (!string.IsNullOrEmpty(dir))
-                {
-                    Directory.CreateDirectory(dir);
-                }
-                var json = JsonSerializer.Serialize(state, _jsonOptions);
-                File.WriteAllText(filePath, json);
+                JsonHelper.SaveToFile(filePath, state);
             }
-            catch
+            catch (Exception ex)
             {
-                // 忽略保存错误
+                LogService.Instance.Debug("WindowStateService", $"保存窗口状态失败 [{filePath}]: {ex.Message}");
             }
         }
 
@@ -130,7 +114,7 @@ namespace FloatWebPlayer.Services
 
         private string GetFilePath()
         {
-            return Path.Combine(ProfileManager.Instance.GetCurrentProfileDirectory(), "window_state.json");
+            return Path.Combine(ProfileManager.Instance.GetCurrentProfileDirectory(), AppConstants.WindowStateFileName);
         }
 
         private WindowState CreateDefaultState()

@@ -1,6 +1,4 @@
 using System;
-using System.IO;
-using System.Text.Json;
 using FloatWebPlayer.Helpers;
 using FloatWebPlayer.Models;
 
@@ -82,24 +80,15 @@ namespace FloatWebPlayer.Services
         {
             try
             {
-                if (File.Exists(ConfigFilePath))
+                var config = JsonHelper.LoadFromFile<AppConfig>(ConfigFilePath);
+                if (config != null)
                 {
-                    var json = File.ReadAllText(ConfigFilePath);
-                    var options = new JsonSerializerOptions
-                    {
-                        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                        PropertyNameCaseInsensitive = true
-                    };
-                    var config = JsonSerializer.Deserialize<AppConfig>(json, options);
-                    if (config != null)
-                    {
-                        return config;
-                    }
+                    return config;
                 }
             }
-            catch
+            catch (Exception ex)
             {
-                // 加载失败，使用默认配置
+                LogService.Instance.Warn("ConfigService", $"加载配置失败，将使用默认配置: {ex.Message}");
             }
 
             return new AppConfig();
@@ -112,17 +101,11 @@ namespace FloatWebPlayer.Services
         {
             try
             {
-                var options = new JsonSerializerOptions
-                {
-                    WriteIndented = true,
-                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-                };
-                var json = JsonSerializer.Serialize(Config, options);
-                File.WriteAllText(ConfigFilePath, json);
+                JsonHelper.SaveToFile(ConfigFilePath, Config);
             }
-            catch
+            catch (Exception ex)
             {
-                // 保存失败，忽略
+                LogService.Instance.Debug("ConfigService", $"保存配置失败: {ex.Message}");
             }
         }
 

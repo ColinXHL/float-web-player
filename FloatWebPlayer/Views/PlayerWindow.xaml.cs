@@ -47,44 +47,14 @@ namespace FloatWebPlayer.Views
         private Rect _restoreBounds;
 
         /// <summary>
-        /// 是否处于鼠标穿透模式
-        /// </summary>
-        private bool _isClickThrough;
-
-        /// <summary>
-        /// 穿透模式前保存的透明度
-        /// </summary>
-        private double _opacityBeforeClickThrough = 1.0;
-
-        /// <summary>
-        /// 当前窗口透明度（使用 Win32 API 控制）
-        /// </summary>
-        private double _windowOpacity = 1.0;
-
-        /// <summary>
-        /// 穿透模式下的鼠标位置检测定时器
-        /// </summary>
-        private DispatcherTimer? _clickThroughTimer;
-
-        /// <summary>
-        /// 记录穿透模式下鼠标是否在窗口内
-        /// </summary>
-        private bool _isCursorInWindowWhileClickThrough;
-
-        /// <summary>
         /// 当前配置引用
         /// </summary>
         private AppConfig _config;
 
         /// <summary>
-        /// 拖动开始时鼠标相对窗口左上角的偏移（物理像素）
+        /// 窗口行为辅助类（边缘吸附、透明度控制）
         /// </summary>
-        private Win32Helper.POINT _dragOffset;
-
-        /// <summary>
-        /// 是否正在拖动窗口
-        /// </summary>
-        private bool _isDragging;
+        private WindowBehaviorHelper _windowBehavior = null!;
 
         /// <summary>
         /// 鼠标检测前保存的透明度
@@ -115,6 +85,7 @@ namespace FloatWebPlayer.Views
             InitializeComponent();
             _config = ConfigService.Instance.Config;
             InitializeWindowPosition();
+            InitializeWindowBehavior();
             InitializeWebView();
             
             // 订阅 Profile 切换事件
@@ -130,7 +101,7 @@ namespace FloatWebPlayer.Views
                 SaveWindowState();
                 
                 // 停止穿透模式定时器
-                StopClickThroughTimer();
+                _windowBehavior.StopClickThroughTimer();
                 
                 // 停止鼠标检测
                 StopCursorDetection();
@@ -179,15 +150,21 @@ namespace FloatWebPlayer.Views
             Width = Math.Max(state.Width, AppConstants.MinWindowWidth);
             Height = Math.Max(state.Height, AppConstants.MinWindowHeight);
             
-            // 应用透明度
-            _windowOpacity = state.Opacity;
-            
             // 确保窗口在屏幕范围内
             var workArea = SystemParameters.WorkArea;
             if (Left < workArea.Left) Left = workArea.Left;
             if (Top < workArea.Top) Top = workArea.Top;
             if (Left + Width > workArea.Right) Left = workArea.Right - Width;
             if (Top + Height > workArea.Bottom) Top = workArea.Bottom - Height;
+        }
+
+        /// <summary>
+        /// 初始化窗口行为辅助类
+        /// </summary>
+        private void InitializeWindowBehavior()
+        {
+            var state = WindowStateService.Instance.Load();
+            _windowBehavior = new WindowBehaviorHelper(this, _config, state.Opacity);
         }
 
         /// <summary>
@@ -200,7 +177,7 @@ namespace FloatWebPlayer.Views
             state.Top = Top;
             state.Width = Width;
             state.Height = Height;
-            state.Opacity = _windowOpacity;
+            state.Opacity = _windowBehavior.WindowOpacity;
             state.IsMaximized = _isMaximized;
             state.LastUrl = WebView.CoreWebView2?.Source ?? AppConstants.DefaultHomeUrl;
             state.IsMuted = WebView.CoreWebView2?.IsMuted ?? false;
@@ -278,10 +255,7 @@ namespace FloatWebPlayer.Views
                 WebView.CoreWebView2.IsMuted = state.IsMuted;
                 
                 // 应用透明度
-                if (_windowOpacity < AppConstants.MaxOpacity)
-                {
-                    Win32Helper.SetWindowOpacity(this, _windowOpacity);
-                }
+                _windowBehavior.ApplyOpacity();
                 
                 // 导航到上次访问的页面（如果有）
                 var urlToLoad = !string.IsNullOrWhiteSpace(state.LastUrl) 
@@ -600,18 +574,7 @@ namespace FloatWebPlayer.Views
         /// <returns>当前透明度</returns>
         public double DecreaseOpacity()
         {
-            if (_isClickThrough)
-            {
-                // 穿透模式下：修改保存的透明度设置
-                _opacityBeforeClickThrough = Math.Max(AppConstants.MinOpacity, 
-                    _opacityBeforeClickThrough - AppConstants.OpacityStep);
-                return _opacityBeforeClickThrough;
-            }
-
-            // 非穿透模式：直接修改当前透明度
-            _windowOpacity = Math.Max(AppConstants.MinOpacity, _windowOpacity - AppConstants.OpacityStep);
-            Win32Helper.SetWindowOpacity(this, _windowOpacity);
-            return _windowOpacity;
+            return _windowBehavior.DecreaseOpacity();
         }
 
         /// <summary>
@@ -620,18 +583,7 @@ namespace FloatWebPlayer.Views
         /// <returns>当前透明度</returns>
         public double IncreaseOpacity()
         {
-            if (_isClickThrough)
-            {
-                // 穿透模式下：修改保存的透明度设置
-                _opacityBeforeClickThrough = Math.Min(AppConstants.MaxOpacity, 
-                    _opacityBeforeClickThrough + AppConstants.OpacityStep);
-                return _opacityBeforeClickThrough;
-            }
-
-            // 非穿透模式：直接修改当前透明度
-            _windowOpacity = Math.Min(AppConstants.MaxOpacity, _windowOpacity + AppConstants.OpacityStep);
-            Win32Helper.SetWindowOpacity(this, _windowOpacity);
-            return _windowOpacity;
+            return _windowBehavior.IncreaseOpacity();
         }
 
         /// <summary>
@@ -640,105 +592,19 @@ namespace FloatWebPlayer.Views
         /// <returns>是否处于穿透模式</returns>
         public bool ToggleClickThrough()
         {
-            _isClickThrough = !_isClickThrough;
-
-            if (_isClickThrough)
-            {
-                // 保存当前透明度
-                _opacityBeforeClickThrough = _windowOpacity;
-                
-                // 启动定时器检测鼠标位置
-                StartClickThroughTimer();
-            }
-            else
-            {
-                // 停止定时器
-                StopClickThroughTimer();
-                
-                // 恢复之前的透明度
-                _windowOpacity = _opacityBeforeClickThrough;
-                Win32Helper.SetWindowOpacity(this, _windowOpacity);
-            }
-
-            Win32Helper.SetClickThrough(this, _isClickThrough);
-            return _isClickThrough;
-        }
-
-        /// <summary>
-        /// 启动穿透模式鼠标检测定时器
-        /// </summary>
-        private void StartClickThroughTimer()
-        {
-            _clickThroughTimer = new DispatcherTimer
-            {
-                Interval = TimeSpan.FromMilliseconds(50)
-            };
-            _clickThroughTimer.Tick += ClickThroughTimer_Tick;
-            _clickThroughTimer.Start();
-            
-            // 立即检测一次
-            UpdateClickThroughOpacity();
-        }
-
-        /// <summary>
-        /// 停止穿透模式鼠标检测定时器
-        /// </summary>
-        private void StopClickThroughTimer()
-        {
-            if (_clickThroughTimer != null)
-            {
-                _clickThroughTimer.Stop();
-                _clickThroughTimer.Tick -= ClickThroughTimer_Tick;
-                _clickThroughTimer = null;
-            }
-            _isCursorInWindowWhileClickThrough = false;
-        }
-
-        /// <summary>
-        /// 定时器回调：检测鼠标位置并更新透明度
-        /// </summary>
-        private void ClickThroughTimer_Tick(object? sender, EventArgs e)
-        {
-            UpdateClickThroughOpacity();
-        }
-
-        /// <summary>
-        /// 更新穿透模式下的透明度
-        /// </summary>
-        private void UpdateClickThroughOpacity()
-        {
-            bool cursorInWindow = Win32Helper.IsCursorInWindow(this);
-            
-            // 只有状态变化时才更新透明度
-            if (cursorInWindow != _isCursorInWindowWhileClickThrough)
-            {
-                _isCursorInWindowWhileClickThrough = cursorInWindow;
-                
-                if (cursorInWindow)
-                {
-                    // 鼠标进入窗口，降至最低透明度
-                    Win32Helper.SetWindowOpacity(this, AppConstants.MinOpacity);
-                }
-                else
-                {
-                    // 鼠标离开窗口，恢复正常透明度
-                    Win32Helper.SetWindowOpacity(this, _opacityBeforeClickThrough);
-                }
-            }
+            return _windowBehavior.ToggleClickThrough();
         }
 
         /// <summary>
         /// 获取当前透明度百分比
         /// 穿透模式下返回保存的透明度设置，非穿透模式下返回当前窗口透明度
         /// </summary>
-        public int OpacityPercent => _isClickThrough 
-            ? (int)(_opacityBeforeClickThrough * 100)
-            : (int)(_windowOpacity * 100);
+        public int OpacityPercent => _windowBehavior.OpacityPercent;
 
         /// <summary>
         /// 是否处于鼠标穿透模式
         /// </summary>
-        public bool IsClickThrough => _isClickThrough;
+        public bool IsClickThrough => _windowBehavior.IsClickThrough;
 
         /// <summary>
         /// 更新配置
@@ -747,6 +613,7 @@ namespace FloatWebPlayer.Views
         public void UpdateConfig(AppConfig config)
         {
             _config = config;
+            _windowBehavior.UpdateConfig(config);
         }
 
         #endregion
@@ -771,139 +638,27 @@ namespace FloatWebPlayer.Views
             switch (msg)
             {
                 case Win32Helper.WM_ENTERSIZEMOVE:
-                    // 开始拖动：记录鼠标相对窗口的偏移
-                    if (Win32Helper.GetCursorPosition(out var cursorPos) &&
-                        Win32Helper.GetWindowRectangle(hwnd, out var windowRect))
-                    {
-                        _dragOffset.X = cursorPos.X - windowRect.Left;
-                        _dragOffset.Y = cursorPos.Y - windowRect.Top;
-                        _isDragging = true;
-                    }
+                    // 开始拖动：委托给 WindowBehaviorHelper
+                    _windowBehavior.HandleEnterSizeMove(hwnd);
                     break;
 
                 case Win32Helper.WM_EXITSIZEMOVE:
-                    // 结束拖动
-                    _isDragging = false;
+                    // 结束拖动：委托给 WindowBehaviorHelper
+                    _windowBehavior.HandleExitSizeMove();
                     break;
 
                 case Win32Helper.WM_MOVING:
-                    if (_isDragging && lParam != IntPtr.Zero)
-                    {
-                        HandleWindowMoving(hwnd, lParam);
-                    }
+                    // 窗口移动时的边缘吸附：委托给 WindowBehaviorHelper
+                    _windowBehavior.HandleWindowMoving(hwnd, lParam);
                     break;
 
                 case Win32Helper.WM_SIZING:
-                    if (lParam != IntPtr.Zero)
-                    {
-                        HandleWindowSizing(wParam, lParam);
-                    }
+                    // 窗口调整大小时的边缘吸附：委托给 WindowBehaviorHelper
+                    _windowBehavior.HandleWindowSizing(wParam, lParam);
                     break;
             }
 
             return IntPtr.Zero;
-        }
-
-        /// <summary>
-        /// 处理窗口移动时的边缘吸附
-        /// </summary>
-        private void HandleWindowMoving(IntPtr hwnd, IntPtr lParam)
-        {
-            // 获取当前鼠标位置
-            if (!Win32Helper.GetCursorPosition(out var cursorPos))
-                return;
-
-            // 获取 DPI 缩放比例
-            var source = PresentationSource.FromVisual(this);
-            double dpiScale = source?.CompositionTarget?.TransformToDevice.M11 ?? 1.0;
-
-            // 计算物理像素阈值（使用配置值）
-            int snapThreshold = _config.EnableEdgeSnap ? _config.SnapThreshold : 0;
-            int threshold = (int)(snapThreshold * dpiScale);
-
-            // 获取工作区（物理像素）- 排除任务栏
-            var workAreaWpf = SystemParameters.WorkArea;
-            var workArea = Win32Helper.ToPhysicalRect(workAreaWpf, dpiScale);
-
-            // 获取屏幕完整区域（物理像素）- 包括任务栏
-            var screenRect = new Win32Helper.RECT
-            {
-                Left = 0,
-                Top = 0,
-                Right = (int)(SystemParameters.PrimaryScreenWidth * dpiScale),
-                Bottom = (int)(SystemParameters.PrimaryScreenHeight * dpiScale)
-            };
-
-            // 获取窗口当前大小
-            var rect = Marshal.PtrToStructure<Win32Helper.RECT>(lParam);
-            int width = rect.Right - rect.Left;
-            int height = rect.Bottom - rect.Top;
-
-            // 根据鼠标位置和偏移计算用户意图的窗口位置
-            int intendedLeft = cursorPos.X - _dragOffset.X;
-            int intendedTop = cursorPos.Y - _dragOffset.Y;
-
-            // 对意图位置进行吸附计算
-            int finalLeft = intendedLeft;
-            int finalTop = intendedTop;
-
-            // 左边缘吸附（工作区和屏幕边缘相同）
-            if (Math.Abs(intendedLeft - workArea.Left) <= threshold)
-            {
-                finalLeft = workArea.Left;
-            }
-            // 右边缘吸附（工作区和屏幕边缘相同）
-            else if (Math.Abs(intendedLeft + width - workArea.Right) <= threshold)
-            {
-                finalLeft = workArea.Right - width;
-            }
-
-            // 上边缘吸附（工作区）
-            if (Math.Abs(intendedTop - workArea.Top) <= threshold)
-            {
-                finalTop = workArea.Top;
-            }
-            // 下边缘吸附 - 优先工作区（任务栏上方）
-            else if (Math.Abs(intendedTop + height - workArea.Bottom) <= threshold)
-            {
-                finalTop = workArea.Bottom - height;
-            }
-            // 下边缘吸附 - 屏幕真实底部
-            else if (Math.Abs(intendedTop + height - screenRect.Bottom) <= threshold)
-            {
-                finalTop = screenRect.Bottom - height;
-            }
-
-            // 更新窗口位置
-            rect.Left = finalLeft;
-            rect.Top = finalTop;
-            rect.Right = finalLeft + width;
-            rect.Bottom = finalTop + height;
-
-            Marshal.StructureToPtr(rect, lParam, false);
-        }
-
-        /// <summary>
-        /// 处理窗口调整大小时的边缘吸附
-        /// </summary>
-        private void HandleWindowSizing(IntPtr wParam, IntPtr lParam)
-        {
-            // 获取 DPI 缩放比例
-            var source = PresentationSource.FromVisual(this);
-            double dpiScale = source?.CompositionTarget?.TransformToDevice.M11 ?? 1.0;
-
-            // 计算物理像素阈值（使用配置值）
-            int snapThreshold = _config.EnableEdgeSnap ? _config.SnapThreshold : 0;
-            int threshold = (int)(snapThreshold * dpiScale);
-
-            // 获取工作区（物理像素）
-            var workAreaWpf = SystemParameters.WorkArea;
-            var workArea = Win32Helper.ToPhysicalRect(workAreaWpf, dpiScale);
-
-            int sizingEdge = wParam.ToInt32();
-            var rect = Marshal.PtrToStructure<Win32Helper.RECT>(lParam);
-            Win32Helper.SnapSizingEdge(ref rect, workArea, threshold, sizingEdge);
-            Marshal.StructureToPtr(rect, lParam, false);
         }
 
         /// <summary>
@@ -1082,8 +837,8 @@ namespace FloatWebPlayer.Views
             // 如果之前因鼠标检测降低了透明度，恢复
             if (_isOpacityReducedByCursorDetection)
             {
-                _windowOpacity = _opacityBeforeCursorDetection;
-                Win32Helper.SetWindowOpacity(this, _windowOpacity);
+                _windowBehavior.SetInitialOpacity(_opacityBeforeCursorDetection);
+                Win32Helper.SetWindowOpacity(this, _opacityBeforeCursorDetection);
                 _isOpacityReducedByCursorDetection = false;
             }
         }
@@ -1112,13 +867,13 @@ namespace FloatWebPlayer.Views
             Dispatcher.BeginInvoke(() =>
             {
                 // 如果处于穿透模式，不处理
-                if (_isClickThrough)
+                if (_windowBehavior.IsClickThrough)
                     return;
 
                 // 保存当前透明度并降低
                 if (!_isOpacityReducedByCursorDetection)
                 {
-                    _opacityBeforeCursorDetection = _windowOpacity;
+                    _opacityBeforeCursorDetection = _windowBehavior.WindowOpacity;
                     _isOpacityReducedByCursorDetection = true;
                 }
                 
@@ -1135,14 +890,14 @@ namespace FloatWebPlayer.Views
             Dispatcher.BeginInvoke(() =>
             {
                 // 如果处于穿透模式，不处理
-                if (_isClickThrough)
+                if (_windowBehavior.IsClickThrough)
                     return;
 
                 // 恢复之前的透明度
                 if (_isOpacityReducedByCursorDetection)
                 {
-                    _windowOpacity = _opacityBeforeCursorDetection;
-                    Win32Helper.SetWindowOpacity(this, _windowOpacity);
+                    _windowBehavior.SetInitialOpacity(_opacityBeforeCursorDetection);
+                    Win32Helper.SetWindowOpacity(this, _opacityBeforeCursorDetection);
                     _isOpacityReducedByCursorDetection = false;
                 }
             });

@@ -414,8 +414,38 @@
                 <TabItem Header="通用" Style="{StaticResource DarkTabItemStyle}">
                     <ScrollViewer Style="{StaticResource DarkScrollViewer}" VerticalScrollBarVisibility="Auto">
                         <StackPanel Margin="20,10,16,0">
+                            <!-- 配置 (Profile) -->
+                            <TextBlock Text="配置" Style="{StaticResource GroupHeaderStyle}" Margin="0,0,0,8"/>
+                            <Grid Margin="0,0,0,8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <ComboBox x:Name="ProfileComboBox" Grid.Column="0"
+                                          Style="{StaticResource DarkComboBoxStyle}"
+                                          ItemContainerStyle="{StaticResource DarkComboBoxItemStyle}"
+                                          SelectionChanged="ProfileComboBox_SelectionChanged">
+                                    <ComboBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Foreground="White">
+                                                <Run Text="{Binding Icon}"/>
+                                                <Run Text=" "/>
+                                                <Run Text="{Binding Name}"/>
+                                            </TextBlock>
+                                        </DataTemplate>
+                                    </ComboBox.ItemTemplate>
+                                </ComboBox>
+                                <Button x:Name="BtnUnsubscribeProfile" Grid.Column="1" Content="取消订阅" 
+                                        Style="{StaticResource ActionButtonStyle}"
+                                        Background="#5C2020" Foreground="#F87171"
+                                        Padding="8,6" Margin="8,0,0,0"
+                                        Click="BtnUnsubscribeProfile_Click"/>
+                            </Grid>
+                            <Button Content="📂 打开配置文件夹" Style="{StaticResource ActionButtonStyle}"
+                                    HorizontalAlignment="Left" Padding="14,8" Margin="0,0,0,0" Click="BtnOpenConfigFolder_Click"/>
+
                             <!-- 基础设置 -->
-                            <TextBlock Text="基础设置" Style="{StaticResource GroupHeaderStyle}" Margin="0,0,0,8"/>
+                            <TextBlock Text="基础设置" Style="{StaticResource GroupHeaderStyle}"/>
                             
                             <!-- 快进/倒退秒数 -->
                             <Grid Margin="0,0,0,12">
@@ -533,35 +563,6 @@
                                          PreviewKeyDown="Hotkey_PreviewKeyDown" GotFocus="Hotkey_GotFocus" LostFocus="Hotkey_LostFocus"/>
                             </Grid>
 
-                            <!-- Profile -->
-                            <TextBlock Text="Profile" Style="{StaticResource GroupHeaderStyle}"/>
-                            <Grid Margin="0,0,0,8">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
-                                <ComboBox x:Name="ProfileComboBox" Grid.Column="0"
-                                          Style="{StaticResource DarkComboBoxStyle}"
-                                          ItemContainerStyle="{StaticResource DarkComboBoxItemStyle}"
-                                          SelectionChanged="ProfileComboBox_SelectionChanged">
-                                    <ComboBox.ItemTemplate>
-                                        <DataTemplate>
-                                            <TextBlock Foreground="White">
-                                                <Run Text="{Binding Icon}"/>
-                                                <Run Text=" "/>
-                                                <Run Text="{Binding Name}"/>
-                                            </TextBlock>
-                                        </DataTemplate>
-                                    </ComboBox.ItemTemplate>
-                                </ComboBox>
-                                <Button x:Name="BtnUnsubscribeProfile" Grid.Column="1" Content="取消订阅" 
-                                        Style="{StaticResource ActionButtonStyle}"
-                                        Background="#5C2020" Foreground="#F87171"
-                                        Padding="8,6" Margin="8,0,0,0"
-                                        Click="BtnUnsubscribeProfile_Click"/>
-                            </Grid>
-                            <Button Content="📂 打开配置文件夹" Style="{StaticResource ActionButtonStyle}"
-                                    HorizontalAlignment="Left" Padding="14,8" Margin="0,0,0,10" Click="BtnOpenConfigFolder_Click"/>
                         </StackPanel>
                     </ScrollViewer>
                 </TabItem>
@@ -569,7 +570,7 @@
                 <!-- 插件设置选项卡 -->
                 <TabItem Header="插件" Style="{StaticResource DarkTabItemStyle}">
                     <ScrollViewer Style="{StaticResource DarkScrollViewer}" VerticalScrollBarVisibility="Auto">
-                        <local:PluginSettingsPage x:Name="PluginSettingsPage" Margin="20,0,16,10"/>
+                        <local:PluginSettingsPage x:Name="PluginSettingsPage" Margin="20,10,16,10"/>
                     </ScrollViewer>
                 </TabItem>
             </TabControl>

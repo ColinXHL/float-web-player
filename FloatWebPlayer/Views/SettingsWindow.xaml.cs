@@ -65,7 +65,7 @@ namespace FloatWebPlayer.Views
             LoadHotkey(HotkeyIncreaseOpacity, _config.HotkeyIncreaseOpacity, _config.HotkeyIncreaseOpacityMod);
             LoadHotkey(HotkeyToggleClickThrough, _config.HotkeyToggleClickThrough, _config.HotkeyToggleClickThroughMod);
 
-            // Profile
+            // 配置 (Profile)
             LoadProfileList();
         }
 
@@ -340,7 +340,7 @@ namespace FloatWebPlayer.Views
                     // 刷新插件设置页面
                     PluginSettingsPage?.RefreshAll();
                     
-                    Debug.WriteLine($"[Settings] 已切换到 Profile: {selectedProfile.Name}");
+                    Debug.WriteLine($"[Settings] 已切换到配置: {selectedProfile.Name}");
                 }
                 
                 // 更新取消订阅按钮状态
@@ -359,13 +359,13 @@ namespace FloatWebPlayer.Views
             // 不能删除默认 Profile
             if (selectedProfile.Id.Equals("default", StringComparison.OrdinalIgnoreCase))
             {
-                MessageBox.Show("不能取消订阅默认 Profile。", "提示", MessageBoxButton.OK, MessageBoxImage.Information);
+                MessageBox.Show("不能取消订阅默认配置。", "提示", MessageBoxButton.OK, MessageBoxImage.Information);
                 return;
             }
             
             // 显示确认对话框
             var result = MessageBox.Show(
-                $"确定要取消订阅 Profile \"{selectedProfile.Name}\" 吗？\n\n此操作将删除该 Profile 及其所有插件，无法撤销。",
+                $"确定要取消订阅配置 \"{selectedProfile.Name}\" 吗？\n\n此操作将删除该配置及其所有插件，无法撤销。",
                 "确认取消订阅",
                 MessageBoxButton.YesNo,
                 MessageBoxImage.Warning);
@@ -378,7 +378,7 @@ namespace FloatWebPlayer.Views
             
             if (unsubscribeResult.Success)
             {
-                Debug.WriteLine($"[Settings] Profile {selectedProfile.Id} 已取消订阅");
+                Debug.WriteLine($"[Settings] 配置 {selectedProfile.Id} 已取消订阅");
                 
                 // 刷新 Profile 列表
                 _isInitializing = true;
@@ -395,7 +395,7 @@ namespace FloatWebPlayer.Views
                     "错误",
                     MessageBoxButton.OK,
                     MessageBoxImage.Error);
-                Debug.WriteLine($"[Settings] 取消订阅 Profile 失败: {unsubscribeResult.ErrorMessage}");
+                Debug.WriteLine($"[Settings] 取消订阅配置失败: {unsubscribeResult.ErrorMessage}");
             }
         }
 

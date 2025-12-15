@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+
 namespace FloatWebPlayer.Models
 {
     /// <summary>
@@ -63,6 +65,49 @@ namespace FloatWebPlayer.Models
         /// 边缘吸附阈值（像素）
         /// </summary>
         public int SnapThreshold { get; set; } = AppConstants.SnapThreshold;
+
+        #endregion
+
+        #region Conversion Methods
+
+        /// <summary>
+        /// 将 AppConfig 转换为 HotkeyConfig
+        /// </summary>
+        /// <returns>包含所有快捷键绑定的 HotkeyConfig</returns>
+        public HotkeyConfig ToHotkeyConfig()
+        {
+            return new HotkeyConfig
+            {
+                ActiveProfileName = "Default",
+                AutoSwitchProfile = false,
+                Profiles = new List<HotkeyProfile>
+                {
+                    new HotkeyProfile
+                    {
+                        Name = "Default",
+                        ActivationProcesses = null,
+                        Bindings = CreateHotkeyBindings()
+                    }
+                }
+            };
+        }
+
+        /// <summary>
+        /// 创建快捷键绑定列表
+        /// </summary>
+        /// <returns>包含所有 6 个快捷键绑定的列表</returns>
+        private List<HotkeyBinding> CreateHotkeyBindings()
+        {
+            return new List<HotkeyBinding>
+            {
+                new HotkeyBinding { Key = HotkeySeekBackward, Modifiers = HotkeySeekBackwardMod, Action = "SeekBackward" },
+                new HotkeyBinding { Key = HotkeySeekForward, Modifiers = HotkeySeekForwardMod, Action = "SeekForward" },
+                new HotkeyBinding { Key = HotkeyTogglePlay, Modifiers = HotkeyTogglePlayMod, Action = "TogglePlay" },
+                new HotkeyBinding { Key = HotkeyDecreaseOpacity, Modifiers = HotkeyDecreaseOpacityMod, Action = "DecreaseOpacity" },
+                new HotkeyBinding { Key = HotkeyIncreaseOpacity, Modifiers = HotkeyIncreaseOpacityMod, Action = "IncreaseOpacity" },
+                new HotkeyBinding { Key = HotkeyToggleClickThrough, Modifiers = HotkeyToggleClickThroughMod, Action = "ToggleClickThrough" }
+            };
+        }
 
         #endregion
     }

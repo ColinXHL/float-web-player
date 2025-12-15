@@ -9,32 +9,6 @@ using FloatWebPlayer.Plugins;
 namespace FloatWebPlayer.Services
 {
     /// <summary>
-    /// 取消订阅操作结果
-    /// </summary>
-    public class UnsubscribeResult
-    {
-        /// <summary>
-        /// 操作是否成功
-        /// </summary>
-        public bool Success { get; set; }
-
-        /// <summary>
-        /// 错误消息（失败时）
-        /// </summary>
-        public string? ErrorMessage { get; set; }
-
-        /// <summary>
-        /// 创建成功结果
-        /// </summary>
-        public static UnsubscribeResult Succeeded() => new() { Success = true };
-
-        /// <summary>
-        /// 创建失败结果
-        /// </summary>
-        public static UnsubscribeResult Failed(string errorMessage) => new() { Success = false, ErrorMessage = errorMessage };
-    }
-
-    /// <summary>
     /// 插件宿主服务
     /// 负责插件的加载、执行和生命周期管理
     /// </summary>
@@ -304,7 +278,7 @@ namespace FloatWebPlayer.Services
         /// </summary>
         private void LoadPlugin(string pluginDir)
         {
-            var manifestPath = Path.Combine(pluginDir, "plugin.json");
+            var manifestPath = Path.Combine(pluginDir, AppConstants.PluginManifestFileName);
             
             // 加载清单
             var loadResult = PluginManifest.LoadFromFile(manifestPath);
@@ -324,7 +298,7 @@ namespace FloatWebPlayer.Services
             }
 
             // 加载配置
-            var configPath = Path.Combine(pluginDir, "config.json");
+            var configPath = Path.Combine(pluginDir, AppConstants.PluginConfigFileName);
             var config = PluginConfig.LoadFromFile(configPath, manifest.Id!);
             
             // 应用默认配置
@@ -395,7 +369,7 @@ namespace FloatWebPlayer.Services
         /// </summary>
         private string GetPluginsDirectory(string profileId)
         {
-            return Path.Combine(AppPaths.ProfilesDirectory, profileId, "plugins");
+            return Path.Combine(AppPaths.ProfilesDirectory, profileId, AppConstants.PluginsDirectoryName);
         }
 
         /// <summary>
@@ -403,7 +377,7 @@ namespace FloatWebPlayer.Services
         /// </summary>
         private void SavePluginConfig(PluginConfig config, string pluginDir)
         {
-            var configPath = Path.Combine(pluginDir, "config.json");
+            var configPath = Path.Combine(pluginDir, AppConstants.PluginConfigFileName);
             config.SaveToFile(configPath);
         }
 

@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text.Json;
+using FloatWebPlayer.Helpers;
 using FloatWebPlayer.Models;
 
 namespace FloatWebPlayer.Services
@@ -40,7 +40,6 @@ namespace FloatWebPlayer.Services
 
         #region Fields
 
-        private readonly JsonSerializerOptions _jsonOptions;
         private List<HistoryItem> _historyCache = new();
         private List<BookmarkItem> _bookmarkCache = new();
         private bool _historyCacheLoaded;
@@ -52,13 +51,6 @@ namespace FloatWebPlayer.Services
 
         private DataService()
         {
-            _jsonOptions = new JsonSerializerOptions
-            {
-                WriteIndented = true,
-                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                PropertyNameCaseInsensitive = true
-            };
-
             // 监听 Profile 切换，清除缓存
             ProfileManager.Instance.ProfileChanged += (s, e) =>
             {
@@ -280,12 +272,12 @@ namespace FloatWebPlayer.Services
 
         private string GetHistoryFilePath()
         {
-            return Path.Combine(ProfileManager.Instance.GetCurrentProfileDirectory(), "history.json");
+            return Path.Combine(ProfileManager.Instance.GetCurrentProfileDirectory(), AppConstants.HistoryFileName);
         }
 
         private string GetBookmarksFilePath()
         {
-            return Path.Combine(ProfileManager.Instance.GetCurrentProfileDirectory(), "bookmarks.json");
+            return Path.Combine(ProfileManager.Instance.GetCurrentProfileDirectory(), AppConstants.BookmarksFileName);
         }
 
         private void EnsureHistoryLoaded()
@@ -294,20 +286,13 @@ namespace FloatWebPlayer.Services
                 return;
 
             var filePath = GetHistoryFilePath();
-            if (File.Exists(filePath))
+            try
             {
-                try
-                {
-                    var json = File.ReadAllText(filePath);
-                    _historyCache = JsonSerializer.Deserialize<List<HistoryItem>>(json, _jsonOptions) ?? new();
-                }
-                catch
-                {
-                    _historyCache = new();
-                }
+                _historyCache = JsonHelper.LoadFromFile<List<HistoryItem>>(filePath) ?? new();
             }
-            else
+            catch (Exception ex)
             {
+                LogService.Instance.Warn("DataService", $"加载历史记录失败 [{filePath}]: {ex.Message}");
                 _historyCache = new();
             }
             _historyCacheLoaded = true;
@@ -319,20 +304,13 @@ namespace FloatWebPlayer.Services
                 return;
 
             var filePath = GetBookmarksFilePath();
-            if (File.Exists(filePath))
+            try
             {
-                try
-                {
-                    var json = File.ReadAllText(filePath);
-                    _bookmarkCache = JsonSerializer.Deserialize<List<BookmarkItem>>(json, _jsonOptions) ?? new();
-                }
-                catch
-                {
-                    _bookmarkCache = new();
-                }
+                _bookmarkCache = JsonHelper.LoadFromFile<List<BookmarkItem>>(filePath) ?? new();
             }
-            else
+            catch (Exception ex)
             {
+                LogService.Instance.Warn("DataService", $"加载收藏夹失败 [{filePath}]: {ex.Message}");
                 _bookmarkCache = new();
             }
             _bookmarkCacheLoaded = true;
@@ -340,39 +318,27 @@ namespace FloatWebPlayer.Services
 
         private void SaveHistory()
         {
+            var filePath = GetHistoryFilePath();
             try
             {
-                var filePath = GetHistoryFilePath();
-                var dir = Path.GetDirectoryName(filePath);
-                if (!string.IsNullOrEmpty(dir))
-                {
-                    Directory.CreateDirectory(dir);
-                }
-                var json = JsonSerializer.Serialize(_historyCache, _jsonOptions);
-                File.WriteAllText(filePath, json);
+                JsonHelper.SaveToFile(filePath, _historyCache);
             }
-            catch
+            catch (Exception ex)
             {
-                // 忽略保存错误
+                LogService.Instance.Debug("DataService", $"保存历史记录失败 [{filePath}]: {ex.Message}");
             }
         }
 
         private void SaveBookmarks()
         {
+            var filePath = GetBookmarksFilePath();
             try
             {
-                var filePath = GetBookmarksFilePath();
-                var dir = Path.GetDirectoryName(filePath);
-                if (!string.IsNullOrEmpty(dir))
-                {
-                    Directory.CreateDirectory(dir);
-                }
-                var json = JsonSerializer.Serialize(_bookmarkCache, _jsonOptions);
-                File.WriteAllText(filePath, json);
+                JsonHelper.SaveToFile(filePath, _bookmarkCache);
             }
-            catch
+            catch (Exception ex)
             {
-                // 忽略保存错误
+                LogService.Instance.Debug("DataService", $"保存收藏夹失败 [{filePath}]: {ex.Message}");
             }
         }
 

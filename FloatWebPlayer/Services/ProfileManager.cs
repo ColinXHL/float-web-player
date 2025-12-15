@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Text.Json;
 using FloatWebPlayer.Helpers;
 using FloatWebPlayer.Models;
 
@@ -88,7 +87,7 @@ namespace FloatWebPlayer.Services
             LoadAllProfiles();
 
             // 设置默认 Profile
-            CurrentProfile = GetProfileById("default") ?? CreateDefaultProfile();
+            CurrentProfile = GetProfileById(AppConstants.DefaultProfileId) ?? CreateDefaultProfile();
         }
 
         #endregion
@@ -154,16 +153,17 @@ namespace FloatWebPlayer.Services
         public void SaveProfile(GameProfile profile)
         {
             var profileDir = GetProfileDirectory(profile.Id);
-            Directory.CreateDirectory(profileDir);
-
-            var profilePath = Path.Combine(profileDir, "profile.json");
-            var options = new JsonSerializerOptions 
-            { 
-                WriteIndented = true,
-                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-            };
-            var json = JsonSerializer.Serialize(profile, options);
-            File.WriteAllText(profilePath, json);
+            var profilePath = Path.Combine(profileDir, AppConstants.ProfileFileName);
+            
+            try
+            {
+                Directory.CreateDirectory(profileDir);
+                JsonHelper.SaveToFile(profilePath, profile);
+            }
+            catch (Exception ex)
+            {
+                LogService.Instance.Debug("ProfileManager", $"保存 Profile 失败 [{profilePath}]: {ex.Message}");
+            }
         }
 
         /// <summary>
@@ -179,7 +179,7 @@ namespace FloatWebPlayer.Services
             }
 
             // 不允许删除默认 Profile
-            if (profileId.Equals("default", StringComparison.OrdinalIgnoreCase))
+            if (profileId.Equals(AppConstants.DefaultProfileId, StringComparison.OrdinalIgnoreCase))
             {
                 return UnsubscribeResult.Failed("不能删除默认 Profile");
             }
@@ -199,7 +199,7 @@ namespace FloatWebPlayer.Services
                 // 如果是当前 Profile，先切换到默认 Profile
                 if (CurrentProfile.Id.Equals(profileId, StringComparison.OrdinalIgnoreCase))
                 {
-                    SwitchProfile("default");
+                    SwitchProfile(AppConstants.DefaultProfileId);
                 }
                 else
                 {
@@ -243,7 +243,7 @@ namespace FloatWebPlayer.Services
             // 如果当前 Profile 不存在，切换到 Default
             if (GetProfileById(CurrentProfile.Id) == null)
             {
-                CurrentProfile = GetProfileById("default") ?? CreateDefaultProfile();
+                CurrentProfile = GetProfileById(AppConstants.DefaultProfileId) ?? CreateDefaultProfile();
                 ProfileChanged?.Invoke(this, CurrentProfile);
             }
         }
@@ -263,32 +263,23 @@ namespace FloatWebPlayer.Services
             var profileDirs = Directory.GetDirectories(ProfilesDirectory);
             foreach (var dir in profileDirs)
             {
-                var profilePath = Path.Combine(dir, "profile.json");
-                if (File.Exists(profilePath))
+                var profilePath = Path.Combine(dir, AppConstants.ProfileFileName);
+                try
                 {
-                    try
+                    var profile = JsonHelper.LoadFromFile<GameProfile>(profilePath);
+                    if (profile != null)
                     {
-                        var json = File.ReadAllText(profilePath);
-                        var options = new JsonSerializerOptions
-                        {
-                            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                            PropertyNameCaseInsensitive = true
-                        };
-                        var profile = JsonSerializer.Deserialize<GameProfile>(json, options);
-                        if (profile != null)
-                        {
-                            Profiles.Add(profile);
-                        }
+                        Profiles.Add(profile);
                     }
-                    catch
-                    {
-                        // 跳过无效的 Profile
-                    }
+                }
+                catch (Exception ex)
+                {
+                    LogService.Instance.Warn("ProfileManager", $"加载 Profile 失败 [{profilePath}]: {ex.Message}");
                 }
             }
 
             // 如果没有 Default Profile，创建一个
-            if (GetProfileById("default") == null)
+            if (GetProfileById(AppConstants.DefaultProfileId) == null)
             {
                 var defaultProfile = CreateDefaultProfile();
                 Profiles.Add(defaultProfile);
@@ -302,8 +293,8 @@ namespace FloatWebPlayer.Services
         {
             var profile = new GameProfile
             {
-                Id = "default",
-                Name = "Default",
+                Id = AppConstants.DefaultProfileId,
+                Name = AppConstants.DefaultProfileName,
                 Icon = "🌐",
                 Version = 1,
                 Defaults = new ProfileDefaults

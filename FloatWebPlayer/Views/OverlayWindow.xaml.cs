@@ -109,14 +109,23 @@ namespace FloatWebPlayer.Views
         #region Window Events
 
         /// <summary>
-        /// 窗口源初始化完成 - 设置鼠标穿透
+        /// 窗口源初始化完成 - 设置鼠标穿透和隐藏 Alt+Tab
         /// </summary>
         private void Window_SourceInitialized(object sender, EventArgs e)
         {
-            // 设置鼠标穿透，使点击可以穿透到下层窗口
-            // 注意：WPF AllowsTransparency 窗口已自动设置 WS_EX_LAYERED，
-            // 只需添加 WS_EX_TRANSPARENT 即可实现点击穿透
-            SetClickThroughOnly(true);
+            var hwnd = new WindowInteropHelper(this).Handle;
+            if (hwnd != IntPtr.Zero)
+            {
+                const int GWL_EXSTYLE = -20;
+                const int WS_EX_TOOLWINDOW = 0x00000080;
+                const int WS_EX_TRANSPARENT = 0x00000020;
+
+                // 设置 WS_EX_TOOLWINDOW 使窗口不在 Alt+Tab 中显示
+                // 设置 WS_EX_TRANSPARENT 使点击可以穿透到下层窗口
+                int exStyle = GetWindowLong(hwnd, GWL_EXSTYLE);
+                exStyle |= WS_EX_TOOLWINDOW | WS_EX_TRANSPARENT;
+                SetWindowLong(hwnd, GWL_EXSTYLE, exStyle);
+            }
         }
 
         /// <summary>

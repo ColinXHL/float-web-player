@@ -105,10 +105,11 @@
             <Setter Property="Padding" Value="12"/>
             <Setter Property="Margin" Value="0,0,0,8"/>
         </Style>
+
     </UserControl.Resources>
 
     <StackPanel Margin="0">
-        <!-- 插件列表 -->
+        <!-- 已安装插件 -->
         <TextBlock Text="已安装插件" Style="{StaticResource GroupHeaderStyle}" Margin="0,0,0,8"/>
         
         <!-- 无插件提示 -->

@@ -167,8 +167,7 @@ namespace FloatWebPlayer
             _hotkeyService = new HotkeyService();
             
             // 使用 AppConfig 中的快捷键配置初始化
-            var hotkeyConfig = CreateHotkeyConfigFromAppConfig(_config);
-            _hotkeyService.UpdateConfig(hotkeyConfig);
+            _hotkeyService.UpdateConfig(_config.ToHotkeyConfig());
 
             // 绑定快捷键事件
             _hotkeyService.SeekBackward += (s, e) =>
@@ -245,38 +244,8 @@ namespace FloatWebPlayer
             // 更新 HotkeyService 配置
             if (_hotkeyService != null)
             {
-                var hotkeyConfig = CreateHotkeyConfigFromAppConfig(_config);
-                _hotkeyService.UpdateConfig(hotkeyConfig);
+                _hotkeyService.UpdateConfig(_config.ToHotkeyConfig());
             }
-        }
-
-        /// <summary>
-        /// 根据 AppConfig 创建 HotkeyConfig
-        /// </summary>
-        private static HotkeyConfig CreateHotkeyConfigFromAppConfig(AppConfig config)
-        {
-            return new HotkeyConfig
-            {
-                ActiveProfileName = "Default",
-                AutoSwitchProfile = false,
-                Profiles = new System.Collections.Generic.List<HotkeyProfile>
-                {
-                    new HotkeyProfile
-                    {
-                        Name = "Default",
-                        ActivationProcesses = null,
-                        Bindings = new System.Collections.Generic.List<HotkeyBinding>
-                        {
-                            new HotkeyBinding { Key = config.HotkeySeekBackward, Modifiers = config.HotkeySeekBackwardMod, Action = "SeekBackward" },
-                            new HotkeyBinding { Key = config.HotkeySeekForward, Modifiers = config.HotkeySeekForwardMod, Action = "SeekForward" },
-                            new HotkeyBinding { Key = config.HotkeyTogglePlay, Modifiers = config.HotkeyTogglePlayMod, Action = "TogglePlay" },
-                            new HotkeyBinding { Key = config.HotkeyDecreaseOpacity, Modifiers = config.HotkeyDecreaseOpacityMod, Action = "DecreaseOpacity" },
-                            new HotkeyBinding { Key = config.HotkeyIncreaseOpacity, Modifiers = config.HotkeyIncreaseOpacityMod, Action = "IncreaseOpacity" },
-                            new HotkeyBinding { Key = config.HotkeyToggleClickThrough, Modifiers = config.HotkeyToggleClickThroughMod, Action = "ToggleClickThrough" }
-                        }
-                    }
-                }
-            };
         }
 
         /// <summary>

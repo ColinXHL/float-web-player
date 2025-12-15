@@ -123,5 +123,67 @@ namespace FloatWebPlayer
         public const string DefaultHomeUrl = "https://www.bilibili.com";
 
         #endregion
+
+        #region File Names
+
+        /// <summary>
+        /// Profile 配置文件名
+        /// </summary>
+        public const string ProfileFileName = "profile.json";
+
+        /// <summary>
+        /// 应用配置文件名
+        /// </summary>
+        public const string ConfigFileName = "config.json";
+
+        /// <summary>
+        /// 历史记录文件名
+        /// </summary>
+        public const string HistoryFileName = "history.json";
+
+        /// <summary>
+        /// 书签文件名
+        /// </summary>
+        public const string BookmarksFileName = "bookmarks.json";
+
+        /// <summary>
+        /// 窗口状态文件名
+        /// </summary>
+        public const string WindowStateFileName = "window_state.json";
+
+        /// <summary>
+        /// 插件清单文件名
+        /// </summary>
+        public const string PluginManifestFileName = "plugin.json";
+
+        /// <summary>
+        /// 插件配置文件名
+        /// </summary>
+        public const string PluginConfigFileName = "config.json";
+
+        #endregion
+
+        #region IDs and Names
+
+        /// <summary>
+        /// 默认 Profile ID
+        /// </summary>
+        public const string DefaultProfileId = "default";
+
+        /// <summary>
+        /// 默认 Profile 名称
+        /// </summary>
+        public const string DefaultProfileName = "Default";
+
+        #endregion
+
+        #region Directory Names
+
+        /// <summary>
+        /// 插件目录名
+        /// </summary>
+        public const string PluginsDirectoryName = "plugins";
+
+        #endregion
     }
 }
