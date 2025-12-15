@@ -42,6 +42,24 @@ namespace FloatWebPlayer.Helpers
         /// </summary>
         public static string ConfigFilePath { get; }
 
+        /// <summary>
+        /// 内置 Profile 目录（exe 同级的 Profiles/）
+        /// 存放随软件分发的 Profile 模板，只读
+        /// </summary>
+        public static string BuiltInProfilesDirectory { get; }
+
+        /// <summary>
+        /// 内置插件目录（exe 同级的 Plugins/）
+        /// 存放随软件分发的插件源码，只读
+        /// </summary>
+        public static string BuiltInPluginsDirectory { get; }
+
+        /// <summary>
+        /// 订阅配置文件路径（User/Data/subscriptions.json）
+        /// 存放用户的 Profile 和插件订阅信息
+        /// </summary>
+        public static string SubscriptionsFilePath { get; }
+
         static AppPaths()
         {
             // 获取应用程序目录
@@ -61,6 +79,15 @@ namespace FloatWebPlayer.Helpers
 
             // 配置文件路径
             ConfigFilePath = Path.Combine(DataDirectory, "config.json");
+
+            // 内置 Profile 目录（exe 同级的 Profiles/）
+            BuiltInProfilesDirectory = Path.Combine(AppDirectory, "Profiles");
+
+            // 内置插件目录（exe 同级的 Plugins/）
+            BuiltInPluginsDirectory = Path.Combine(AppDirectory, "Plugins");
+
+            // 订阅配置文件路径
+            SubscriptionsFilePath = Path.Combine(DataDirectory, "subscriptions.json");
 
             // 确保目录存在
             EnsureDirectoriesExist();

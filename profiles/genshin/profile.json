@@ -1,0 +1,16 @@
+{
+  "id": "genshin",
+  "name": "原神",
+  "icon": "🎮",
+  "version": 1,
+  "recommendedPlugins": ["genshin-direction-marker"],
+  "activation": {
+    "processes": ["GenshinImpact", "YuanShen"],
+    "autoSwitch": true
+  },
+  "defaults": {
+    "url": "https://www.bilibili.com",
+    "opacity": 0.8,
+    "seekSeconds": 5
+  }
+}

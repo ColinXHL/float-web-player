@@ -642,11 +642,88 @@ function onUnload() {}
             host.Dispose();
         }
 
+        /// <summary>
+        /// 新目录结构：源码目录和配置目录分离
+        /// </summary>
+        [Fact]
+        public void NewDirectoryStructure_ShouldSeparateSourceAndConfig()
+        {
+            var jsCode = "function onLoad() {} function onUnload() {}";
+            
+            // 创建插件源码目录（模拟内置插件库）
+            var pluginSourceDir = Path.Combine(_tempProfilesDir, "BuiltInPlugins");
+            var plugin1SourceDir = Path.Combine(pluginSourceDir, "plugin1");
+            Directory.CreateDirectory(plugin1SourceDir);
+            File.WriteAllText(Path.Combine(plugin1SourceDir, "plugin.json"), 
+                JsonSerializer.Serialize(new { id = "plugin1", name = "Plugin 1", version = "1.0.0", main = "main.js" }));
+            File.WriteAllText(Path.Combine(plugin1SourceDir, "main.js"), jsCode);
+
+            // 创建 Profile 配置目录（模拟用户数据目录）
+            var profileId = "test-profile-new";
+            var subscribedPlugins = new List<string> { "plugin1" };
+
+            var host = new TestablePluginHost(_tempProfilesDir);
+
+            // 使用新模式加载插件
+            host.LoadPluginsForProfileNew(profileId, subscribedPlugins, pluginSourceDir);
+
+            // 验证插件已加载
+            Assert.Single(host.LoadedPlugins);
+            Assert.Equal("plugin1", host.LoadedPlugins[0].PluginId);
+
+            // 验证源码目录和配置目录分离
+            var plugin = host.LoadedPlugins[0];
+            Assert.Equal(plugin1SourceDir, plugin.PluginDirectory);
+            Assert.NotEqual(plugin.PluginDirectory, plugin.ConfigDirectory);
+
+            // 验证配置目录已创建
+            Assert.True(Directory.Exists(plugin.ConfigDirectory));
+
+            host.Dispose();
+        }
+
+        /// <summary>
+        /// 新目录结构：配置应保存到配置目录而非源码目录
+        /// </summary>
+        [Fact]
+        public void NewDirectoryStructure_ConfigShouldBeSavedToConfigDir()
+        {
+            var jsCode = "function onLoad() {} function onUnload() {}";
+            
+            // 创建插件源码目录
+            var pluginSourceDir = Path.Combine(_tempProfilesDir, "BuiltInPlugins2");
+            var plugin1SourceDir = Path.Combine(pluginSourceDir, "plugin1");
+            Directory.CreateDirectory(plugin1SourceDir);
+            File.WriteAllText(Path.Combine(plugin1SourceDir, "plugin.json"), 
+                JsonSerializer.Serialize(new { id = "plugin1", name = "Plugin 1", version = "1.0.0", main = "main.js" }));
+            File.WriteAllText(Path.Combine(plugin1SourceDir, "main.js"), jsCode);
+
+            var profileId = "test-profile-config";
+            var subscribedPlugins = new List<string> { "plugin1" };
+
+            var host = new TestablePluginHost(_tempProfilesDir);
+            host.LoadPluginsForProfileNew(profileId, subscribedPlugins, pluginSourceDir);
+
+            var plugin = host.LoadedPlugins[0];
+            var configDir = plugin.ConfigDirectory;
+
+            // 验证配置目录在用户数据目录下
+            Assert.Contains(profileId, configDir);
+            Assert.Contains("plugins", configDir);
+            Assert.Contains("plugin1", configDir);
+
+            // 验证源码目录不包含 profile 信息
+            Assert.DoesNotContain(profileId, plugin.PluginDirectory);
+
+            host.Dispose();
+        }
+
         #endregion
     }
 
     /// <summary>
     /// 可测试的 PluginHost（允许自定义 Profiles 目录）
+    /// 支持新的目录结构：源码目录和配置目录分离
     /// </summary>
     internal class TestablePluginHost : IDisposable
     {
@@ -664,6 +741,9 @@ function onUnload() {}
             _profilesDirectory = profilesDirectory;
         }
 
+        /// <summary>
+        /// 加载指定 Profile 的所有插件（旧模式：源码和配置在同一目录）
+        /// </summary>
         public void LoadPluginsForProfile(string profileId)
         {
             if (string.IsNullOrWhiteSpace(profileId))
@@ -683,7 +763,33 @@ function onUnload() {}
             var pluginDirs = Directory.GetDirectories(pluginsDir);
             foreach (var pluginDir in pluginDirs)
             {
-                LoadPlugin(pluginDir);
+                LoadPluginLegacy(pluginDir);
+            }
+        }
+
+        /// <summary>
+        /// 加载指定 Profile 的所有插件（新模式：源码和配置目录分离）
+        /// </summary>
+        /// <param name="profileId">Profile ID</param>
+        /// <param name="subscribedPlugins">订阅的插件 ID 列表</param>
+        /// <param name="pluginSourceDirectory">插件源码根目录</param>
+        public void LoadPluginsForProfileNew(string profileId, List<string> subscribedPlugins, string pluginSourceDirectory)
+        {
+            if (string.IsNullOrWhiteSpace(profileId))
+                return;
+
+            if (_loadedPlugins.Count > 0)
+            {
+                UnloadAllPlugins();
+            }
+
+            _currentProfileId = profileId;
+
+            foreach (var pluginId in subscribedPlugins)
+            {
+                var sourceDir = Path.Combine(pluginSourceDirectory, pluginId);
+                var configDir = GetPluginConfigDirectory(profileId, pluginId);
+                LoadPlugin(sourceDir, configDir, pluginId);
             }
         }
 
@@ -720,7 +826,15 @@ function onUnload() {}
         }
 
         /// <summary>
-        /// 取消订阅插件（停止运行并删除插件目录）
+        /// 获取插件用户配置目录
+        /// </summary>
+        public string GetPluginConfigDirectory(string profileId, string pluginId)
+        {
+            return Path.Combine(_profilesDirectory, profileId, "plugins", pluginId);
+        }
+
+        /// <summary>
+        /// 取消订阅插件（停止运行并删除配置目录）
         /// </summary>
         public UnsubscribeResult UnsubscribePlugin(string pluginId)
         {
@@ -735,7 +849,8 @@ function onUnload() {}
                 return UnsubscribeResult.Succeeded();
             }
 
-            var pluginDir = plugin.PluginDirectory;
+            // 使用配置目录（而不是源码目录）
+            var configDir = plugin.ConfigDirectory;
 
             try
             {
@@ -744,9 +859,10 @@ function onUnload() {}
                 _loadedPlugins.Remove(plugin);
                 _pluginConfigs.Remove(pluginId);
 
-                if (Directory.Exists(pluginDir))
+                // 删除配置目录
+                if (Directory.Exists(configDir))
                 {
-                    Directory.Delete(pluginDir, recursive: true);
+                    Directory.Delete(configDir, recursive: true);
                 }
 
                 return UnsubscribeResult.Succeeded();
@@ -757,7 +873,59 @@ function onUnload() {}
             }
         }
 
-        private void LoadPlugin(string pluginDir)
+        /// <summary>
+        /// 加载单个插件（新模式：源码和配置目录分离）
+        /// </summary>
+        private void LoadPlugin(string sourceDir, string configDir, string pluginId)
+        {
+            if (!Directory.Exists(sourceDir))
+                return;
+
+            var manifestPath = Path.Combine(sourceDir, "plugin.json");
+            var loadResult = PluginManifest.LoadFromFile(manifestPath);
+            if (!loadResult.IsSuccess)
+                return;
+
+            var manifest = loadResult.Manifest!;
+
+            if (_loadedPlugins.Any(p => p.PluginId == manifest.Id))
+                return;
+
+            // 确保配置目录存在
+            if (!Directory.Exists(configDir))
+            {
+                Directory.CreateDirectory(configDir);
+            }
+
+            // 从配置目录加载配置
+            var configPath = Path.Combine(configDir, "config.json");
+            var config = PluginConfig.LoadFromFile(configPath, manifest.Id!);
+            config.ApplyDefaults(manifest.DefaultConfig);
+            _pluginConfigs[manifest.Id!] = config;
+
+            if (!config.Enabled)
+                return;
+
+            var context = new PluginContext(manifest, sourceDir)
+            {
+                IsEnabled = config.Enabled,
+                ConfigDirectory = configDir
+            };
+
+            if (!context.LoadScript())
+            {
+                context.Dispose();
+                return;
+            }
+
+            context.CallOnLoad();
+            _loadedPlugins.Add(context);
+        }
+
+        /// <summary>
+        /// 加载单个插件（旧模式：源码和配置在同一目录）
+        /// </summary>
+        private void LoadPluginLegacy(string pluginDir)
         {
             var manifestPath = Path.Combine(pluginDir, "plugin.json");
             var loadResult = PluginManifest.LoadFromFile(manifestPath);
@@ -779,7 +947,8 @@ function onUnload() {}
 
             var context = new PluginContext(manifest, pluginDir)
             {
-                IsEnabled = config.Enabled
+                IsEnabled = config.Enabled,
+                ConfigDirectory = pluginDir  // 旧模式下配置目录与源码目录相同
             };
 
             if (!context.LoadScript())

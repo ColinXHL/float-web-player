@@ -22,4 +22,14 @@
     <EmbeddedResource Include="Scripts\InjectedScripts.js" />
   </ItemGroup>
 
+  <!-- 复制内置 Profile 模板到输出目录 -->
+  <ItemGroup>
+    <None Include="..\profiles\**\*" CopyToOutputDirectory="PreserveNewest" LinkBase="Profiles" />
+  </ItemGroup>
+
+  <!-- 复制内置插件到输出目录 -->
+  <ItemGroup>
+    <None Include="..\plugins\**\*" CopyToOutputDirectory="PreserveNewest" LinkBase="Plugins" />
+  </ItemGroup>
+
 </Project>

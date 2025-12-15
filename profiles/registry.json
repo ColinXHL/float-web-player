@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "profiles": [
+    {
+      "id": "default",
+      "name": "默认",
+      "icon": "📺",
+      "description": "通用配置，适用于一般视频观看场景",
+      "recommendedPlugins": []
+    },
+    {
+      "id": "genshin",
+      "name": "原神",
+      "icon": "🎮",
+      "description": "原神游戏配置，包含方向标记插件",
+      "recommendedPlugins": ["genshin-direction-marker"]
+    }
+  ]
+}

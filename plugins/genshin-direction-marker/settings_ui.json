@@ -1,0 +1,71 @@
+{
+  "sections": [
+    {
+      "title": "基本设置",
+      "items": [
+        {
+          "type": "checkbox",
+          "key": "enabled",
+          "label": "启用插件",
+          "default": true
+        },
+        {
+          "type": "number",
+          "key": "markerDuration",
+          "label": "标记显示时长（毫秒，0 表示常驻）",
+          "default": 0,
+          "min": 0,
+          "max": 30000,
+          "step": 500
+        }
+      ]
+    },
+    {
+      "title": "覆盖层位置",
+      "items": [
+        {
+          "type": "number",
+          "key": "overlay.x",
+          "label": "X 坐标",
+          "default": 43,
+          "min": 0,
+          "max": 3840,
+          "step": 1
+        },
+        {
+          "type": "number",
+          "key": "overlay.y",
+          "label": "Y 坐标",
+          "default": 43,
+          "min": 0,
+          "max": 2160,
+          "step": 1
+        },
+        {
+          "type": "number",
+          "key": "overlay.size",
+          "label": "大小",
+          "default": 212,
+          "min": 50,
+          "max": 500,
+          "step": 10
+        },
+        {
+          "type": "button",
+          "label": "📍 可视化调整位置",
+          "action": "enterEditMode"
+        }
+      ]
+    },
+    {
+      "title": "其他",
+      "items": [
+        {
+          "type": "button",
+          "label": "📂 打开插件目录",
+          "action": "openPluginFolder"
+        }
+      ]
+    }
+  ]
+}

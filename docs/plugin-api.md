@@ -124,14 +124,26 @@ function onLoad(api) {
 
 插件卸载时调用，用于清理资源。
 
+**重要：** 插件卸载时，系统会自动清理所有 API 资源（包括事件监听器、覆盖层窗口等），但建议在 `onUnload` 中显式清理，以确保资源及时释放。
+
 ```javascript
 function onUnload(api) {
     // 清理代码
     api.subtitle.removeAllListeners();
+    api.speech.removeAllListeners();
     api.overlay.hide();
+    api.overlay.clear();
     api.log("插件已卸载");
 }
 ```
+
+**自动清理的资源：**
+- 所有事件监听器（subtitle、speech、event）
+- 覆盖层窗口和绘图元素
+- HTTP 请求连接
+- 存储 API 缓存
+
+**注意：** 即使 `onUnload` 中没有清理代码，系统也会在插件卸载后自动清理所有资源，防止内存泄漏。
 
 ---
 

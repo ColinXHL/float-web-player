@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+
 namespace FloatWebPlayer.Models
 {
     /// <summary>
@@ -14,6 +16,11 @@ namespace FloatWebPlayer.Models
         /// 错误消息（失败时）
         /// </summary>
         public string? ErrorMessage { get; set; }
+
+        /// <summary>
+        /// 被取消订阅的插件列表（取消 Profile 订阅时使用）
+        /// </summary>
+        public List<string> UnsubscribedPlugins { get; set; } = new();
 
         /// <summary>
         /// 创建成功结果

@@ -33,9 +33,15 @@ namespace FloatWebPlayer.Plugins
         public PluginManifest Manifest { get; }
 
         /// <summary>
-        /// 插件目录路径
+        /// 插件目录路径（源码目录）
         /// </summary>
         public string PluginDirectory { get; }
+
+        /// <summary>
+        /// 插件配置目录路径（用户数据目录，可写）
+        /// 如果未设置，则使用 PluginDirectory
+        /// </summary>
+        public string ConfigDirectory { get; set; }
 
         /// <summary>
         /// 是否启用
@@ -61,12 +67,13 @@ namespace FloatWebPlayer.Plugins
         /// 创建插件上下文
         /// </summary>
         /// <param name="manifest">插件清单</param>
-        /// <param name="pluginDirectory">插件目录</param>
+        /// <param name="pluginDirectory">插件目录（源码目录）</param>
         public PluginContext(PluginManifest manifest, string pluginDirectory)
         {
             Manifest = manifest ?? throw new ArgumentNullException(nameof(manifest));
             PluginId = manifest.Id ?? throw new ArgumentException("插件 ID 不能为空");
             PluginDirectory = pluginDirectory ?? throw new ArgumentNullException(nameof(pluginDirectory));
+            ConfigDirectory = pluginDirectory; // 默认配置目录与源码目录相同
 
             InitializeEngine();
         }

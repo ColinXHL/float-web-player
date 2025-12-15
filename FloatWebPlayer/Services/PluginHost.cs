@@ -114,19 +114,25 @@ namespace FloatWebPlayer.Services
 
             _currentProfileId = profileId;
 
-            // 获取插件目录
-            var pluginsDir = GetPluginsDirectory(profileId);
-            if (!Directory.Exists(pluginsDir))
+            // 从 SubscriptionManager 获取订阅的插件列表
+            var subscribedPlugins = SubscriptionManager.Instance.GetSubscribedPlugins(profileId);
+            if (subscribedPlugins.Count == 0)
             {
-                Log($"插件目录不存在: {pluginsDir}");
+                Log($"Profile '{profileId}' 没有订阅任何插件");
                 return;
             }
 
-            // 遍历插件目录
-            var pluginDirs = Directory.GetDirectories(pluginsDir);
-            foreach (var pluginDir in pluginDirs)
+            // 遍历订阅的插件
+            foreach (var pluginId in subscribedPlugins)
             {
-                LoadPlugin(pluginDir);
+                // 从 PluginRegistry 获取插件源码目录
+                var sourceDir = PluginRegistry.Instance.GetPluginSourceDirectory(pluginId);
+                
+                // 获取用户配置目录
+                var configDir = GetPluginConfigDirectory(profileId, pluginId);
+                
+                // 加载插件
+                LoadPlugin(sourceDir, configDir, pluginId);
             }
 
             Log($"已加载 {_loadedPlugins.Count} 个插件 (Profile: {profileId})");
@@ -166,11 +172,11 @@ namespace FloatWebPlayer.Services
 
             plugin.IsEnabled = enabled;
 
-            // 更新配置
+            // 更新配置（使用配置目录）
             if (_pluginConfigs.TryGetValue(pluginId, out var config))
             {
                 config.Enabled = enabled;
-                SavePluginConfig(config, plugin.PluginDirectory);
+                SavePluginConfig(config, plugin.ConfigDirectory);
             }
 
             Log($"插件 {pluginId} 已{(enabled ? "启用" : "禁用")}");
@@ -205,7 +211,7 @@ namespace FloatWebPlayer.Services
 
             if (_pluginConfigs.TryGetValue(pluginId, out var config))
             {
-                SavePluginConfig(config, plugin.PluginDirectory);
+                SavePluginConfig(config, plugin.ConfigDirectory);
             }
         }
 
@@ -337,9 +343,103 @@ namespace FloatWebPlayer.Services
         #region Private Methods
 
         /// <summary>
-        /// 加载单个插件
+        /// 加载单个插件（新目录结构：源码目录 + 配置目录分离）
         /// </summary>
-        private void LoadPlugin(string pluginDir)
+        /// <param name="sourceDir">插件源码目录（内置插件库，只读）</param>
+        /// <param name="configDir">插件配置目录（用户数据目录，可写）</param>
+        /// <param name="pluginId">插件 ID</param>
+        private void LoadPlugin(string sourceDir, string configDir, string pluginId)
+        {
+            // 检查源码目录是否存在
+            if (!Directory.Exists(sourceDir))
+            {
+                Log($"插件源码目录不存在 ({pluginId}): {sourceDir}");
+                return;
+            }
+
+            var manifestPath = Path.Combine(sourceDir, AppConstants.PluginManifestFileName);
+            
+            // 加载清单
+            var loadResult = PluginManifest.LoadFromFile(manifestPath);
+            if (!loadResult.IsSuccess)
+            {
+                Log($"加载插件清单失败 ({pluginId}): {loadResult.ErrorMessage}");
+                return;
+            }
+
+            var manifest = loadResult.Manifest!;
+
+            // 检查是否已加载同 ID 插件
+            if (_loadedPlugins.Any(p => p.PluginId == manifest.Id))
+            {
+                Log($"插件 {manifest.Id} 已加载，跳过");
+                return;
+            }
+
+            // 确保配置目录存在
+            if (!Directory.Exists(configDir))
+            {
+                Directory.CreateDirectory(configDir);
+            }
+
+            // 从用户配置目录加载配置
+            var configPath = Path.Combine(configDir, AppConstants.PluginConfigFileName);
+            var config = PluginConfig.LoadFromFile(configPath, manifest.Id!);
+            
+            // 应用默认配置
+            config.ApplyDefaults(manifest.DefaultConfig);
+            _pluginConfigs[manifest.Id!] = config;
+
+            // 如果插件被禁用，跳过加载
+            if (!config.Enabled)
+            {
+                Log($"插件 {manifest.Id} 已禁用，跳过加载");
+                return;
+            }
+
+            // 创建插件上下文（使用源码目录）
+            var context = new PluginContext(manifest, sourceDir)
+            {
+                IsEnabled = config.Enabled,
+                ConfigDirectory = configDir  // 设置配置目录
+            };
+
+            // 加载脚本
+            if (!context.LoadScript())
+            {
+                Log($"加载插件脚本失败 ({manifest.Id}): {context.LastError}");
+                context.Dispose();
+                return;
+            }
+
+            // 创建 PluginApi 并传入 onLoad
+            var profileInfo = new ProfileInfo(
+                _currentProfileId ?? string.Empty,
+                _currentProfileId ?? string.Empty,
+                GetPluginConfigDirectory(_currentProfileId ?? string.Empty, pluginId)
+            );
+            var pluginApi = new PluginApi(context, config, profileInfo);
+
+            // 调用 onLoad
+            if (!context.CallOnLoad(pluginApi))
+            {
+                Log($"插件 {manifest.Id} onLoad 调用失败: {context.LastError}");
+                // 即使 onLoad 失败，也保留插件（异常隔离）
+            }
+
+            _loadedPlugins.Add(context);
+            _pluginApis[manifest.Id!] = pluginApi;
+            PluginLoaded?.Invoke(this, context);
+
+            Log($"插件 {manifest.Name} (v{manifest.Version}) 加载成功");
+        }
+
+        /// <summary>
+        /// 加载单个插件（旧方法，保留向后兼容）
+        /// </summary>
+        /// <param name="pluginDir">插件目录（源码和配置在同一目录）</param>
+        [Obsolete("使用 LoadPlugin(sourceDir, configDir, pluginId) 代替")]
+        private void LoadPluginLegacy(string pluginDir)
         {
             var manifestPath = Path.Combine(pluginDir, AppConstants.PluginManifestFileName);
             
@@ -418,11 +518,41 @@ namespace FloatWebPlayer.Services
         {
             var pluginId = plugin.PluginId;
 
-            // 调用 onUnload
-            plugin.CallOnUnload();
+            try
+            {
+                // 调用 onUnload
+                plugin.CallOnUnload();
+            }
+            catch (Exception ex)
+            {
+                Log($"插件 {pluginId} onUnload 调用失败: {ex.Message}");
+                // 继续执行清理流程
+            }
 
-            // 释放资源
-            plugin.Dispose();
+            // 清理 PluginApi
+            if (_pluginApis.TryGetValue(pluginId, out var pluginApi))
+            {
+                try
+                {
+                    pluginApi.Cleanup();
+                }
+                catch (Exception ex)
+                {
+                    Log($"清理插件 API 失败 ({pluginId}): {ex.Message}");
+                    // 继续执行清理流程
+                }
+            }
+
+            try
+            {
+                // 释放资源
+                plugin.Dispose();
+            }
+            catch (Exception ex)
+            {
+                Log($"释放插件资源失败 ({pluginId}): {ex.Message}");
+                // 继续执行清理流程
+            }
 
             // 从 API 字典移除
             _pluginApis.Remove(pluginId);
@@ -432,7 +562,7 @@ namespace FloatWebPlayer.Services
         }
 
         /// <summary>
-        /// 获取 Profile 的插件目录
+        /// 获取 Profile 的插件目录（旧方法，保留向后兼容）
         /// </summary>
         private string GetPluginsDirectory(string profileId)
         {
@@ -440,11 +570,22 @@ namespace FloatWebPlayer.Services
         }
 
         /// <summary>
+        /// 获取插件用户配置目录
+        /// </summary>
+        /// <param name="profileId">Profile ID</param>
+        /// <param name="pluginId">插件 ID</param>
+        /// <returns>配置目录路径</returns>
+        public string GetPluginConfigDirectory(string profileId, string pluginId)
+        {
+            return Path.Combine(AppPaths.ProfilesDirectory, profileId, AppConstants.PluginsDirectoryName, pluginId);
+        }
+
+        /// <summary>
         /// 保存插件配置
         /// </summary>
-        private void SavePluginConfig(PluginConfig config, string pluginDir)
+        private void SavePluginConfig(PluginConfig config, string configDir)
         {
-            var configPath = Path.Combine(pluginDir, AppConstants.PluginConfigFileName);
+            var configPath = Path.Combine(configDir, AppConstants.PluginConfigFileName);
             config.SaveToFile(configPath);
         }
 

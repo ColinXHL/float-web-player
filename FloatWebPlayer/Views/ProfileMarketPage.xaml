@@ -1,0 +1,195 @@
+<UserControl x:Class="FloatWebPlayer.Views.ProfileMarketPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:helpers="clr-namespace:FloatWebPlayer.Helpers"
+             mc:Ignorable="d" 
+             d:DesignHeight="450" d:DesignWidth="480"
+             Background="Transparent">
+    
+    <UserControl.Resources>
+        <!-- 转换器 -->
+        <helpers:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
+        <helpers:InverseBoolToVisibilityConverter x:Key="InverseBoolToVisibilityConverter"/>
+        
+        <!-- Profile 卡片样式 -->
+        <Style x:Key="ProfileCardStyle" TargetType="Border">
+            <Setter Property="Background" Value="#2A2A2A"/>
+            <Setter Property="BorderBrush" Value="#3A3A3A"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Margin" Value="0,0,0,12"/>
+            <Setter Property="Padding" Value="16"/>
+        </Style>
+
+        <!-- 订阅按钮样式 -->
+        <Style x:Key="SubscribeButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="#0078D4"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="16,8"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="border" Background="{TemplateBinding Background}"
+                                CornerRadius="4" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="#1084D8"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="#006CBD"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- 取消订阅按钮样式 -->
+        <Style x:Key="UnsubscribeButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="#5C2020"/>
+            <Setter Property="Foreground" Value="#F87171"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="12,8"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="border" Background="{TemplateBinding Background}"
+                                CornerRadius="4" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="#7C2D2D"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="#991B1B"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- 已订阅标签样式 -->
+        <Style x:Key="SubscribedBadgeStyle" TargetType="Border">
+            <Setter Property="Background" Value="#1E3A2F"/>
+            <Setter Property="CornerRadius" Value="4"/>
+            <Setter Property="Padding" Value="8,4"/>
+            <Setter Property="Margin" Value="0,0,8,0"/>
+        </Style>
+
+        <!-- 推荐插件标签样式 -->
+        <Style x:Key="PluginTagStyle" TargetType="Border">
+            <Setter Property="Background" Value="#333"/>
+            <Setter Property="CornerRadius" Value="3"/>
+            <Setter Property="Padding" Value="6,2"/>
+            <Setter Property="Margin" Value="0,0,4,0"/>
+        </Style>
+    </UserControl.Resources>
+
+    <StackPanel>
+        <!-- 标题 -->
+        <TextBlock Text="Profile 市场" FontSize="16" FontWeight="SemiBold" 
+                   Foreground="White" Margin="0,0,0,8"/>
+        <TextBlock Text="浏览并订阅内置的游戏配置" FontSize="12" 
+                   Foreground="#888" Margin="0,0,0,16"/>
+
+        <!-- Profile 列表 -->
+        <ItemsControl x:Name="ProfileList">
+            <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                    <Border Style="{StaticResource ProfileCardStyle}">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+
+                            <!-- 第一行：图标、名称、状态、按钮 -->
+                            <Grid Grid.Row="0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+
+                                <!-- 图标和名称 -->
+                                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding Icon}" FontSize="24" Margin="0,0,12,0"/>
+                                    <TextBlock Text="{Binding Name}" FontSize="15" FontWeight="SemiBold" 
+                                               Foreground="White" VerticalAlignment="Center"/>
+                                </StackPanel>
+
+                                <!-- 状态和按钮 -->
+                                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                                    <!-- 已订阅标签 -->
+                                    <Border Style="{StaticResource SubscribedBadgeStyle}"
+                                            Visibility="{Binding IsSubscribed, Converter={StaticResource BoolToVisibilityConverter}}">
+                                        <TextBlock Text="✓ 已订阅" FontSize="11" Foreground="#4ADE80"/>
+                                    </Border>
+                                    
+                                    <!-- 订阅按钮 -->
+                                    <Button Content="订阅" Style="{StaticResource SubscribeButtonStyle}"
+                                            Tag="{Binding Id}" Click="BtnSubscribe_Click"
+                                            Visibility="{Binding IsSubscribed, Converter={StaticResource InverseBoolToVisibilityConverter}}"/>
+                                    
+                                    <!-- 取消订阅按钮 -->
+                                    <Button Content="取消订阅" Style="{StaticResource UnsubscribeButtonStyle}"
+                                            Tag="{Binding Id}" Click="BtnUnsubscribe_Click"
+                                            Visibility="{Binding CanUnsubscribe, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                                </StackPanel>
+                            </Grid>
+
+                            <!-- 第二行：描述 -->
+                            <TextBlock Grid.Row="1" Text="{Binding Description}" 
+                                       FontSize="12" Foreground="#AAA" 
+                                       TextWrapping="Wrap" Margin="0,8,0,0"/>
+
+                            <!-- 第三行：推荐插件 -->
+                            <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,10,0,0"
+                                        Visibility="{Binding HasRecommendedPlugins, Converter={StaticResource BoolToVisibilityConverter}}">
+                                <TextBlock Text="推荐插件：" FontSize="11" Foreground="#666" 
+                                           VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                <ItemsControl ItemsSource="{Binding RecommendedPluginNames}">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <StackPanel Orientation="Horizontal"/>
+                                        </ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Border Style="{StaticResource PluginTagStyle}">
+                                                <TextBlock Text="{Binding}" FontSize="11" Foreground="#AAA"/>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+
+                            <!-- 无推荐插件时显示 -->
+                            <TextBlock Grid.Row="2" Text="推荐插件：无" FontSize="11" Foreground="#555" 
+                                       Margin="0,10,0,0"
+                                       Visibility="{Binding HasRecommendedPlugins, Converter={StaticResource InverseBoolToVisibilityConverter}}"/>
+                        </Grid>
+                    </Border>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+
+        <!-- 空状态提示 -->
+        <TextBlock x:Name="EmptyMessage" Text="暂无可用的 Profile" 
+                   FontSize="13" Foreground="#666" 
+                   HorizontalAlignment="Center" Margin="0,20,0,0"
+                   Visibility="Collapsed"/>
+    </StackPanel>
+</UserControl>

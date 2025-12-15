@@ -10,6 +10,7 @@ namespace FloatWebPlayer.Services
     /// <summary>
     /// Profile 管理服务
     /// 负责加载、切换、保存 Profile 配置
+    /// 集成订阅机制：只加载已订阅的 Profile
     /// </summary>
     public class ProfileManager
     {
@@ -33,6 +34,17 @@ namespace FloatWebPlayer.Services
                     }
                 }
                 return _instance;
+            }
+        }
+
+        /// <summary>
+        /// 重置单例实例（仅用于测试）
+        /// </summary>
+        internal static void ResetInstance()
+        {
+            lock (_lock)
+            {
+                _instance = null;
             }
         }
 
@@ -254,26 +266,114 @@ namespace FloatWebPlayer.Services
 
         #endregion
 
+        #region Subscription Methods
+
+        /// <summary>
+        /// 订阅 Profile（调用 SubscriptionManager）
+        /// </summary>
+        /// <param name="profileId">Profile ID</param>
+        /// <returns>是否成功</returns>
+        public bool SubscribeProfile(string profileId)
+        {
+            if (string.IsNullOrWhiteSpace(profileId))
+            {
+                LogService.Instance.Warn("ProfileManager", "订阅 Profile 失败: profileId 为空");
+                return false;
+            }
+
+            // 调用 SubscriptionManager 执行订阅
+            var success = SubscriptionManager.Instance.SubscribeProfile(profileId);
+            
+            if (success)
+            {
+                // 重新加载 Profiles 列表
+                ReloadProfiles();
+                LogService.Instance.Info("ProfileManager", $"成功订阅 Profile '{profileId}'");
+            }
+
+            return success;
+        }
+
+        /// <summary>
+        /// 取消订阅 Profile（调用 SubscriptionManager）
+        /// </summary>
+        /// <param name="profileId">Profile ID</param>
+        /// <returns>取消订阅结果</returns>
+        public UnsubscribeResult UnsubscribeProfileViaSubscription(string profileId)
+        {
+            if (string.IsNullOrWhiteSpace(profileId))
+            {
+                return UnsubscribeResult.Failed("Profile ID 不能为空");
+            }
+
+            // 不允许取消订阅默认 Profile
+            if (profileId.Equals(AppConstants.DefaultProfileId, StringComparison.OrdinalIgnoreCase))
+            {
+                return UnsubscribeResult.Failed("不能取消订阅默认 Profile");
+            }
+
+            // 如果是当前 Profile，先切换到默认 Profile
+            if (CurrentProfile.Id.Equals(profileId, StringComparison.OrdinalIgnoreCase))
+            {
+                SwitchProfile(AppConstants.DefaultProfileId);
+            }
+
+            // 调用 SubscriptionManager 执行取消订阅
+            var result = SubscriptionManager.Instance.UnsubscribeProfile(profileId);
+            
+            if (result.Success)
+            {
+                // 从列表中移除
+                Profiles.RemoveAll(p => p.Id.Equals(profileId, StringComparison.OrdinalIgnoreCase));
+                LogService.Instance.Info("ProfileManager", $"成功取消订阅 Profile '{profileId}'");
+            }
+
+            return result;
+        }
+
+        #endregion
+
         #region Private Methods
 
         /// <summary>
-        /// 加载所有 Profile
+        /// 加载所有已订阅的 Profile
+        /// 只加载 SubscriptionManager 中已订阅的 Profile
         /// </summary>
         private void LoadAllProfiles()
         {
-            if (!Directory.Exists(ProfilesDirectory))
-                return;
+            // 确保 SubscriptionManager 已加载
+            SubscriptionManager.Instance.Load();
 
-            var profileDirs = Directory.GetDirectories(ProfilesDirectory);
-            foreach (var dir in profileDirs)
+            // 获取已订阅的 Profile 列表
+            var subscribedProfiles = SubscriptionManager.Instance.GetSubscribedProfiles();
+
+            // 如果没有订阅任何 Profile，确保默认 Profile 存在
+            if (subscribedProfiles.Count == 0)
             {
-                var profilePath = Path.Combine(dir, AppConstants.ProfileFileName);
+                // 自动订阅默认 Profile
+                EnsureDefaultProfileSubscribed();
+                subscribedProfiles = SubscriptionManager.Instance.GetSubscribedProfiles();
+            }
+
+            // 只加载已订阅的 Profile
+            foreach (var profileId in subscribedProfiles)
+            {
+                var profileDir = Path.Combine(ProfilesDirectory, profileId);
+                var profilePath = Path.Combine(profileDir, AppConstants.ProfileFileName);
+
+                if (!File.Exists(profilePath))
+                {
+                    LogService.Instance.Warn("ProfileManager", $"已订阅的 Profile 文件不存在: {profilePath}");
+                    continue;
+                }
+
                 try
                 {
                     var profile = JsonHelper.LoadFromFile<GameProfile>(profilePath);
                     if (profile != null)
                     {
                         Profiles.Add(profile);
+                        LogService.Instance.Debug("ProfileManager", $"已加载订阅的 Profile: {profileId}");
                     }
                 }
                 catch (Exception ex)
@@ -282,7 +382,7 @@ namespace FloatWebPlayer.Services
                 }
             }
 
-            // 如果没有 Default Profile，创建一个
+            // 确保默认 Profile 存在于列表中
             if (GetProfileById(AppConstants.DefaultProfileId) == null)
             {
                 var defaultProfile = CreateDefaultProfile();
@@ -291,11 +391,98 @@ namespace FloatWebPlayer.Services
         }
 
         /// <summary>
+        /// 确保默认 Profile 已订阅
+        /// </summary>
+        private void EnsureDefaultProfileSubscribed()
+        {
+            if (!SubscriptionManager.Instance.IsProfileSubscribed(AppConstants.DefaultProfileId))
+            {
+                // 检查内置模板是否存在
+                if (ProfileRegistry.Instance.ProfileExists(AppConstants.DefaultProfileId))
+                {
+                    // 从内置模板订阅
+                    SubscriptionManager.Instance.SubscribeProfile(AppConstants.DefaultProfileId);
+                    LogService.Instance.Info("ProfileManager", "已自动订阅默认 Profile（从内置模板）");
+                }
+                else
+                {
+                    // 内置模板不存在，创建默认 Profile 并手动添加到订阅
+                    CreateDefaultProfile();
+                    // 手动添加到订阅配置（因为没有内置模板）
+                    AddDefaultProfileToSubscription();
+                    LogService.Instance.Info("ProfileManager", "已创建并订阅默认 Profile");
+                }
+            }
+        }
+
+        /// <summary>
+        /// 手动将默认 Profile 添加到订阅配置
+        /// 用于内置模板不存在的情况
+        /// </summary>
+        private void AddDefaultProfileToSubscription()
+        {
+            // 直接操作订阅配置文件
+            var subscriptionsPath = AppPaths.SubscriptionsFilePath;
+            var config = new SubscriptionConfig();
+            
+            if (File.Exists(subscriptionsPath))
+            {
+                try
+                {
+                    config = SubscriptionConfig.LoadFromFile(subscriptionsPath);
+                }
+                catch
+                {
+                    config = new SubscriptionConfig();
+                }
+            }
+
+            if (!config.IsProfileSubscribed(AppConstants.DefaultProfileId))
+            {
+                config.AddProfile(AppConstants.DefaultProfileId);
+                config.SaveToFile(subscriptionsPath);
+            }
+
+            // 重新加载 SubscriptionManager
+            SubscriptionManager.Instance.Load();
+        }
+
+        /// <summary>
         /// 创建默认 Profile
+        /// 优先从内置模板复制，否则创建新的
         /// </summary>
         private GameProfile CreateDefaultProfile()
         {
-            var profile = new GameProfile
+            var profileDir = GetProfileDirectory(AppConstants.DefaultProfileId);
+            var profilePath = Path.Combine(profileDir, AppConstants.ProfileFileName);
+
+            // 检查内置模板是否存在
+            var templateDir = ProfileRegistry.Instance.GetProfileTemplateDirectory(AppConstants.DefaultProfileId);
+            var templatePath = Path.Combine(templateDir, AppConstants.ProfileFileName);
+
+            if (File.Exists(templatePath))
+            {
+                // 从内置模板复制
+                try
+                {
+                    Directory.CreateDirectory(profileDir);
+                    CopyDirectory(templateDir, profileDir);
+                    
+                    var profile = JsonHelper.LoadFromFile<GameProfile>(profilePath);
+                    if (profile != null)
+                    {
+                        LogService.Instance.Info("ProfileManager", "已从内置模板创建默认 Profile");
+                        return profile;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    LogService.Instance.Warn("ProfileManager", $"从模板复制默认 Profile 失败: {ex.Message}");
+                }
+            }
+
+            // 内置模板不存在或复制失败，创建新的默认 Profile
+            var newProfile = new GameProfile
             {
                 Id = AppConstants.DefaultProfileId,
                 Name = AppConstants.DefaultProfileName,
@@ -310,8 +497,33 @@ namespace FloatWebPlayer.Services
             };
 
             // 保存到文件
-            SaveProfile(profile);
-            return profile;
+            SaveProfile(newProfile);
+            LogService.Instance.Info("ProfileManager", "已创建新的默认 Profile");
+            return newProfile;
+        }
+
+        /// <summary>
+        /// 递归复制目录
+        /// </summary>
+        /// <param name="sourceDir">源目录</param>
+        /// <param name="targetDir">目标目录</param>
+        private void CopyDirectory(string sourceDir, string targetDir)
+        {
+            Directory.CreateDirectory(targetDir);
+
+            foreach (var file in Directory.GetFiles(sourceDir))
+            {
+                var fileName = Path.GetFileName(file);
+                var destFile = Path.Combine(targetDir, fileName);
+                File.Copy(file, destFile, true);
+            }
+
+            foreach (var dir in Directory.GetDirectories(sourceDir))
+            {
+                var dirName = Path.GetFileName(dir);
+                var destDir = Path.Combine(targetDir, dirName);
+                CopyDirectory(dir, destDir);
+            }
         }
 
         #endregion

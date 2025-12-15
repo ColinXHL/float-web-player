@@ -1,0 +1,16 @@
+{
+  "id": "default",
+  "name": "默认",
+  "icon": "📺",
+  "version": 1,
+  "recommendedPlugins": [],
+  "activation": {
+    "processes": [],
+    "autoSwitch": false
+  },
+  "defaults": {
+    "url": "https://www.bilibili.com",
+    "opacity": 0.9,
+    "seekSeconds": 5
+  }
+}

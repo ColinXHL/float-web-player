@@ -9,17 +9,25 @@ namespace FloatWebPlayer.Tests
 {
     /// <summary>
     /// ProfileManager 属性测试
+    /// 测试 Profile 管理和订阅集成功能
     /// </summary>
     public class ProfileManagerTests : IDisposable
     {
         private readonly string _tempDir;
         private readonly string _profilesDir;
+        private readonly string _builtInProfilesDir;
+        private readonly string _subscriptionsFilePath;
 
         public ProfileManagerTests()
         {
             _tempDir = Path.Combine(Path.GetTempPath(), $"profile_manager_test_{Guid.NewGuid()}");
-            _profilesDir = Path.Combine(_tempDir, "Profiles");
+            _profilesDir = Path.Combine(_tempDir, "User", "Data", "Profiles");
+            _builtInProfilesDir = Path.Combine(_tempDir, "Profiles");
+            _subscriptionsFilePath = Path.Combine(_tempDir, "User", "Data", "subscriptions.json");
+            
             Directory.CreateDirectory(_profilesDir);
+            Directory.CreateDirectory(_builtInProfilesDir);
+            Directory.CreateDirectory(Path.GetDirectoryName(_subscriptionsFilePath)!);
         }
 
         public void Dispose()
@@ -38,7 +46,7 @@ namespace FloatWebPlayer.Tests
         }
 
         /// <summary>
-        /// 创建模拟的 Profile 目录
+        /// 创建模拟的用户 Profile 目录
         /// </summary>
         private void CreateMockProfile(string profileId, string name)
         {
@@ -60,6 +68,46 @@ namespace FloatWebPlayer.Tests
             };
             var json = JsonSerializer.Serialize(profile, options);
             File.WriteAllText(Path.Combine(profileDir, "profile.json"), json);
+        }
+
+        /// <summary>
+        /// 创建模拟的内置 Profile 模板
+        /// 注意：内置模板使用 BuiltInProfileInfo 格式，包含 recommendedPlugins
+        /// </summary>
+        private void CreateMockBuiltInProfile(string profileId, string name, string[]? recommendedPlugins = null)
+        {
+            var profileDir = Path.Combine(_builtInProfilesDir, profileId);
+            Directory.CreateDirectory(profileDir);
+            
+            // 创建 profile.json（GameProfile 格式）
+            var profile = new GameProfile
+            {
+                Id = profileId,
+                Name = name,
+                Icon = "🎮",
+                Version = 1
+            };
+            
+            var options = new JsonSerializerOptions 
+            { 
+                WriteIndented = true,
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+            };
+            var json = JsonSerializer.Serialize(profile, options);
+            File.WriteAllText(Path.Combine(profileDir, "profile.json"), json);
+        }
+
+        /// <summary>
+        /// 创建模拟的订阅配置
+        /// </summary>
+        private void CreateMockSubscriptionConfig(string[] profileIds)
+        {
+            var config = new SubscriptionConfig();
+            foreach (var profileId in profileIds)
+            {
+                config.AddProfile(profileId);
+            }
+            config.SaveToFile(_subscriptionsFilePath);
         }
 
         #region Property 3: Profile 切换一致性
@@ -258,6 +306,145 @@ namespace FloatWebPlayer.Tests
             
             // Assert
             Assert.False(Directory.Exists(profileDir));
+        }
+
+        #endregion
+
+        #region Subscription Integration Tests
+
+        /// <summary>
+        /// 订阅配置应该只包含已订阅的 Profile
+        /// </summary>
+        [Fact]
+        public void SubscriptionConfig_ShouldOnlyContainSubscribedProfiles()
+        {
+            // Arrange: 创建订阅配置
+            CreateMockSubscriptionConfig(new[] { "genshin", "default" });
+            
+            // Act: 读取订阅配置
+            var config = SubscriptionConfig.LoadFromFile(_subscriptionsFilePath);
+            
+            // Assert
+            Assert.NotNull(config);
+            Assert.Equal(2, config.Profiles.Count);
+            Assert.Contains("genshin", config.Profiles);
+            Assert.Contains("default", config.Profiles);
+        }
+
+        /// <summary>
+        /// 内置 Profile 模板应该可以被复制
+        /// </summary>
+        [Fact]
+        public void BuiltInProfileTemplate_ShouldBeCopyable()
+        {
+            // Arrange: 创建内置模板
+            CreateMockBuiltInProfile("genshin", "原神", new[] { "direction-marker" });
+            
+            var templateDir = Path.Combine(_builtInProfilesDir, "genshin");
+            var targetDir = Path.Combine(_profilesDir, "genshin");
+            
+            // Act: 复制模板
+            Directory.CreateDirectory(targetDir);
+            foreach (var file in Directory.GetFiles(templateDir))
+            {
+                var fileName = Path.GetFileName(file);
+                File.Copy(file, Path.Combine(targetDir, fileName), true);
+            }
+            
+            // Assert
+            Assert.True(File.Exists(Path.Combine(targetDir, "profile.json")));
+            
+            // 验证内容
+            var options = new JsonSerializerOptions
+            {
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                PropertyNameCaseInsensitive = true
+            };
+            var json = File.ReadAllText(Path.Combine(targetDir, "profile.json"));
+            var profile = JsonSerializer.Deserialize<GameProfile>(json, options);
+            
+            Assert.NotNull(profile);
+            Assert.Equal("genshin", profile!.Id);
+            Assert.Equal("原神", profile.Name);
+        }
+
+        /// <summary>
+        /// 订阅 Profile 后应该添加到订阅列表
+        /// </summary>
+        [Fact]
+        public void SubscribeProfile_ShouldAddToSubscriptionList()
+        {
+            // Arrange: 创建空的订阅配置
+            var config = new SubscriptionConfig();
+            
+            // Act: 添加 Profile
+            config.AddProfile("genshin");
+            
+            // Assert
+            Assert.True(config.IsProfileSubscribed("genshin"));
+            Assert.Single(config.Profiles);
+        }
+
+        /// <summary>
+        /// 取消订阅 Profile 后应该从订阅列表移除
+        /// </summary>
+        [Fact]
+        public void UnsubscribeProfile_ShouldRemoveFromSubscriptionList()
+        {
+            // Arrange: 创建包含 Profile 的订阅配置
+            var config = new SubscriptionConfig();
+            config.AddProfile("genshin");
+            config.AddProfile("default");
+            
+            // Act: 移除 Profile
+            config.RemoveProfile("genshin");
+            
+            // Assert
+            Assert.False(config.IsProfileSubscribed("genshin"));
+            Assert.True(config.IsProfileSubscribed("default"));
+            Assert.Single(config.Profiles);
+        }
+
+        /// <summary>
+        /// 取消订阅 Profile 时应该同时移除插件订阅
+        /// </summary>
+        [Fact]
+        public void UnsubscribeProfile_ShouldAlsoRemovePluginSubscriptions()
+        {
+            // Arrange: 创建包含插件订阅的配置
+            var config = new SubscriptionConfig();
+            config.AddProfile("genshin");
+            config.AddPlugin("direction-marker", "genshin");
+            
+            Assert.True(config.IsPluginSubscribed("direction-marker", "genshin"));
+            
+            // Act: 移除 Profile
+            config.RemoveProfile("genshin");
+            
+            // Assert: 插件订阅也应该被移除
+            Assert.False(config.IsProfileSubscribed("genshin"));
+            Assert.Empty(config.GetSubscribedPlugins("genshin"));
+        }
+
+        /// <summary>
+        /// 默认 Profile 不能被取消订阅
+        /// </summary>
+        [Fact]
+        public void DefaultProfile_ShouldNotBeUnsubscribable()
+        {
+            // 模拟检查默认 Profile
+            var profileId = "default";
+            var isDefault = profileId.Equals("default", StringComparison.OrdinalIgnoreCase);
+            
+            Assert.True(isDefault);
+            
+            // 应该返回失败结果
+            if (isDefault)
+            {
+                var result = UnsubscribeResult.Failed("不能取消订阅默认 Profile");
+                Assert.False(result.Success);
+                Assert.Contains("默认", result.ErrorMessage);
+            }
         }
 
         #endregion

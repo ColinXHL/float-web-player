@@ -4,8 +4,8 @@
         xmlns:helpers="clr-namespace:FloatWebPlayer.Helpers"
         xmlns:local="clr-namespace:FloatWebPlayer.Views"
         Title="设置"
-        Width="520"
-        Height="600"
+        Width="560"
+        Height="620"
         WindowStartupLocation="CenterScreen"
         Foreground="White"
         ResizeMode="NoResize">
@@ -410,6 +410,13 @@
 
             <!-- TabControl 内容区 -->
             <TabControl Grid.Row="1" Style="{StaticResource DarkTabControlStyle}" Margin="0,10,0,0">
+                <!-- Profile 市场选项卡 -->
+                <TabItem Header="Profile 市场" Style="{StaticResource DarkTabItemStyle}">
+                    <ScrollViewer Style="{StaticResource DarkScrollViewer}" VerticalScrollBarVisibility="Auto">
+                        <local:ProfileMarketPage x:Name="ProfileMarketPage" Margin="20,10,16,10"/>
+                    </ScrollViewer>
+                </TabItem>
+
                 <!-- 通用设置选项卡 -->
                 <TabItem Header="通用" Style="{StaticResource DarkTabItemStyle}">
                     <ScrollViewer Style="{StaticResource DarkScrollViewer}" VerticalScrollBarVisibility="Auto">
@@ -567,8 +574,15 @@
                     </ScrollViewer>
                 </TabItem>
 
+                <!-- 插件管理选项卡 -->
+                <TabItem Header="插件管理" Style="{StaticResource DarkTabItemStyle}">
+                    <ScrollViewer Style="{StaticResource DarkScrollViewer}" VerticalScrollBarVisibility="Auto">
+                        <local:PluginMarketPage x:Name="PluginMarketPage" Margin="20,10,16,10"/>
+                    </ScrollViewer>
+                </TabItem>
+
                 <!-- 插件设置选项卡 -->
-                <TabItem Header="插件" Style="{StaticResource DarkTabItemStyle}">
+                <TabItem Header="插件设置" Style="{StaticResource DarkTabItemStyle}">
                     <ScrollViewer Style="{StaticResource DarkScrollViewer}" VerticalScrollBarVisibility="Auto">
                         <local:PluginSettingsPage x:Name="PluginSettingsPage" Margin="20,10,16,10"/>
                     </ScrollViewer>

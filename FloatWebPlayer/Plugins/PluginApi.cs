@@ -226,6 +226,70 @@ namespace FloatWebPlayer.Plugins
         }
 
         #endregion
+
+        #region Cleanup
+
+        private bool _isCleanedUp = false;
+
+        /// <summary>
+        /// 清理所有 API 资源（插件卸载时调用）
+        /// 此方法是幂等的，可以安全地多次调用
+        /// 只清理已初始化的 API（即不为 null 的 API）
+        /// </summary>
+        public void Cleanup()
+        {
+            // 确保幂等性：如果已经清理过，直接返回
+            if (_isCleanedUp)
+            {
+                Services.LogService.Instance.Debug("PluginApi", $"Plugin {_context.PluginId} already cleaned up, skipping");
+                return;
+            }
+
+            Services.LogService.Instance.Debug("PluginApi", $"Cleaning up plugin {_context.PluginId}");
+
+            // 清理已初始化的子 API，使用 try-catch 确保一个 API 失败不影响其他 API 的清理
+            // 只清理那些实际被初始化的 API（即不为 null 的 API）
+            if (_overlayApi != null)
+                TryCleanupApi("OverlayApi", () => _overlayApi.Cleanup());
+            if (_subtitleApi != null)
+                TryCleanupApi("SubtitleApi", () => _subtitleApi.Cleanup());
+            if (_speechApi != null)
+                TryCleanupApi("SpeechApi", () => _speechApi.Cleanup());
+            if (_playerApi != null)
+                TryCleanupApi("PlayerApi", () => _playerApi.Cleanup());
+            if (_windowApi != null)
+                TryCleanupApi("WindowApi", () => _windowApi.Cleanup());
+            if (_storageApi != null)
+                TryCleanupApi("StorageApi", () => _storageApi.Cleanup());
+            if (_httpApi != null)
+                TryCleanupApi("HttpApi", () => _httpApi.Cleanup());
+            if (_eventApi != null)
+                TryCleanupApi("EventApi", () => _eventApi.Cleanup());
+
+            _isCleanedUp = true;
+            Services.LogService.Instance.Debug("PluginApi", $"Plugin {_context.PluginId} cleanup completed");
+        }
+
+        /// <summary>
+        /// 尝试清理单个 API，捕获并记录异常
+        /// </summary>
+        /// <param name="apiName">API 名称（用于日志）</param>
+        /// <param name="cleanupAction">清理操作</param>
+        private void TryCleanupApi(string apiName, Action cleanupAction)
+        {
+            try
+            {
+                cleanupAction?.Invoke();
+                Services.LogService.Instance.Debug("PluginApi", $"  - {apiName} cleaned up successfully");
+            }
+            catch (Exception ex)
+            {
+                Services.LogService.Instance.Error("PluginApi", $"  - Failed to cleanup {apiName}: {ex.Message}");
+                // 继续清理其他 API，不抛出异常
+            }
+        }
+
+        #endregion
     }
 
     /// <summary>

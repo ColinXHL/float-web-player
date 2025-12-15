@@ -54,6 +54,18 @@ namespace FloatWebPlayer.Plugins
             _eventApi = eventApi;
         }
 
+        /// <summary>
+        /// 清理资源（插件卸载时调用）
+        /// </summary>
+        internal void Cleanup()
+        {
+            // WindowApi 没有事件监听器需要清理
+            // 清空 EventApi 引用
+            _eventApi = null;
+            
+            Services.LogService.Instance.Debug($"Plugin:{_context.PluginId}", "WindowApi: cleaned up");
+        }
+
         #endregion
 
         #region Opacity Control

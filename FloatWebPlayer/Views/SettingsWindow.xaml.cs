@@ -35,6 +35,12 @@ namespace FloatWebPlayer.Views
             _config = ConfigService.Instance.Config;
             LoadSettings();
             _isInitializing = false;
+            
+            // 订阅 ProfileMarketPage 的订阅变化事件
+            ProfileMarketPage.SubscriptionChanged += ProfileMarketPage_SubscriptionChanged;
+            
+            // 订阅 PluginMarketPage 的订阅变化事件
+            PluginMarketPage.SubscriptionChanged += PluginMarketPage_SubscriptionChanged;
         }
 
         #endregion
@@ -387,6 +393,9 @@ namespace FloatWebPlayer.Views
                 
                 // 刷新插件设置页面
                 PluginSettingsPage?.RefreshAll();
+                
+                // 刷新 Profile 市场页面
+                ProfileMarketPage?.RefreshProfileList();
             }
             else
             {
@@ -397,6 +406,37 @@ namespace FloatWebPlayer.Views
                     MessageBoxImage.Error);
                 Debug.WriteLine($"[Settings] 取消订阅配置失败: {unsubscribeResult.ErrorMessage}");
             }
+        }
+
+        /// <summary>
+        /// Profile 市场订阅状态变化事件处理
+        /// </summary>
+        private void ProfileMarketPage_SubscriptionChanged(object? sender, EventArgs e)
+        {
+            // 刷新 Profile 列表
+            _isInitializing = true;
+            ProfileManager.Instance.ReloadProfiles();
+            LoadProfileList();
+            _isInitializing = false;
+            
+            // 刷新插件设置页面
+            PluginSettingsPage?.RefreshAll();
+            
+            // 刷新插件管理页面
+            PluginMarketPage?.RefreshProfileList();
+            
+            Debug.WriteLine("[Settings] Profile 订阅状态已变化，已刷新列表");
+        }
+
+        /// <summary>
+        /// 插件管理页面订阅状态变化事件处理
+        /// </summary>
+        private void PluginMarketPage_SubscriptionChanged(object? sender, EventArgs e)
+        {
+            // 刷新插件设置页面
+            PluginSettingsPage?.RefreshAll();
+            
+            Debug.WriteLine("[Settings] 插件订阅状态已变化，已刷新插件设置页面");
         }
 
         #endregion

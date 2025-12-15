@@ -5,6 +5,29 @@
              Cursor="Arrow">
     
     <UserControl.Resources>
+        <!-- 返回按钮样式 -->
+        <Style x:Key="BackButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="#0078D4"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Left" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Foreground" Value="#50A0E0"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
         <!-- 分组标题样式 -->
         <Style x:Key="GroupHeaderStyle" TargetType="TextBlock">
             <Setter Property="FontSize" Value="13"/>
@@ -108,16 +131,18 @@
 
     </UserControl.Resources>
 
-    <StackPanel Margin="0">
-        <!-- 已安装插件 -->
-        <TextBlock Text="已安装插件" Style="{StaticResource GroupHeaderStyle}" Margin="0,0,0,8"/>
-        
-        <!-- 无插件提示 -->
-        <TextBlock x:Name="NoPluginsText" Text="当前 Profile 没有安装插件" 
-                   Foreground="#666" FontSize="12" Margin="0,0,0,8"/>
-        
-        <!-- 插件列表 -->
-        <ItemsControl x:Name="PluginList">
+    <Grid>
+        <!-- 插件列表视图 -->
+        <StackPanel x:Name="PluginListPanel" Margin="0">
+            <!-- 已安装插件 -->
+            <TextBlock Text="已安装插件" Style="{StaticResource GroupHeaderStyle}" Margin="0,0,0,8"/>
+            
+            <!-- 无插件提示 -->
+            <TextBlock x:Name="NoPluginsText" Text="当前 Profile 没有安装插件" 
+                       Foreground="#666" FontSize="12" Margin="0,0,0,8"/>
+            
+            <!-- 插件列表 -->
+            <ItemsControl x:Name="PluginList">
             <ItemsControl.ItemTemplate>
                 <DataTemplate>
                     <Border Style="{StaticResource PluginCardStyle}">
@@ -174,10 +199,13 @@
                             </ItemsControl>
                             
                             <!-- 操作按钮 -->
-                            <StackPanel Grid.Row="3" Grid.ColumnSpan="2" Orientation="Horizontal" Margin="0,8,0,0"
-                                        Visibility="{Binding HasOverlayPermission}">
+                            <StackPanel Grid.Row="3" Grid.ColumnSpan="2" Orientation="Horizontal" Margin="0,8,0,0">
+                                <Button Content="⚙ 设置" Style="{StaticResource ActionButtonStyle}"
+                                        Click="BtnPluginSettings_Click" Tag="{Binding Id}"
+                                        Visibility="{Binding HasSettingsUi}" Margin="0,0,8,0"/>
                                 <Button Content="📍 调整覆盖层位置" Style="{StaticResource ActionButtonStyle}"
-                                        Click="BtnEditOverlay_Click" Tag="{Binding Id}"/>
+                                        Click="BtnEditOverlay_Click" Tag="{Binding Id}"
+                                        Visibility="{Binding HasOverlayPermission}"/>
                             </StackPanel>
                         </Grid>
                     </Border>
@@ -185,4 +213,44 @@
             </ItemsControl.ItemTemplate>
         </ItemsControl>
     </StackPanel>
+
+        <!-- 插件设置详情视图 -->
+        <StackPanel x:Name="PluginSettingsPanel" Visibility="Collapsed" Margin="0">
+            <!-- 返回按钮 -->
+            <Button x:Name="BtnBack" Content="← 返回插件列表" 
+                    Style="{StaticResource BackButtonStyle}"
+                    Click="BtnBack_Click" Margin="0,0,0,12"/>
+            
+            <!-- 插件标题 -->
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                <TextBlock x:Name="PluginSettingsTitle" Text="插件设置" 
+                           FontSize="16" FontWeight="SemiBold" Foreground="White"/>
+                <TextBlock x:Name="PluginSettingsVersion" Text="" 
+                           FontSize="12" Foreground="#888" 
+                           VerticalAlignment="Center" Margin="8,0,0,0"/>
+            </StackPanel>
+            
+            <!-- 插件描述 -->
+            <TextBlock x:Name="PluginSettingsDescription" Text="" 
+                       Foreground="#AAA" FontSize="12" TextWrapping="Wrap"
+                       Margin="0,0,0,16" Visibility="Collapsed"/>
+            
+            <!-- 声明式设置 UI 容器 -->
+            <Border x:Name="SettingsUiContainer" Margin="0,0,0,16"/>
+            
+            <!-- 无设置提示 -->
+            <TextBlock x:Name="NoSettingsText" Text="此插件没有可配置的设置项" 
+                       Foreground="#666" FontSize="12" Visibility="Collapsed"/>
+            
+            <!-- 操作按钮区域 -->
+            <StackPanel Orientation="Horizontal" Margin="0,16,0,0">
+                <Button x:Name="BtnResetConfig" Content="重置为默认值" 
+                        Style="{StaticResource ActionButtonStyle}"
+                        Click="BtnResetConfig_Click" Margin="0,0,8,0"/>
+                <Button x:Name="BtnOpenPluginFolder" Content="打开插件目录" 
+                        Style="{StaticResource ActionButtonStyle}"
+                        Click="BtnOpenPluginFolder_Click"/>
+            </StackPanel>
+        </StackPanel>
+    </Grid>
 </UserControl>
