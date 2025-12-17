@@ -181,15 +181,23 @@ namespace FloatWebPlayer.Plugins
             }
             catch (JavaScriptException ex)
             {
-                LastError = $"调用 {functionName} 失败: {ex.Message}";
+                LastError = $"调用 {functionName} 失败: {ex.Message} (行 {ex.Location.Start.Line}, 列 {ex.Location.Start.Column})";
                 Log(LastError);
+                if (ex.InnerException != null)
+                {
+                    Log($"  内部异常: {ex.InnerException.GetType().Name} - {ex.InnerException.Message}");
+                }
                 // 异常被捕获，不影响主程序
                 return false;
             }
             catch (Exception ex)
             {
-                LastError = $"调用 {functionName} 异常: {ex.Message}";
+                LastError = $"调用 {functionName} 异常: {ex.GetType().Name} - {ex.Message}";
                 Log(LastError);
+                if (ex.InnerException != null)
+                {
+                    Log($"  内部异常: {ex.InnerException.GetType().Name} - {ex.InnerException.Message}");
+                }
                 // 异常被捕获，不影响主程序
                 return false;
             }
@@ -262,13 +270,17 @@ namespace FloatWebPlayer.Plugins
         /// <summary>
         /// 调用 onUnload 生命周期函数
         /// </summary>
+        /// <param name="api">插件 API 对象（可选，如果不传则使用全局注入的 api）</param>
         /// <returns>是否成功</returns>
-        public bool CallOnUnload()
+        public bool CallOnUnload(object? api = null)
         {
             if (!_isLoaded)
                 return true;
 
-            var result = InvokeFunction("onUnload");
+            // 如果提供了 API，传递给 onUnload；否则使用全局注入的 api
+            var result = api != null 
+                ? InvokeFunction("onUnload", api) 
+                : InvokeFunction("onUnload");
             _isLoaded = false;
             return result;
         }

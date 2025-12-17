@@ -96,11 +96,58 @@ function onLoad(api) {
     var y = api.config.get("overlay.y", 43);
     var size = api.config.get("overlay.size", 212);
     var duration = api.config.get("markerDuration", 0);
+
+    api.log("覆盖层位置和大小: x=" + x + ", y=" + y + ", size=" + size + ", duration=" + duration);
+
+    // 从配置读取标记样式
+    var markerSize = api.config.get("marker.size", 32);
+    var markerImage = api.config.get("marker.image", "assets/right.png");
+
+    api.log("markerImage 配置: " + markerImage + " | " + typeof markerImage);
     
     // 设置覆盖层
+    api.log("设置覆盖层位置和大小...");
     api.overlay.setPosition(x, y);
     api.overlay.setSize(size, size);
     api.overlay.show();
+    api.log("覆盖层设置完成");
+    
+    // 应用标记样式
+    api.log("应用标记样式, size=" + markerSize);
+    try {
+        api.overlay.setMarkerStyle({ size: markerSize });
+        api.log("标记样式设置完成");
+    } catch (e) {
+        api.log("设置标记样式失败: " + e.message);
+    }
+    
+    // 调试：检查 overlay 对象的方法
+    api.log("检查 overlay 对象...");
+    api.log("overlay.setMarkerImage 类型: " + typeof api.overlay.setMarkerImage);
+    api.log("overlay.SetMarkerImage 类型: " + typeof api.overlay.SetMarkerImage);
+    
+    // 设置标记图片（图片应指向右/东方向）
+    if (markerImage) {
+        api.log("准备设置标记图片: " + markerImage);
+        try {
+            // 尝试小写方法名（Jint 的 camelCase 转换）
+            if (typeof api.overlay.setMarkerImage === 'function') {
+                var result = api.overlay.setMarkerImage(markerImage);
+                api.log("setMarkerImage 结果: " + result);
+            } 
+            // 尝试原始方法名
+            else if (typeof api.overlay.SetMarkerImage === 'function') {
+                var result = api.overlay.SetMarkerImage(markerImage);
+                api.log("SetMarkerImage 结果: " + result);
+            } else {
+                api.log("错误: setMarkerImage 方法不存在！");
+            }
+        } catch (e) {
+            api.log("设置标记图片失败: " + e.message + " | " + e.toString());
+        }
+    } else {
+        api.log("markerImage 配置为空，跳过设置");
+    }
     
     // 初始化时显示北方向标记，让用户知道遮罩层已生效
     api.overlay.showMarker("north", duration);

@@ -157,16 +157,32 @@ namespace FloatWebPlayer.Views
         }
 
         /// <summary>
+        /// 保存的父窗口引用（用于编辑模式时隐藏/恢复）
+        /// </summary>
+        private Window? _parentPluginCenter;
+        private Window? _parentSettings;
+
+        /// <summary>
         /// 进入覆盖层编辑模式
         /// </summary>
         private void EnterOverlayEditMode()
         {
+            // 隐藏设置窗口，避免阻挡 overlay 编辑
+            Hide();
+
+            // 查找并隐藏父级模态窗口（PluginCenterWindow 和 SettingsWindow）
+            // 这样才能让用户与 overlay 交互
+            HideParentModalWindows();
+
             // 通过 OverlayManager 获取覆盖层并进入编辑模式
             var overlay = OverlayManager.Instance.GetOverlay(_pluginId);
             if (overlay != null)
             {
                 overlay.Show();
                 overlay.EnterEditMode();
+
+                // 监听编辑模式退出，恢复设置窗口
+                overlay.EditModeExited += OnOverlayEditModeExited;
             }
             else
             {
@@ -196,6 +212,77 @@ namespace FloatWebPlayer.Views
         }
 
         /// <summary>
+        /// 隐藏父级模态窗口
+        /// </summary>
+        private void HideParentModalWindows()
+        {
+            // 查找 PluginCenterWindow 和 SettingsWindow
+            foreach (Window window in Application.Current.Windows)
+            {
+                if (window is PluginCenterWindow pluginCenter && window.IsVisible)
+                {
+                    _parentPluginCenter = pluginCenter;
+                    pluginCenter.Hide();
+                }
+                else if (window is SettingsWindow settings && window.IsVisible)
+                {
+                    _parentSettings = settings;
+                    settings.Hide();
+                }
+            }
+        }
+
+        /// <summary>
+        /// 恢复父级模态窗口
+        /// </summary>
+        private void RestoreParentModalWindows()
+        {
+            // 按相反顺序恢复窗口
+            if (_parentSettings != null)
+            {
+                _parentSettings.Show();
+                _parentSettings = null;
+            }
+            if (_parentPluginCenter != null)
+            {
+                _parentPluginCenter.Show();
+                _parentPluginCenter.Activate();
+                _parentPluginCenter = null;
+            }
+        }
+
+        /// <summary>
+        /// 已有覆盖层编辑模式退出处理
+        /// </summary>
+        private void OnOverlayEditModeExited(object? sender, EventArgs e)
+        {
+            if (sender is OverlayWindow overlay)
+            {
+                // 取消事件订阅
+                overlay.EditModeExited -= OnOverlayEditModeExited;
+
+                // 保存位置到配置
+                _config.Set("overlay.x", overlay.Left);
+                _config.Set("overlay.y", overlay.Top);
+                _config.Set("overlay.size", overlay.Width);
+                SaveConfig();
+
+                // 刷新 UI 显示
+                _renderer?.RefreshValues();
+
+                // 通知插件配置已变更
+                NotifyPluginConfigChanged(null, null);
+
+                // 恢复父级模态窗口
+                RestoreParentModalWindows();
+
+                // 恢复设置窗口显示
+                Show();
+                Activate();
+            }
+        }
+
+        /// <summary>
         /// 临时覆盖层编辑模式退出处理
         /// </summary>
         private void OnTempOverlayEditModeExited(object? sender, EventArgs e)
@@ -219,6 +306,13 @@ namespace FloatWebPlayer.Views
 
                 // 销毁临时覆盖层
                 OverlayManager.Instance.DestroyOverlay(_pluginId);
+
+                // 恢复父级模态窗口
+                RestoreParentModalWindows();
+
+                // 恢复设置窗口显示
+                Show();
+                Activate();
             }
         }
 

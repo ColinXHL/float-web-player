@@ -576,10 +576,13 @@ namespace FloatWebPlayer.Services
         {
             var pluginId = plugin.PluginId;
 
+            // 获取 PluginApi（在调用 onUnload 之前，因为 onUnload 需要 api 参数）
+            _pluginApis.TryGetValue(pluginId, out var pluginApi);
+
             try
             {
-                // 调用 onUnload
-                plugin.CallOnUnload();
+                // 调用 onUnload，传递 api 参数
+                plugin.CallOnUnload(pluginApi);
             }
             catch (Exception ex)
             {
@@ -588,7 +591,7 @@ namespace FloatWebPlayer.Services
             }
 
             // 清理 PluginApi
-            if (_pluginApis.TryGetValue(pluginId, out var pluginApi))
+            if (pluginApi != null)
             {
                 try
                 {

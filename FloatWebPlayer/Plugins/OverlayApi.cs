@@ -159,6 +159,101 @@ namespace FloatWebPlayer.Plugins
             InvokeOnUI(() => _overlay?.ClearMarkers());
         }
 
+        /// <summary>
+        /// 设置标记样式
+        /// </summary>
+        /// <param name="size">标记大小（像素），范围 16-64</param>
+        /// <param name="color">标记颜色（十六进制，如 #FFFF6B6B）</param>
+        public void SetMarkerStyle(double size, string color)
+        {
+            EnsureOverlay();
+            InvokeOnUI(() => _overlay?.SetMarkerStyle(size, color));
+        }
+
+        /// <summary>
+        /// 设置标记样式（从选项对象）
+        /// </summary>
+        /// <param name="options">样式选项对象，包含 size 和 color 属性</param>
+        public void SetMarkerStyle(object? options)
+        {
+            Services.LogService.Instance.Debug("OverlayApi", $"SetMarkerStyle(object) called, options is null = {options == null}");
+            
+            if (options == null)
+                return;
+
+            Services.LogService.Instance.Debug("OverlayApi", $"SetMarkerStyle: options type = {options.GetType().FullName}");
+            
+            var dict = ConvertToDictionary(options);
+            Services.LogService.Instance.Debug("OverlayApi", $"SetMarkerStyle: dict is null = {dict == null}");
+            
+            if (dict == null)
+                return;
+
+            double size = 24;
+            string color = "#FFFF6B6B";
+
+            if (dict.TryGetValue("size", out var sizeValue) && sizeValue != null)
+            {
+                Services.LogService.Instance.Debug("OverlayApi", $"SetMarkerStyle: sizeValue = {sizeValue}, type = {sizeValue.GetType().Name}");
+                size = Convert.ToDouble(sizeValue);
+            }
+            if (dict.TryGetValue("color", out var colorValue) && colorValue != null)
+                color = colorValue.ToString() ?? "#FFFF6B6B";
+
+            Services.LogService.Instance.Debug("OverlayApi", $"SetMarkerStyle: calling SetMarkerStyle({size}, {color})");
+            SetMarkerStyle(size, color);
+            Services.LogService.Instance.Debug("OverlayApi", "SetMarkerStyle: completed");
+        }
+
+        /// <summary>
+        /// 设置标记图片
+        /// </summary>
+        /// <param name="path">图片路径（相对于插件目录或绝对路径），图片应指向右/东方向</param>
+        /// <returns>是否设置成功</returns>
+        public bool SetMarkerImage(string path)
+        {
+            Services.LogService.Instance.Debug("OverlayApi", $"SetMarkerImage called with path: {path}");
+            Services.LogService.Instance.Debug("OverlayApi", $"Plugin directory: {_context.PluginDirectory}");
+
+            if (string.IsNullOrEmpty(path))
+            {
+                Services.LogService.Instance.Warn("OverlayApi", "SetMarkerImage: path is null or empty");
+                return false;
+            }
+
+            // 解析路径：如果是相对路径，则相对于插件目录
+            string fullPath = path;
+            if (!System.IO.Path.IsPathRooted(path))
+            {
+                fullPath = System.IO.Path.Combine(_context.PluginDirectory, path);
+            }
+
+            Services.LogService.Instance.Debug("OverlayApi", $"SetMarkerImage: resolved full path: {fullPath}");
+
+            if (!System.IO.File.Exists(fullPath))
+            {
+                Services.LogService.Instance.Error("OverlayApi", $"SetMarkerImage: Image file not found: {fullPath}");
+                return false;
+            }
+
+            Services.LogService.Instance.Debug("OverlayApi", "SetMarkerImage: Image file exists, ensuring overlay...");
+            EnsureOverlay();
+            bool result = false;
+
+            InvokeOnUI(() =>
+            {
+                Services.LogService.Instance.Debug("OverlayApi", $"SetMarkerImage: InvokeOnUI, _overlay is null = {_overlay == null}");
+                if (_overlay != null)
+                {
+                    result = _overlay.SetMarkerImage(fullPath);
+                    Services.LogService.Instance.Debug("OverlayApi", $"SetMarkerImage: overlay.SetMarkerImage returned {result}");
+                }
+            });
+
+            Services.LogService.Instance.Debug("OverlayApi", $"SetMarkerImage: returning {result}");
+            return result;
+        }
+
         #endregion
 
         #region Drawing Methods

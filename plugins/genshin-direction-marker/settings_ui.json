@@ -21,6 +21,20 @@
       ]
     },
     {
+      "title": "标记样式",
+      "items": [
+        {
+          "type": "number",
+          "key": "marker.size",
+          "label": "标记大小",
+          "default": 24,
+          "min": 16,
+          "max": 64,
+          "step": 4
+        }
+      ]
+    },
+    {
       "title": "覆盖层位置",
       "items": [
         {
