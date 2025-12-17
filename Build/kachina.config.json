@@ -16,8 +16,12 @@
   "title": "FloatWebPlayer",
   "description": "悬浮网页播放器",
   "windowTitle": "FloatWebPlayer 安装程序",
+  "windowBorderless": false,
   "userDataPath": [
     "${INSTALL_PATH}/User"
+  ],
+  "extraUninstallPath": [
+    "${INSTALL_PATH}/logs"
   ],
   "uacStrategy": "prefer-admin",
   "runtimes": [
