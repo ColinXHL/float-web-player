@@ -1,7 +1,7 @@
 {
   "id": "genshin-direction-marker",
   "name": "原神方向标记",
-  "version": "2.0.0",
+  "version": "1.0.0",
   "main": "main.js",
   "description": "识别攻略视频中的方位词，在小地图上显示方向标记",
   "author": "ColinXHL",
