@@ -124,6 +124,13 @@
             <Setter Property="Padding" Value="8,3"/>
         </Style>
 
+        <!-- 状态标签样式 - 更新可用 -->
+        <Style x:Key="UpdateAvailableTagStyle" TargetType="Border">
+            <Setter Property="Background" Value="#3A2A1A"/>
+            <Setter Property="CornerRadius" Value="3"/>
+            <Setter Property="Padding" Value="8,3"/>
+        </Style>
+
         <!-- 深色滚动条样式 -->
         <Style x:Key="DarkScrollBarThumb" TargetType="Thumb">
             <Setter Property="Template">
@@ -190,10 +197,14 @@
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
             <TextBlock Grid.Column="0" Text="已安装插件" FontSize="18" FontWeight="SemiBold" 
                        Foreground="White" VerticalAlignment="Center"/>
-            <TextBox x:Name="SearchBox" Grid.Column="1" Width="200" 
+            <Button x:Name="BtnCheckUpdate" Grid.Column="1" Content="🔄 检查更新" 
+                    Style="{StaticResource ActionButtonStyle}" Margin="0,0,12,0"
+                    Click="BtnCheckUpdate_Click"/>
+            <TextBox x:Name="SearchBox" Grid.Column="2" Width="200" 
                      Style="{StaticResource SearchBoxStyle}"
                      TextChanged="SearchBox_TextChanged"/>
         </Grid>
@@ -229,6 +240,7 @@
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="*"/>
                                             <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="Auto"/>
                                         </Grid.ColumnDefinitions>
                                         
                                         <StackPanel Grid.Column="0" Orientation="Horizontal">
@@ -240,7 +252,14 @@
                                                        VerticalAlignment="Center" Margin="8,0,0,0"/>
                                         </StackPanel>
                                         
-                                        <Border Grid.Column="1" Style="{StaticResource InstalledTagStyle}">
+                                        <!-- 更新可用标签 -->
+                                        <Border Grid.Column="1" Style="{StaticResource UpdateAvailableTagStyle}"
+                                                Visibility="{Binding UpdateAvailableTagVisibility}" Margin="0,0,8,0">
+                                            <TextBlock Text="{Binding UpdateAvailableTagText}" Foreground="#F59E0B" FontSize="11"/>
+                                        </Border>
+                                        
+                                        <!-- 已安装标签 -->
+                                        <Border Grid.Column="2" Style="{StaticResource InstalledTagStyle}">
                                             <TextBlock Text="已安装" Foreground="#4ADE80" FontSize="11"/>
                                         </Border>
                                     </Grid>
@@ -257,10 +276,13 @@
 
                                     <!-- 第三行：操作按钮 -->
                                     <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,12,0,0">
+                                        <Button Content="{Binding UpdateButtonText}" Style="{StaticResource PrimaryButtonStyle}"
+                                                Click="BtnUpdate_Click" Tag="{Binding Id}"
+                                                Visibility="{Binding UpdateButtonVisibility}" Margin="0,0,8,0"/>
                                         <Button Content="⚙ 设置" Style="{StaticResource ActionButtonStyle}"
                                                 Click="BtnSettings_Click" Tag="{Binding Id}"
                                                 Visibility="{Binding HasSettingsUi, Converter={StaticResource BoolToVisibilityConverter}}" Margin="0,0,8,0"/>
-                                        <Button Content="➕ 添加到 Profile" Style="{StaticResource PrimaryButtonStyle}"
+                                        <Button Content="➕ 添加到 Profile" Style="{StaticResource ActionButtonStyle}"
                                                 Click="BtnAddToProfile_Click" Tag="{Binding Id}" Margin="0,0,8,0"/>
                                         <Button Content="🗑 卸载" Style="{StaticResource DangerButtonStyle}"
                                                 Click="BtnUninstall_Click" Tag="{Binding Id}"/>

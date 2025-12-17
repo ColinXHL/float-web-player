@@ -67,6 +67,28 @@ namespace FloatWebPlayer.Services
         }
     }
 
+    /// <summary>
+    /// 插件启用状态变化事件参数
+    /// </summary>
+    public class PluginEnabledChangedEventArgs : EventArgs
+    {
+        /// <summary>Profile ID</summary>
+        public string ProfileId { get; }
+
+        /// <summary>插件ID</summary>
+        public string PluginId { get; }
+
+        /// <summary>是否启用</summary>
+        public bool Enabled { get; }
+
+        public PluginEnabledChangedEventArgs(string profileId, string pluginId, bool enabled)
+        {
+            ProfileId = profileId;
+            PluginId = pluginId;
+            Enabled = enabled;
+        }
+    }
+
     #endregion
 
 
@@ -597,6 +619,8 @@ namespace FloatWebPlayer.Services
             if (string.IsNullOrEmpty(profileId) || string.IsNullOrEmpty(pluginId))
                 return false;
 
+            bool stateChanged = false;
+
             lock (_indexLock)
             {
                 if (!_index.ProfilePlugins.TryGetValue(profileId, out var entries))
@@ -608,8 +632,19 @@ namespace FloatWebPlayer.Services
                 if (entry == null)
                     return false;
 
-                entry.Enabled = enabled;
-                SaveIndex();
+                // 只有状态真正变化时才保存和触发事件
+                if (entry.Enabled != enabled)
+                {
+                    entry.Enabled = enabled;
+                    SaveIndex();
+                    stateChanged = true;
+                }
+            }
+
+            // 触发事件（在锁外触发，避免死锁）
+            if (stateChanged)
+            {
+                OnPluginEnabledChanged(new PluginEnabledChangedEventArgs(profileId, pluginId, enabled));
             }
 
             return true;
@@ -812,11 +847,24 @@ namespace FloatWebPlayer.Services
         public event EventHandler<AssociationChangedEventArgs>? AssociationChanged;
 
         /// <summary>
+        /// 插件启用状态变化事件
+        /// </summary>
+        public event EventHandler<PluginEnabledChangedEventArgs>? PluginEnabledChanged;
+
+        /// <summary>
         /// 触发关联变化事件
         /// </summary>
         protected virtual void OnAssociationChanged(AssociationChangedEventArgs e)
         {
             AssociationChanged?.Invoke(this, e);
+        }
+
+        /// <summary>
+        /// 触发插件启用状态变化事件
+        /// </summary>
+        protected virtual void OnPluginEnabledChanged(PluginEnabledChangedEventArgs e)
+        {
+            PluginEnabledChanged?.Invoke(this, e);
         }
 
         #endregion

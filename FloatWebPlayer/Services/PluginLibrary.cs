@@ -543,6 +543,201 @@ namespace FloatWebPlayer.Services
 
         #endregion
 
+        #region Update Methods
+
+        /// <summary>
+        /// 检查插件是否有可用更新
+        /// </summary>
+        /// <param name="pluginId">插件ID</param>
+        /// <returns>更新检查结果</returns>
+        public UpdateCheckResult CheckForUpdate(string pluginId)
+        {
+            // 获取已安装版本
+            var installedInfo = GetInstalledPluginInfo(pluginId);
+            if (installedInfo == null)
+            {
+                return UpdateCheckResult.NoUpdate(pluginId, "未安装");
+            }
+
+            var currentVersion = installedInfo.Version ?? "1.0.0";
+
+            // 检查内置插件目录是否有该插件
+            var builtInPath = Path.Combine(AppPaths.BuiltInPluginsDirectory, pluginId);
+            if (!Directory.Exists(builtInPath))
+            {
+                return UpdateCheckResult.NoUpdate(pluginId, currentVersion);
+            }
+
+            // 读取内置插件的清单
+            var manifestPath = Path.Combine(builtInPath, "plugin.json");
+            var manifestResult = PluginManifest.LoadFromFile(manifestPath);
+            if (!manifestResult.IsSuccess || manifestResult.Manifest == null)
+            {
+                return UpdateCheckResult.NoUpdate(pluginId, currentVersion);
+            }
+
+            var availableVersion = manifestResult.Manifest.Version ?? "1.0.0";
+
+            // 比较版本号
+            if (IsNewerVersion(currentVersion, availableVersion))
+            {
+                return UpdateCheckResult.WithUpdate(pluginId, currentVersion, availableVersion, builtInPath);
+            }
+
+            return UpdateCheckResult.NoUpdate(pluginId, currentVersion);
+        }
+
+        /// <summary>
+        /// 检查所有已安装插件的更新
+        /// </summary>
+        /// <returns>有更新的插件列表</returns>
+        public List<UpdateCheckResult> CheckAllUpdates()
+        {
+            var results = new List<UpdateCheckResult>();
+            var installedPlugins = GetInstalledPlugins();
+
+            foreach (var plugin in installedPlugins)
+            {
+                var checkResult = CheckForUpdate(plugin.Id);
+                if (checkResult.HasUpdate)
+                {
+                    results.Add(checkResult);
+                }
+            }
+
+            return results;
+        }
+
+        /// <summary>
+        /// 更新插件到最新版本
+        /// </summary>
+        /// <param name="pluginId">插件ID</param>
+        /// <returns>更新结果</returns>
+        public UpdateResult UpdatePlugin(string pluginId)
+        {
+            // 检查是否有可用更新
+            var checkResult = CheckForUpdate(pluginId);
+            if (!checkResult.HasUpdate)
+            {
+                return UpdateResult.NoUpdateAvailable();
+            }
+
+            var oldVersion = checkResult.CurrentVersion;
+            var newVersion = checkResult.AvailableVersion!;
+            var sourcePath = checkResult.SourcePath!;
+
+            // 获取目标目录
+            var targetDir = GetPluginDirectory(pluginId);
+
+            try
+            {
+                // 删除旧文件（保留配置目录 - 配置在 Profile 目录中，不在这里）
+                if (Directory.Exists(targetDir))
+                {
+                    Directory.Delete(targetDir, true);
+                }
+
+                // 复制新文件
+                CopyDirectory(sourcePath, targetDir);
+
+                // 更新索引中的版本号
+                lock (_indexLock)
+                {
+                    var entry = _index.Plugins.FirstOrDefault(p =>
+                        string.Equals(p.Id, pluginId, StringComparison.OrdinalIgnoreCase));
+
+                    if (entry != null)
+                    {
+                        entry.Version = newVersion;
+                        SaveIndex();
+                    }
+                }
+
+                // 获取更新后的插件信息
+                var pluginInfo = GetInstalledPluginInfo(pluginId);
+
+                // 触发 PluginChanged 事件 (Updated)
+                OnPluginChanged(new PluginLibraryChangedEventArgs(
+                    PluginLibraryChangeType.Updated, pluginId, pluginInfo));
+
+                return UpdateResult.Success(oldVersion, newVersion);
+            }
+            catch (Exception ex)
+            {
+                return UpdateResult.Failed($"更新失败: {ex.Message}");
+            }
+        }
+
+        #endregion
+
+        #region Version Comparison
+
+        /// <summary>
+        /// 比较两个语义化版本号
+        /// </summary>
+        /// <param name="version1">第一个版本号</param>
+        /// <param name="version2">第二个版本号</param>
+        /// <returns>
+        /// 负数: version1 &lt; version2
+        /// 零: version1 == version2
+        /// 正数: version1 &gt; version2
+        /// </returns>
+        public static int CompareVersions(string? version1, string? version2)
+        {
+            // 处理空值情况
+            if (string.IsNullOrEmpty(version1) && string.IsNullOrEmpty(version2))
+                return 0;
+            if (string.IsNullOrEmpty(version1))
+                return -1;
+            if (string.IsNullOrEmpty(version2))
+                return 1;
+
+            // 移除可能的 'v' 前缀
+            version1 = version1.TrimStart('v', 'V');
+            version2 = version2.TrimStart('v', 'V');
+
+            // 分割版本号
+            var parts1 = version1.Split('.', '-', '+');
+            var parts2 = version2.Split('.', '-', '+');
+
+            // 比较主要版本部分 (major.minor.patch)
+            var maxParts = Math.Max(parts1.Length, parts2.Length);
+            for (int i = 0; i < maxParts; i++)
+            {
+                var part1 = i < parts1.Length ? parts1[i] : "0";
+                var part2 = i < parts2.Length ? parts2[i] : "0";
+
+                // 尝试作为数字比较
+                if (int.TryParse(part1, out int num1) && int.TryParse(part2, out int num2))
+                {
+                    if (num1 != num2)
+                        return num1.CompareTo(num2);
+                }
+                else
+                {
+                    // 作为字符串比较（用于预发布标签等）
+                    var strCompare = string.Compare(part1, part2, StringComparison.OrdinalIgnoreCase);
+                    if (strCompare != 0)
+                        return strCompare;
+                }
+            }
+
+            return 0;
+        }
+
+        /// <summary>
+        /// 检查 availableVersion 是否比 currentVersion 更新
+        /// </summary>
+        /// <param name="currentVersion">当前版本</param>
+        /// <param name="availableVersion">可用版本</param>
+        /// <returns>如果可用版本更新则返回 true</returns>
+        public static bool IsNewerVersion(string? currentVersion, string? availableVersion)
+        {
+            return CompareVersions(availableVersion, currentVersion) > 0;
+        }
+
+        #endregion
+
         #region Utility Methods
 
         /// <summary>

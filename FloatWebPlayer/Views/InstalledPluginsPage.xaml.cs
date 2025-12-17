@@ -1,4 +1,6 @@
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using FloatWebPlayer.Models;
@@ -23,39 +25,11 @@ namespace FloatWebPlayer.Views
         }
 
         /// <summary>
-        /// 刷新插件列表
+        /// 刷新插件列表（公共方法，不带更新信息）
         /// </summary>
         public void RefreshPluginList()
         {
-            var plugins = PluginLibrary.Instance.GetInstalledPlugins();
-            var searchText = SearchBox?.Text?.ToLower() ?? "";
-
-            // 过滤搜索
-            if (!string.IsNullOrWhiteSpace(searchText))
-            {
-                plugins = plugins.Where(p =>
-                    p.Name.ToLower().Contains(searchText) ||
-                    (p.Description?.ToLower().Contains(searchText) ?? false)
-                ).ToList();
-            }
-
-            // 转换为视图模型
-            var viewModels = plugins.Select(p => new InstalledPluginViewModel
-            {
-                Id = p.Id,
-                Name = p.Name,
-                Version = p.Version,
-                Description = p.Description,
-                Author = p.Author,
-                ReferenceCount = PluginAssociationManager.Instance.GetPluginReferenceCount(p.Id),
-                ProfilesText = GetProfilesText(p.Id),
-                HasDescription = !string.IsNullOrWhiteSpace(p.Description),
-                HasSettingsUi = HasSettingsUi(p.Id)
-            }).ToList();
-
-            PluginList.ItemsSource = viewModels;
-            PluginCountText.Text = $"共 {viewModels.Count} 个插件";
-            NoPluginsText.Visibility = viewModels.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+            RefreshPluginList(null);
         }
 
         /// <summary>
@@ -87,6 +61,79 @@ namespace FloatWebPlayer.Views
         private void SearchBox_TextChanged(object sender, TextChangedEventArgs e)
         {
             RefreshPluginList();
+        }
+
+        /// <summary>
+        /// 检查更新按钮点击
+        /// </summary>
+        private void BtnCheckUpdate_Click(object sender, RoutedEventArgs e)
+        {
+            // 调用 PluginLibrary.CheckAllUpdates
+            var updates = PluginLibrary.Instance.CheckAllUpdates();
+
+            if (updates.Count == 0)
+            {
+                // 没有可用更新
+                NotificationService.Instance.Show("所有插件都是最新版本", NotificationType.Success);
+            }
+            else
+            {
+                // 有可用更新，刷新列表以显示更新信息
+                RefreshPluginList(updates);
+                NotificationService.Instance.Show($"发现 {updates.Count} 个插件有可用更新", NotificationType.Info);
+            }
+        }
+
+        /// <summary>
+        /// 刷新插件列表（带更新信息）
+        /// </summary>
+        private void RefreshPluginList(List<UpdateCheckResult>? updateResults = null)
+        {
+            var plugins = PluginLibrary.Instance.GetInstalledPlugins();
+            var searchText = SearchBox?.Text?.ToLower() ?? "";
+
+            // 过滤搜索
+            if (!string.IsNullOrWhiteSpace(searchText))
+            {
+                plugins = plugins.Where(p =>
+                    p.Name.ToLower().Contains(searchText) ||
+                    (p.Description?.ToLower().Contains(searchText) ?? false)
+                ).ToList();
+            }
+
+            // 创建更新信息字典
+            var updateDict = updateResults?.ToDictionary(u => u.PluginId, u => u) 
+                ?? new Dictionary<string, UpdateCheckResult>();
+
+            // 转换为视图模型
+            var viewModels = plugins.Select(p =>
+            {
+                var vm = new InstalledPluginViewModel
+                {
+                    Id = p.Id,
+                    Name = p.Name,
+                    Version = p.Version,
+                    Description = p.Description,
+                    Author = p.Author,
+                    ReferenceCount = PluginAssociationManager.Instance.GetPluginReferenceCount(p.Id),
+                    ProfilesText = GetProfilesText(p.Id),
+                    HasDescription = !string.IsNullOrWhiteSpace(p.Description),
+                    HasSettingsUi = HasSettingsUi(p.Id)
+                };
+
+                // 设置更新信息
+                if (updateDict.TryGetValue(p.Id, out var updateInfo) && updateInfo.HasUpdate)
+                {
+                    vm.HasUpdate = true;
+                    vm.AvailableVersion = updateInfo.AvailableVersion;
+                }
+
+                return vm;
+            }).ToList();
+
+            PluginList.ItemsSource = viewModels;
+            PluginCountText.Text = $"共 {viewModels.Count} 个插件";
+            NoPluginsText.Visibility = viewModels.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
         }
 
         /// <summary>
@@ -158,6 +205,40 @@ namespace FloatWebPlayer.Views
                 }
             }
         }
+
+        /// <summary>
+        /// 更新按钮点击
+        /// </summary>
+        private void BtnUpdate_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is Button btn && btn.Tag is string pluginId)
+            {
+                // 获取插件名称用于显示
+                var pluginInfo = PluginLibrary.Instance.GetInstalledPluginInfo(pluginId);
+                var pluginName = pluginInfo?.Name ?? pluginId;
+
+                // 调用 PluginLibrary.UpdatePlugin
+                var result = PluginLibrary.Instance.UpdatePlugin(pluginId);
+
+                if (result.IsSuccess)
+                {
+                    // 显示成功通知
+                    NotificationService.Instance.Show(
+                        $"{pluginName} 已更新到 v{result.NewVersion}",
+                        NotificationType.Success);
+                    
+                    // 刷新列表
+                    RefreshPluginList();
+                }
+                else
+                {
+                    // 显示失败通知
+                    NotificationService.Instance.Show(
+                        $"更新 {pluginName} 失败: {result.ErrorMessage}",
+                        NotificationType.Error);
+                }
+            }
+        }
     }
 
     /// <summary>
@@ -176,5 +257,36 @@ namespace FloatWebPlayer.Views
         public bool HasSettingsUi { get; set; }
         public Visibility HasDescriptionVisibility => HasDescription ? Visibility.Visible : Visibility.Collapsed;
         public Visibility HasSettingsUiVisibility => HasSettingsUi ? Visibility.Visible : Visibility.Collapsed;
+
+        // 更新相关属性
+        /// <summary>
+        /// 是否有可用更新
+        /// </summary>
+        public bool HasUpdate { get; set; }
+
+        /// <summary>
+        /// 可用的新版本号
+        /// </summary>
+        public string? AvailableVersion { get; set; }
+
+        /// <summary>
+        /// 更新按钮可见性
+        /// </summary>
+        public Visibility UpdateButtonVisibility => HasUpdate ? Visibility.Visible : Visibility.Collapsed;
+
+        /// <summary>
+        /// 更新按钮文本
+        /// </summary>
+        public string UpdateButtonText => $"更新到 v{AvailableVersion}";
+
+        /// <summary>
+        /// 更新可用标签可见性
+        /// </summary>
+        public Visibility UpdateAvailableTagVisibility => HasUpdate ? Visibility.Visible : Visibility.Collapsed;
+
+        /// <summary>
+        /// 更新可用标签文本
+        /// </summary>
+        public string UpdateAvailableTagText => $"更新可用 v{AvailableVersion}";
     }
 }
