@@ -82,7 +82,11 @@ namespace FloatWebPlayer.Services
 
         private PluginHost()
         {
-            // 私有构造函数，单例模式
+            // 订阅插件启用状态变化事件
+            PluginAssociationManager.Instance.PluginEnabledChanged += OnPluginEnabledChanged;
+            
+            // 订阅插件库变化事件（用于插件更新后自动重新加载）
+            PluginLibrary.Instance.PluginChanged += OnPluginLibraryChanged;
         }
 
         /// <summary>
@@ -90,7 +94,7 @@ namespace FloatWebPlayer.Services
         /// </summary>
         internal PluginHost(bool forTesting)
         {
-            // 测试用构造函数
+            // 测试用构造函数，不订阅事件
         }
 
         #endregion
@@ -99,6 +103,7 @@ namespace FloatWebPlayer.Services
 
         /// <summary>
         /// 加载指定 Profile 的所有插件
+        /// 使用新的清单化架构：从 PluginAssociationManager 获取插件引用，从 PluginLibrary 获取插件目录
         /// </summary>
         /// <param name="profileId">Profile ID</param>
         public void LoadPluginsForProfile(string profileId)
@@ -114,19 +119,82 @@ namespace FloatWebPlayer.Services
 
             _currentProfileId = profileId;
 
-            // 获取插件目录
-            var pluginsDir = GetPluginsDirectory(profileId);
-            if (!Directory.Exists(pluginsDir))
+            // 1. 从 PluginAssociationManager 获取 Profile 的插件引用
+            var pluginReferences = PluginAssociationManager.Instance.GetPluginsInProfile(profileId);
+            if (pluginReferences.Count == 0)
             {
-                Log($"插件目录不存在: {pluginsDir}");
+                Log($"Profile '{profileId}' 没有关联任何插件");
                 return;
             }
 
-            // 遍历插件目录
-            var pluginDirs = Directory.GetDirectories(pluginsDir);
-            foreach (var pluginDir in pluginDirs)
+            // 2. 遍历启用的插件引用
+            foreach (var reference in pluginReferences)
             {
-                LoadPlugin(pluginDir);
+                // 跳过禁用的插件
+                if (!reference.Enabled)
+                {
+                    Log($"插件 {reference.PluginId} 已禁用，跳过加载");
+                    continue;
+                }
+
+                // 3. 检查插件是否已安装（从 PluginLibrary）
+                if (!PluginLibrary.Instance.IsInstalled(reference.PluginId))
+                {
+                    Log($"插件 {reference.PluginId} 未安装，跳过加载");
+                    continue;
+                }
+
+                // 4. 从 PluginLibrary 获取插件目录
+                var pluginDir = PluginLibrary.Instance.GetPluginDirectory(reference.PluginId);
+
+                // 5. 获取 Profile 特定的配置目录
+                var configDir = GetPluginConfigDirectory(profileId, reference.PluginId);
+
+                // 6. 加载插件
+                LoadPlugin(pluginDir, configDir, reference.PluginId);
+            }
+
+            Log($"已加载 {_loadedPlugins.Count} 个插件 (Profile: {profileId})");
+        }
+
+        /// <summary>
+        /// 加载指定 Profile 的所有插件（旧方法，保留向后兼容）
+        /// 使用 SubscriptionManager 获取订阅的插件列表
+        /// </summary>
+        /// <param name="profileId">Profile ID</param>
+        [Obsolete("使用 LoadPluginsForProfile(profileId) 代替，新方法使用 PluginAssociationManager")]
+        public void LoadPluginsForProfileLegacy(string profileId)
+        {
+            if (string.IsNullOrWhiteSpace(profileId))
+                return;
+
+            // 如果已有插件加载，先卸载
+            if (_loadedPlugins.Count > 0)
+            {
+                UnloadAllPlugins();
+            }
+
+            _currentProfileId = profileId;
+
+            // 从 SubscriptionManager 获取订阅的插件列表
+            var subscribedPlugins = SubscriptionManager.Instance.GetSubscribedPlugins(profileId);
+            if (subscribedPlugins.Count == 0)
+            {
+                Log($"Profile '{profileId}' 没有订阅任何插件");
+                return;
+            }
+
+            // 遍历订阅的插件
+            foreach (var pluginId in subscribedPlugins)
+            {
+                // 从 PluginRegistry 获取插件源码目录
+                var sourceDir = PluginRegistry.Instance.GetPluginSourceDirectory(pluginId);
+                
+                // 获取用户配置目录
+                var configDir = GetPluginConfigDirectory(profileId, pluginId);
+                
+                // 加载插件
+                LoadPlugin(sourceDir, configDir, pluginId);
             }
 
             Log($"已加载 {_loadedPlugins.Count} 个插件 (Profile: {profileId})");
@@ -166,11 +234,11 @@ namespace FloatWebPlayer.Services
 
             plugin.IsEnabled = enabled;
 
-            // 更新配置
+            // 更新配置（使用配置目录）
             if (_pluginConfigs.TryGetValue(pluginId, out var config))
             {
                 config.Enabled = enabled;
-                SavePluginConfig(config, plugin.PluginDirectory);
+                SavePluginConfig(config, plugin.ConfigDirectory);
             }
 
             Log($"插件 {pluginId} 已{(enabled ? "启用" : "禁用")}");
@@ -205,7 +273,7 @@ namespace FloatWebPlayer.Services
 
             if (_pluginConfigs.TryGetValue(pluginId, out var config))
             {
-                SavePluginConfig(config, plugin.PluginDirectory);
+                SavePluginConfig(config, plugin.ConfigDirectory);
             }
         }
 
@@ -268,6 +336,142 @@ namespace FloatWebPlayer.Services
         public void BroadcastUrlChanged(string url)
         {
             BroadcastEvent(Plugins.EventApi.UrlChanged, new { url });
+        }
+
+        /// <summary>
+        /// 动态启用插件（如果当前 Profile 匹配）
+        /// </summary>
+        /// <param name="profileId">Profile ID</param>
+        /// <param name="pluginId">插件 ID</param>
+        public void EnablePlugin(string profileId, string pluginId)
+        {
+            // 检查当前 Profile 是否匹配
+            if (string.IsNullOrWhiteSpace(_currentProfileId) || 
+                !string.Equals(_currentProfileId, profileId, StringComparison.OrdinalIgnoreCase))
+            {
+                Log($"当前 Profile ({_currentProfileId}) 与目标 Profile ({profileId}) 不匹配，跳过启用插件 {pluginId}");
+                return;
+            }
+
+            // 检查插件是否已加载
+            if (_loadedPlugins.Any(p => string.Equals(p.PluginId, pluginId, StringComparison.OrdinalIgnoreCase)))
+            {
+                Log($"插件 {pluginId} 已加载，跳过");
+                return;
+            }
+
+            // 检查插件是否已安装
+            if (!PluginLibrary.Instance.IsInstalled(pluginId))
+            {
+                Log($"插件 {pluginId} 未安装，无法启用");
+                return;
+            }
+
+            // 从 PluginLibrary 获取插件目录
+            var pluginDir = PluginLibrary.Instance.GetPluginDirectory(pluginId);
+
+            // 获取 Profile 特定的配置目录
+            var configDir = GetPluginConfigDirectory(profileId, pluginId);
+
+            // 加载插件
+            LoadPlugin(pluginDir, configDir, pluginId);
+
+            Log($"插件 {pluginId} 已动态启用");
+        }
+
+        /// <summary>
+        /// 重新加载指定插件（用于更新后）
+        /// 如果插件正在运行，先卸载再加载；如果未运行则不执行任何操作
+        /// 配置目录保持不变，确保用户配置不丢失
+        /// </summary>
+        /// <param name="pluginId">插件 ID</param>
+        public void ReloadPlugin(string pluginId)
+        {
+            if (string.IsNullOrWhiteSpace(pluginId))
+                return;
+
+            // 检查插件是否正在运行
+            var plugin = _loadedPlugins.FirstOrDefault(p =>
+                string.Equals(p.PluginId, pluginId, StringComparison.OrdinalIgnoreCase));
+
+            if (plugin == null)
+            {
+                // 插件未运行，不需要重新加载
+                Log($"插件 {pluginId} 未运行，跳过重新加载");
+                return;
+            }
+
+            // 保存配置目录路径（用于重新加载时使用）
+            var configDir = plugin.ConfigDirectory;
+            var profileId = _currentProfileId;
+
+            if (string.IsNullOrWhiteSpace(profileId))
+            {
+                Log($"当前没有活动的 Profile，无法重新加载插件 {pluginId}");
+                return;
+            }
+
+            Log($"开始重新加载插件 {pluginId}...");
+
+            // 1. 卸载插件
+            UnloadPlugin(plugin);
+            _loadedPlugins.Remove(plugin);
+            _pluginConfigs.Remove(pluginId);
+            _pluginApis.Remove(pluginId);
+
+            // 2. 检查插件是否仍然安装
+            if (!PluginLibrary.Instance.IsInstalled(pluginId))
+            {
+                Log($"插件 {pluginId} 已不存在于插件库中，无法重新加载");
+                return;
+            }
+
+            // 3. 从 PluginLibrary 获取新的插件目录
+            var pluginDir = PluginLibrary.Instance.GetPluginDirectory(pluginId);
+
+            // 4. 使用原有的配置目录重新加载插件（保留配置）
+            if (string.IsNullOrWhiteSpace(configDir))
+            {
+                configDir = GetPluginConfigDirectory(profileId, pluginId);
+            }
+
+            LoadPlugin(pluginDir, configDir, pluginId);
+
+            Log($"插件 {pluginId} 重新加载完成");
+        }
+
+        /// <summary>
+        /// 动态禁用插件（卸载正在运行的插件）
+        /// </summary>
+        /// <param name="pluginId">插件 ID</param>
+        public void DisablePlugin(string pluginId)
+        {
+            if (string.IsNullOrWhiteSpace(pluginId))
+                return;
+
+            // 查找正在运行的插件
+            var plugin = _loadedPlugins.FirstOrDefault(p => 
+                string.Equals(p.PluginId, pluginId, StringComparison.OrdinalIgnoreCase));
+
+            if (plugin == null)
+            {
+                Log($"插件 {pluginId} 未加载，跳过禁用");
+                return;
+            }
+
+            // 卸载插件
+            UnloadPlugin(plugin);
+
+            // 从列表移除
+            _loadedPlugins.Remove(plugin);
+
+            // 从配置字典移除
+            _pluginConfigs.Remove(pluginId);
+
+            // 从 API 字典移除（UnloadPlugin 已经移除，这里确保清理）
+            _pluginApis.Remove(pluginId);
+
+            Log($"插件 {pluginId} 已动态禁用");
         }
 
         /// <summary>
@@ -337,9 +541,103 @@ namespace FloatWebPlayer.Services
         #region Private Methods
 
         /// <summary>
-        /// 加载单个插件
+        /// 加载单个插件（新目录结构：源码目录 + 配置目录分离）
         /// </summary>
-        private void LoadPlugin(string pluginDir)
+        /// <param name="sourceDir">插件源码目录（内置插件库，只读）</param>
+        /// <param name="configDir">插件配置目录（用户数据目录，可写）</param>
+        /// <param name="pluginId">插件 ID</param>
+        private void LoadPlugin(string sourceDir, string configDir, string pluginId)
+        {
+            // 检查源码目录是否存在
+            if (!Directory.Exists(sourceDir))
+            {
+                Log($"插件源码目录不存在 ({pluginId}): {sourceDir}");
+                return;
+            }
+
+            var manifestPath = Path.Combine(sourceDir, AppConstants.PluginManifestFileName);
+            
+            // 加载清单
+            var loadResult = PluginManifest.LoadFromFile(manifestPath);
+            if (!loadResult.IsSuccess)
+            {
+                Log($"加载插件清单失败 ({pluginId}): {loadResult.ErrorMessage}");
+                return;
+            }
+
+            var manifest = loadResult.Manifest!;
+
+            // 检查是否已加载同 ID 插件
+            if (_loadedPlugins.Any(p => p.PluginId == manifest.Id))
+            {
+                Log($"插件 {manifest.Id} 已加载，跳过");
+                return;
+            }
+
+            // 确保配置目录存在
+            if (!Directory.Exists(configDir))
+            {
+                Directory.CreateDirectory(configDir);
+            }
+
+            // 从用户配置目录加载配置
+            var configPath = Path.Combine(configDir, AppConstants.PluginConfigFileName);
+            var config = PluginConfig.LoadFromFile(configPath, manifest.Id!);
+            
+            // 应用默认配置
+            config.ApplyDefaults(manifest.DefaultConfig);
+            _pluginConfigs[manifest.Id!] = config;
+
+            // 如果插件被禁用，跳过加载
+            if (!config.Enabled)
+            {
+                Log($"插件 {manifest.Id} 已禁用，跳过加载");
+                return;
+            }
+
+            // 创建插件上下文（使用源码目录）
+            var context = new PluginContext(manifest, sourceDir)
+            {
+                IsEnabled = config.Enabled,
+                ConfigDirectory = configDir  // 设置配置目录
+            };
+
+            // 加载脚本
+            if (!context.LoadScript())
+            {
+                Log($"加载插件脚本失败 ({manifest.Id}): {context.LastError}");
+                context.Dispose();
+                return;
+            }
+
+            // 创建 PluginApi 并传入 onLoad
+            var profileInfo = new ProfileInfo(
+                _currentProfileId ?? string.Empty,
+                _currentProfileId ?? string.Empty,
+                GetPluginConfigDirectory(_currentProfileId ?? string.Empty, pluginId)
+            );
+            var pluginApi = new PluginApi(context, config, profileInfo);
+
+            // 调用 onLoad
+            if (!context.CallOnLoad(pluginApi))
+            {
+                Log($"插件 {manifest.Id} onLoad 调用失败: {context.LastError}");
+                // 即使 onLoad 失败，也保留插件（异常隔离）
+            }
+
+            _loadedPlugins.Add(context);
+            _pluginApis[manifest.Id!] = pluginApi;
+            PluginLoaded?.Invoke(this, context);
+
+            Log($"插件 {manifest.Name} (v{manifest.Version}) 加载成功");
+        }
+
+        /// <summary>
+        /// 加载单个插件（旧方法，保留向后兼容）
+        /// </summary>
+        /// <param name="pluginDir">插件目录（源码和配置在同一目录）</param>
+        [Obsolete("使用 LoadPlugin(sourceDir, configDir, pluginId) 代替")]
+        private void LoadPluginLegacy(string pluginDir)
         {
             var manifestPath = Path.Combine(pluginDir, AppConstants.PluginManifestFileName);
             
@@ -418,11 +716,44 @@ namespace FloatWebPlayer.Services
         {
             var pluginId = plugin.PluginId;
 
-            // 调用 onUnload
-            plugin.CallOnUnload();
+            // 获取 PluginApi（在调用 onUnload 之前，因为 onUnload 需要 api 参数）
+            _pluginApis.TryGetValue(pluginId, out var pluginApi);
 
-            // 释放资源
-            plugin.Dispose();
+            try
+            {
+                // 调用 onUnload，传递 api 参数
+                plugin.CallOnUnload(pluginApi);
+            }
+            catch (Exception ex)
+            {
+                Log($"插件 {pluginId} onUnload 调用失败: {ex.Message}");
+                // 继续执行清理流程
+            }
+
+            // 清理 PluginApi
+            if (pluginApi != null)
+            {
+                try
+                {
+                    pluginApi.Cleanup();
+                }
+                catch (Exception ex)
+                {
+                    Log($"清理插件 API 失败 ({pluginId}): {ex.Message}");
+                    // 继续执行清理流程
+                }
+            }
+
+            try
+            {
+                // 释放资源
+                plugin.Dispose();
+            }
+            catch (Exception ex)
+            {
+                Log($"释放插件资源失败 ({pluginId}): {ex.Message}");
+                // 继续执行清理流程
+            }
 
             // 从 API 字典移除
             _pluginApis.Remove(pluginId);
@@ -432,7 +763,7 @@ namespace FloatWebPlayer.Services
         }
 
         /// <summary>
-        /// 获取 Profile 的插件目录
+        /// 获取 Profile 的插件目录（旧方法，保留向后兼容）
         /// </summary>
         private string GetPluginsDirectory(string profileId)
         {
@@ -440,11 +771,22 @@ namespace FloatWebPlayer.Services
         }
 
         /// <summary>
+        /// 获取插件用户配置目录
+        /// </summary>
+        /// <param name="profileId">Profile ID</param>
+        /// <param name="pluginId">插件 ID</param>
+        /// <returns>配置目录路径</returns>
+        public string GetPluginConfigDirectory(string profileId, string pluginId)
+        {
+            return Path.Combine(AppPaths.ProfilesDirectory, profileId, AppConstants.PluginsDirectoryName, pluginId);
+        }
+
+        /// <summary>
         /// 保存插件配置
         /// </summary>
-        private void SavePluginConfig(PluginConfig config, string pluginDir)
+        private void SavePluginConfig(PluginConfig config, string configDir)
         {
-            var configPath = Path.Combine(pluginDir, AppConstants.PluginConfigFileName);
+            var configPath = Path.Combine(configDir, AppConstants.PluginConfigFileName);
             config.SaveToFile(configPath);
         }
 
@@ -454,6 +796,40 @@ namespace FloatWebPlayer.Services
         private void Log(string message)
         {
             LogService.Instance.Info("PluginHost", message);
+        }
+
+        /// <summary>
+        /// 处理插件启用状态变化事件
+        /// </summary>
+        private void OnPluginEnabledChanged(object? sender, PluginEnabledChangedEventArgs e)
+        {
+            if (e.Enabled)
+            {
+                // 启用插件
+                EnablePlugin(e.ProfileId, e.PluginId);
+            }
+            else
+            {
+                // 禁用插件（只有当前 Profile 匹配时才禁用）
+                if (!string.IsNullOrWhiteSpace(_currentProfileId) &&
+                    string.Equals(_currentProfileId, e.ProfileId, StringComparison.OrdinalIgnoreCase))
+                {
+                    DisablePlugin(e.PluginId);
+                }
+            }
+        }
+
+        /// <summary>
+        /// 处理插件库变化事件
+        /// </summary>
+        private void OnPluginLibraryChanged(object? sender, PluginLibraryChangedEventArgs e)
+        {
+            // 当插件更新时，重新加载正在运行的插件
+            if (e.ChangeType == PluginLibraryChangeType.Updated)
+            {
+                Log($"检测到插件 {e.PluginId} 已更新，尝试重新加载...");
+                ReloadPlugin(e.PluginId);
+            }
         }
 
         #endregion
@@ -479,6 +855,10 @@ namespace FloatWebPlayer.Services
 
             if (disposing)
             {
+                // 取消订阅事件
+                PluginAssociationManager.Instance.PluginEnabledChanged -= OnPluginEnabledChanged;
+                PluginLibrary.Instance.PluginChanged -= OnPluginLibraryChanged;
+                
                 UnloadAllPlugins();
             }
 

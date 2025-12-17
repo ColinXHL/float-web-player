@@ -4,8 +4,8 @@
         xmlns:helpers="clr-namespace:FloatWebPlayer.Helpers"
         xmlns:local="clr-namespace:FloatWebPlayer.Views"
         Title="设置"
-        Width="520"
-        Height="600"
+        Width="560"
+        Height="580"
         WindowStartupLocation="CenterScreen"
         Foreground="White"
         ResizeMode="NoResize">
@@ -244,40 +244,6 @@
             </Setter>
         </Style>
 
-        <!-- TabControl 样式 -->
-        <Style x:Key="DarkTabControlStyle" TargetType="TabControl">
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Padding" Value="0"/>
-        </Style>
-
-        <Style x:Key="DarkTabItemStyle" TargetType="TabItem">
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="Foreground" Value="#888"/>
-            <Setter Property="Padding" Value="16,8"/>
-            <Setter Property="FontSize" Value="13"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="TabItem">
-                        <Border x:Name="border" Background="{TemplateBinding Background}" 
-                                Padding="{TemplateBinding Padding}" CornerRadius="4,4,0,0">
-                            <ContentPresenter ContentSource="Header" HorizontalAlignment="Center"/>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsSelected" Value="True">
-                                <Setter Property="Foreground" Value="White"/>
-                                <Setter TargetName="border" Property="Background" Value="#333"/>
-                            </Trigger>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter Property="Foreground" Value="#CCC"/>
-                                <Setter Property="Cursor" Value="Hand"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-
         <!-- 深色主题 ComboBox 样式 -->
         <Style x:Key="DarkComboBoxStyle" TargetType="ComboBox">
             <Setter Property="Background" Value="#333"/>
@@ -408,172 +374,163 @@
                 </Grid>
             </Border>
 
-            <!-- TabControl 内容区 -->
-            <TabControl Grid.Row="1" Style="{StaticResource DarkTabControlStyle}" Margin="0,10,0,0">
-                <!-- 通用设置选项卡 -->
-                <TabItem Header="通用" Style="{StaticResource DarkTabItemStyle}">
-                    <ScrollViewer Style="{StaticResource DarkScrollViewer}" VerticalScrollBarVisibility="Auto">
-                        <StackPanel Margin="20,10,16,0">
-                            <!-- 配置 (Profile) -->
-                            <TextBlock Text="配置" Style="{StaticResource GroupHeaderStyle}" Margin="0,0,0,8"/>
-                            <Grid Margin="0,0,0,8">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
-                                <ComboBox x:Name="ProfileComboBox" Grid.Column="0"
-                                          Style="{StaticResource DarkComboBoxStyle}"
-                                          ItemContainerStyle="{StaticResource DarkComboBoxItemStyle}"
-                                          SelectionChanged="ProfileComboBox_SelectionChanged">
-                                    <ComboBox.ItemTemplate>
-                                        <DataTemplate>
-                                            <TextBlock Foreground="White">
-                                                <Run Text="{Binding Icon}"/>
-                                                <Run Text=" "/>
-                                                <Run Text="{Binding Name}"/>
-                                            </TextBlock>
-                                        </DataTemplate>
-                                    </ComboBox.ItemTemplate>
-                                </ComboBox>
-                                <Button x:Name="BtnUnsubscribeProfile" Grid.Column="1" Content="取消订阅" 
-                                        Style="{StaticResource ActionButtonStyle}"
-                                        Background="#5C2020" Foreground="#F87171"
-                                        Padding="8,6" Margin="8,0,0,0"
-                                        Click="BtnUnsubscribeProfile_Click"/>
-                            </Grid>
-                            <Button Content="📂 打开配置文件夹" Style="{StaticResource ActionButtonStyle}"
-                                    HorizontalAlignment="Left" Padding="14,8" Margin="0,0,0,0" Click="BtnOpenConfigFolder_Click"/>
+            <!-- 内容区（移除 TabControl，直接显示通用设置） -->
+            <ScrollViewer Grid.Row="1" Style="{StaticResource DarkScrollViewer}" VerticalScrollBarVisibility="Auto">
+                <StackPanel Margin="20,10,16,0">
+                    <!-- 配置 (Profile) -->
+                    <TextBlock Text="配置" Style="{StaticResource GroupHeaderStyle}" Margin="0,0,0,8"/>
+                    <Grid Margin="0,0,0,8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <ComboBox x:Name="ProfileComboBox" Grid.Column="0"
+                                  Style="{StaticResource DarkComboBoxStyle}"
+                                  ItemContainerStyle="{StaticResource DarkComboBoxItemStyle}"
+                                  SelectionChanged="ProfileComboBox_SelectionChanged">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock Foreground="White">
+                                        <Run Text="{Binding Icon}"/>
+                                        <Run Text=" "/>
+                                        <Run Text="{Binding Name}"/>
+                                    </TextBlock>
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+                        <Button x:Name="BtnUnsubscribeProfile" Grid.Column="1" Content="取消订阅" 
+                                Style="{StaticResource ActionButtonStyle}"
+                                Background="#5C2020" Foreground="#F87171"
+                                Padding="8,6" Margin="8,0,0,0"
+                                Click="BtnUnsubscribeProfile_Click"/>
+                    </Grid>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,0">
+                        <Button Content="📂 打开配置文件夹" Style="{StaticResource ActionButtonStyle}"
+                                HorizontalAlignment="Left" Padding="14,8" Margin="0,0,8,0" Click="BtnOpenConfigFolder_Click"/>
+                        <Button Content="🔌 打开插件中心" Style="{StaticResource PrimaryButtonStyle}"
+                                HorizontalAlignment="Left" Padding="14,8" Click="BtnOpenPluginCenter_Click"/>
+                    </StackPanel>
 
-                            <!-- 基础设置 -->
-                            <TextBlock Text="基础设置" Style="{StaticResource GroupHeaderStyle}"/>
-                            
-                            <!-- 快进/倒退秒数 -->
-                            <Grid Margin="0,0,0,12">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="100"/>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="45"/>
-                                </Grid.ColumnDefinitions>
-                                <TextBlock Grid.Column="0" Text="快进/倒退" Style="{StaticResource LabelStyle}"/>
-                                <Slider x:Name="SeekSecondsSlider" Grid.Column="1"
-                                        Style="{StaticResource DarkSliderStyle}"
-                                        Minimum="1" Maximum="30" TickFrequency="1" IsSnapToTickEnabled="True"
-                                        ValueChanged="SeekSecondsSlider_ValueChanged"/>
-                                <TextBlock x:Name="SeekSecondsValue" Grid.Column="2" Text="5s"
-                                           Style="{StaticResource LabelStyle}" HorizontalAlignment="Right"/>
-                            </Grid>
+                    <!-- 基础设置 -->
+                    <TextBlock Text="基础设置" Style="{StaticResource GroupHeaderStyle}"/>
+                    
+                    <!-- 快进/倒退秒数 -->
+                    <Grid Margin="0,0,0,12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="100"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="45"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="快进/倒退" Style="{StaticResource LabelStyle}"/>
+                        <Slider x:Name="SeekSecondsSlider" Grid.Column="1"
+                                Style="{StaticResource DarkSliderStyle}"
+                                Minimum="1" Maximum="30" TickFrequency="1" IsSnapToTickEnabled="True"
+                                ValueChanged="SeekSecondsSlider_ValueChanged"/>
+                        <TextBlock x:Name="SeekSecondsValue" Grid.Column="2" Text="5s"
+                                   Style="{StaticResource LabelStyle}" HorizontalAlignment="Right"/>
+                    </Grid>
 
-                            <!-- 默认透明度 -->
-                            <Grid Margin="0,0,0,12">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="100"/>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="45"/>
-                                </Grid.ColumnDefinitions>
-                                <TextBlock Grid.Column="0" Text="默认透明度" Style="{StaticResource LabelStyle}"/>
-                                <Slider x:Name="OpacitySlider" Grid.Column="1"
-                                        Style="{StaticResource DarkSliderStyle}"
-                                        Minimum="20" Maximum="100" TickFrequency="10" IsSnapToTickEnabled="True"
-                                        ValueChanged="OpacitySlider_ValueChanged"/>
-                                <TextBlock x:Name="OpacityValue" Grid.Column="2" Text="100%"
-                                           Style="{StaticResource LabelStyle}" HorizontalAlignment="Right"/>
-                            </Grid>
+                    <!-- 默认透明度 -->
+                    <Grid Margin="0,0,0,12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="100"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="45"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="默认透明度" Style="{StaticResource LabelStyle}"/>
+                        <Slider x:Name="OpacitySlider" Grid.Column="1"
+                                Style="{StaticResource DarkSliderStyle}"
+                                Minimum="20" Maximum="100" TickFrequency="10" IsSnapToTickEnabled="True"
+                                ValueChanged="OpacitySlider_ValueChanged"/>
+                        <TextBlock x:Name="OpacityValue" Grid.Column="2" Text="100%"
+                                   Style="{StaticResource LabelStyle}" HorizontalAlignment="Right"/>
+                    </Grid>
 
-                            <!-- 窗口行为 -->
-                            <TextBlock Text="窗口行为" Style="{StaticResource GroupHeaderStyle}"/>
-                            <CheckBox x:Name="EdgeSnapCheckBox" Content="启用边缘吸附"
-                                      Style="{StaticResource DarkCheckBoxStyle}" Margin="0,0,0,12"/>
-                            <Grid Margin="0,0,0,12">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="100"/>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="45"/>
-                                </Grid.ColumnDefinitions>
-                                <TextBlock Grid.Column="0" Text="吸附阈值" Style="{StaticResource LabelStyle}"/>
-                                <Slider x:Name="SnapThresholdSlider" Grid.Column="1"
-                                        Style="{StaticResource DarkSliderStyle}"
-                                        Minimum="5" Maximum="30" TickFrequency="5" IsSnapToTickEnabled="True"
-                                        ValueChanged="SnapThresholdSlider_ValueChanged"/>
-                                <TextBlock x:Name="SnapThresholdValue" Grid.Column="2" Text="15px"
-                                           Style="{StaticResource LabelStyle}" HorizontalAlignment="Right"/>
-                            </Grid>
+                    <!-- 窗口行为 -->
+                    <TextBlock Text="窗口行为" Style="{StaticResource GroupHeaderStyle}"/>
+                    <CheckBox x:Name="EdgeSnapCheckBox" Content="启用边缘吸附"
+                              Style="{StaticResource DarkCheckBoxStyle}" Margin="0,0,0,12"/>
+                    <Grid Margin="0,0,0,12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="100"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="45"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="吸附阈值" Style="{StaticResource LabelStyle}"/>
+                        <Slider x:Name="SnapThresholdSlider" Grid.Column="1"
+                                Style="{StaticResource DarkSliderStyle}"
+                                Minimum="5" Maximum="30" TickFrequency="5" IsSnapToTickEnabled="True"
+                                ValueChanged="SnapThresholdSlider_ValueChanged"/>
+                        <TextBlock x:Name="SnapThresholdValue" Grid.Column="2" Text="15px"
+                                   Style="{StaticResource LabelStyle}" HorizontalAlignment="Right"/>
+                    </Grid>
 
-                            <!-- 快捷键设置 -->
-                            <TextBlock Text="快捷键设置" Style="{StaticResource GroupHeaderStyle}"/>
-                            <TextBlock Text="点击输入框后按下新快捷键即可修改" Foreground="#666" FontSize="11" Margin="0,0,0,8"/>
-                            
-                            <Grid Margin="0,0,0,6">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="110"/>
-                                    <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
-                                <TextBlock Grid.Column="0" Text="视频倒退" Style="{StaticResource LabelStyle}"/>
-                                <TextBox x:Name="HotkeySeekBackward" Grid.Column="1" 
-                                         Style="{StaticResource HotkeyTextBoxStyle}"
-                                         PreviewKeyDown="Hotkey_PreviewKeyDown" GotFocus="Hotkey_GotFocus" LostFocus="Hotkey_LostFocus"/>
-                            </Grid>
-                            <Grid Margin="0,0,0,6">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="110"/>
-                                    <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
-                                <TextBlock Grid.Column="0" Text="视频快进" Style="{StaticResource LabelStyle}"/>
-                                <TextBox x:Name="HotkeySeekForward" Grid.Column="1" 
-                                         Style="{StaticResource HotkeyTextBoxStyle}"
-                                         PreviewKeyDown="Hotkey_PreviewKeyDown" GotFocus="Hotkey_GotFocus" LostFocus="Hotkey_LostFocus"/>
-                            </Grid>
-                            <Grid Margin="0,0,0,6">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="110"/>
-                                    <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
-                                <TextBlock Grid.Column="0" Text="播放/暂停" Style="{StaticResource LabelStyle}"/>
-                                <TextBox x:Name="HotkeyTogglePlay" Grid.Column="1" 
-                                         Style="{StaticResource HotkeyTextBoxStyle}"
-                                         PreviewKeyDown="Hotkey_PreviewKeyDown" GotFocus="Hotkey_GotFocus" LostFocus="Hotkey_LostFocus"/>
-                            </Grid>
-                            <Grid Margin="0,0,0,6">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="110"/>
-                                    <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
-                                <TextBlock Grid.Column="0" Text="降低透明度" Style="{StaticResource LabelStyle}"/>
-                                <TextBox x:Name="HotkeyDecreaseOpacity" Grid.Column="1" 
-                                         Style="{StaticResource HotkeyTextBoxStyle}"
-                                         PreviewKeyDown="Hotkey_PreviewKeyDown" GotFocus="Hotkey_GotFocus" LostFocus="Hotkey_LostFocus"/>
-                            </Grid>
-                            <Grid Margin="0,0,0,6">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="110"/>
-                                    <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
-                                <TextBlock Grid.Column="0" Text="增加透明度" Style="{StaticResource LabelStyle}"/>
-                                <TextBox x:Name="HotkeyIncreaseOpacity" Grid.Column="1" 
-                                         Style="{StaticResource HotkeyTextBoxStyle}"
-                                         PreviewKeyDown="Hotkey_PreviewKeyDown" GotFocus="Hotkey_GotFocus" LostFocus="Hotkey_LostFocus"/>
-                            </Grid>
-                            <Grid Margin="0,0,0,12">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="110"/>
-                                    <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
-                                <TextBlock Grid.Column="0" Text="鼠标穿透" Style="{StaticResource LabelStyle}"/>
-                                <TextBox x:Name="HotkeyToggleClickThrough" Grid.Column="1" 
-                                         Style="{StaticResource HotkeyTextBoxStyle}"
-                                         PreviewKeyDown="Hotkey_PreviewKeyDown" GotFocus="Hotkey_GotFocus" LostFocus="Hotkey_LostFocus"/>
-                            </Grid>
-
-                        </StackPanel>
-                    </ScrollViewer>
-                </TabItem>
-
-                <!-- 插件设置选项卡 -->
-                <TabItem Header="插件" Style="{StaticResource DarkTabItemStyle}">
-                    <ScrollViewer Style="{StaticResource DarkScrollViewer}" VerticalScrollBarVisibility="Auto">
-                        <local:PluginSettingsPage x:Name="PluginSettingsPage" Margin="20,10,16,10"/>
-                    </ScrollViewer>
-                </TabItem>
-            </TabControl>
+                    <!-- 快捷键设置 -->
+                    <TextBlock Text="快捷键设置" Style="{StaticResource GroupHeaderStyle}"/>
+                    <TextBlock Text="点击输入框后按下新快捷键即可修改" Foreground="#666" FontSize="11" Margin="0,0,0,8"/>
+                    
+                    <Grid Margin="0,0,0,6">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="110"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="视频倒退" Style="{StaticResource LabelStyle}"/>
+                        <TextBox x:Name="HotkeySeekBackward" Grid.Column="1" 
+                                 Style="{StaticResource HotkeyTextBoxStyle}"
+                                 PreviewKeyDown="Hotkey_PreviewKeyDown" GotFocus="Hotkey_GotFocus" LostFocus="Hotkey_LostFocus"/>
+                    </Grid>
+                    <Grid Margin="0,0,0,6">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="110"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="视频快进" Style="{StaticResource LabelStyle}"/>
+                        <TextBox x:Name="HotkeySeekForward" Grid.Column="1" 
+                                 Style="{StaticResource HotkeyTextBoxStyle}"
+                                 PreviewKeyDown="Hotkey_PreviewKeyDown" GotFocus="Hotkey_GotFocus" LostFocus="Hotkey_LostFocus"/>
+                    </Grid>
+                    <Grid Margin="0,0,0,6">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="110"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="播放/暂停" Style="{StaticResource LabelStyle}"/>
+                        <TextBox x:Name="HotkeyTogglePlay" Grid.Column="1" 
+                                 Style="{StaticResource HotkeyTextBoxStyle}"
+                                 PreviewKeyDown="Hotkey_PreviewKeyDown" GotFocus="Hotkey_GotFocus" LostFocus="Hotkey_LostFocus"/>
+                    </Grid>
+                    <Grid Margin="0,0,0,6">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="110"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="降低透明度" Style="{StaticResource LabelStyle}"/>
+                        <TextBox x:Name="HotkeyDecreaseOpacity" Grid.Column="1" 
+                                 Style="{StaticResource HotkeyTextBoxStyle}"
+                                 PreviewKeyDown="Hotkey_PreviewKeyDown" GotFocus="Hotkey_GotFocus" LostFocus="Hotkey_LostFocus"/>
+                    </Grid>
+                    <Grid Margin="0,0,0,6">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="110"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="增加透明度" Style="{StaticResource LabelStyle}"/>
+                        <TextBox x:Name="HotkeyIncreaseOpacity" Grid.Column="1" 
+                                 Style="{StaticResource HotkeyTextBoxStyle}"
+                                 PreviewKeyDown="Hotkey_PreviewKeyDown" GotFocus="Hotkey_GotFocus" LostFocus="Hotkey_LostFocus"/>
+                    </Grid>
+                    <Grid Margin="0,0,0,12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="110"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="鼠标穿透" Style="{StaticResource LabelStyle}"/>
+                        <TextBox x:Name="HotkeyToggleClickThrough" Grid.Column="1" 
+                                 Style="{StaticResource HotkeyTextBoxStyle}"
+                                 PreviewKeyDown="Hotkey_PreviewKeyDown" GotFocus="Hotkey_GotFocus" LostFocus="Hotkey_LostFocus"/>
+                    </Grid>
+                </StackPanel>
+            </ScrollViewer>
 
             <!-- 底部按钮 -->
             <Border Grid.Row="2" Background="#252525" Padding="16,10" CornerRadius="0,0,8,8">

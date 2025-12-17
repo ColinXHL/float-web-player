@@ -64,6 +64,27 @@ namespace FloatWebPlayer.Plugins
 
         #endregion
 
+        #region Internal Methods
+
+        /// <summary>
+        /// 清理资源（插件卸载时调用）
+        /// </summary>
+        internal void Cleanup()
+        {
+            // 释放 HttpClient 资源
+            try
+            {
+                _httpClient?.Dispose();
+                Services.LogService.Instance.Debug($"Plugin:{_context.PluginId}", "HttpApi: cleaned up");
+            }
+            catch (Exception ex)
+            {
+                Services.LogService.Instance.Error($"Plugin:{_context.PluginId}", $"HttpApi cleanup failed: {ex.Message}");
+            }
+        }
+
+        #endregion
+
         #region Private Methods
 
         /// <summary>

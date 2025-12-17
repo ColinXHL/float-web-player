@@ -155,6 +155,14 @@ namespace FloatWebPlayer.Plugins
         }
 
         /// <summary>
+        /// 清理资源（插件卸载时调用）
+        /// </summary>
+        internal void Cleanup()
+        {
+            ClearAllListeners();
+        }
+
+        /// <summary>
         /// 获取指定事件的监听器数量
         /// </summary>
         internal int GetListenerCount(string eventName)

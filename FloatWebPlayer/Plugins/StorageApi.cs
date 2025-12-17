@@ -162,6 +162,20 @@ namespace FloatWebPlayer.Plugins
 
         #endregion
 
+        #region Internal Methods
+
+        /// <summary>
+        /// 清理资源（插件卸载时调用）
+        /// </summary>
+        internal void Cleanup()
+        {
+            // StorageApi 没有需要清理的缓存或引用
+            // 文件系统操作不需要特殊清理
+            Services.LogService.Instance.Debug($"Plugin:{_context.PluginId}", "StorageApi: cleaned up");
+        }
+
+        #endregion
+
         #region Private Methods
 
         /// <summary>

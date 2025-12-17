@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -39,7 +40,12 @@ namespace FloatWebPlayer.Views
         /// <summary>
         /// 方向标记元素映射
         /// </summary>
-        private readonly Dictionary<Direction, System.Windows.Shapes.Path> _markers;
+        private readonly Dictionary<Direction, Image> _markers;
+
+        /// <summary>
+        /// 标记图片源（所有方向共用一张图片，通过旋转实现不同方向）
+        /// </summary>
+        private BitmapImage? _markerImageSource;
 
         /// <summary>
         /// 是否处于编辑模式
@@ -81,6 +87,56 @@ namespace FloatWebPlayer.Views
         /// </summary>
         private readonly Dictionary<string, DispatcherTimer> _elementTimers = new();
 
+        /// <summary>
+        /// 标记大小（像素）
+        /// </summary>
+        private double _markerSize = 24;
+
+        /// <summary>
+        /// 标记颜色
+        /// </summary>
+        private string _markerColor = "#FFFF6B6B";
+
+        /// <summary>
+        /// 标记距离圆边缘的偏移量
+        /// </summary>
+        private const double MarkerOffset = 5;
+
+        /// <summary>
+        /// 位置角度映射（以北为 0°，顺时针，转换为数学坐标系角度）
+        /// 数学坐标系：0° 在右侧（东），逆时针增加
+        /// 我们需要：北在上方，顺时针增加
+        /// </summary>
+        private static readonly Dictionary<Direction, double> PositionAngles = new()
+        {
+            { Direction.North, 270 },      // 数学坐标系中的 270°（上方）
+            { Direction.NorthEast, 315 },  // 数学坐标系中的 315°（右上）
+            { Direction.East, 0 },         // 数学坐标系中的 0°（右侧）
+            { Direction.SouthEast, 45 },   // 数学坐标系中的 45°（右下）
+            { Direction.South, 90 },       // 数学坐标系中的 90°（下方）
+            { Direction.SouthWest, 135 },  // 数学坐标系中的 135°（左下）
+            { Direction.West, 180 },       // 数学坐标系中的 180°（左侧）
+            { Direction.NorthWest, 225 }   // 数学坐标系中的 225°（左上）
+        };
+
+        /// <summary>
+        /// 旋转角度映射（使标记指向中心）
+        /// 基础图片指向右（东），通过旋转指向中心：
+        /// - 东方标记旋转 0°（本身指向右，从右边指向中心需要旋转 180°）
+        /// - 实际上是从边缘指向中心，所以需要反向
+        /// </summary>
+        private static readonly Dictionary<Direction, double> RotationAngles = new()
+        {
+            { Direction.North, 270 },      // 从上方指向中心（向下）
+            { Direction.NorthEast, 315 },  // 从右上指向中心（向左下）
+            { Direction.East, 0 },         // 从右侧指向中心（向左）- 但图片本身指向右，所以需要180°
+            { Direction.SouthEast, 45 },   // 从右下指向中心（向左上）
+            { Direction.South, 90 },       // 从下方指向中心（向上）
+            { Direction.SouthWest, 135 },  // 从左下指向中心（向右上）
+            { Direction.West, 180 },       // 从左侧指向中心（向右）
+            { Direction.NorthWest, 225 }   // 从左上指向中心（向右下）
+        };
+
         #endregion
 
         #region Events
@@ -100,7 +156,7 @@ namespace FloatWebPlayer.Views
             PluginId = pluginId;
 
             // 初始化方向标记映射
-            _markers = new Dictionary<Direction, System.Windows.Shapes.Path>
+            _markers = new Dictionary<Direction, Image>
             {
                 { Direction.North, MarkerNorth },
                 { Direction.NorthEast, MarkerNorthEast },
@@ -111,6 +167,18 @@ namespace FloatWebPlayer.Views
                 { Direction.West, MarkerWest },
                 { Direction.NorthWest, MarkerNorthWest }
             };
+
+            // 窗口加载完成后更新标记位置
+            Loaded += Window_Loaded;
+        }
+
+        /// <summary>
+        /// 窗口加载完成 - 初始化标记位置
+        /// </summary>
+        private void Window_Loaded(object sender, RoutedEventArgs e)
+        {
+            // 初始化时更新标记位置（圆形布局）
+            UpdateMarkerPositions();
         }
 
         #endregion
@@ -327,6 +395,87 @@ namespace FloatWebPlayer.Views
             // 触发退出事件
             EditModeExited?.Invoke(this, EventArgs.Empty);
         }
+
+        /// <summary>
+        /// 设置标记样式
+        /// </summary>
+        /// <param name="size">标记大小（像素），范围 16-64</param>
+        /// <param name="color">标记颜色（十六进制，如 #FFFF6B6B）- 图片模式下忽略</param>
+        public void SetMarkerStyle(double size, string color)
+        {
+            // 限制大小范围
+            size = Math.Clamp(size, 16, 64);
+            
+            // 保存颜色配置
+            if (!string.IsNullOrEmpty(color))
+            {
+                _markerColor = color;
+            }
+
+            // 更新标记大小
+            _markerSize = size;
+
+            // 更新所有标记的样式
+            foreach (var marker in _markers.Values)
+            {
+                // 更新大小
+                marker.Width = size;
+                marker.Height = size;
+            }
+
+            // 重新计算标记位置（因为大小变化会影响位置计算）
+            UpdateMarkerPositions();
+        }
+
+        /// <summary>
+        /// 设置标记图片
+        /// </summary>
+        /// <param name="imagePath">图片绝对路径（图片应指向右/东方向）</param>
+        /// <returns>是否设置成功</returns>
+        public bool SetMarkerImage(string imagePath)
+        {
+            if (string.IsNullOrEmpty(imagePath) || !File.Exists(imagePath))
+            {
+                Services.LogService.Instance.Error("OverlayWindow", $"SetMarkerImage: Image file not found: {imagePath}");
+                return false;
+            }
+
+            try
+            {
+                var bitmap = new BitmapImage();
+                bitmap.BeginInit();
+                bitmap.UriSource = new Uri(imagePath, UriKind.Absolute);
+                bitmap.CacheOption = BitmapCacheOption.OnLoad;
+                bitmap.EndInit();
+                bitmap.Freeze();
+
+                _markerImageSource = bitmap;
+
+                // 为所有标记设置图片源
+                foreach (var marker in _markers.Values)
+                {
+                    marker.Source = _markerImageSource;
+                }
+
+                Services.LogService.Instance.Info("OverlayWindow", $"SetMarkerImage: Loaded image from {imagePath}");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Services.LogService.Instance.Error("OverlayWindow", $"SetMarkerImage failed: {ex.Message}");
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// 获取当前标记大小
+        /// </summary>
+        public double MarkerSize => _markerSize;
+
+        /// <summary>
+        /// 获取当前标记颜色
+        /// </summary>
+        public string MarkerColor => _markerColor;
 
         #endregion
 
@@ -700,25 +849,68 @@ namespace FloatWebPlayer.Views
         }
 
         /// <summary>
+        /// 计算标记在圆形布局上的位置
+        /// </summary>
+        /// <param name="direction">方向</param>
+        /// <returns>标记中心点的位置</returns>
+        internal Point CalculateMarkerPosition(Direction direction)
+        {
+            // 圆心位于窗口中心
+            double centerX = Width / 2;
+            double centerY = Height / 2;
+
+            // 半径为窗口较小边的一半减去偏移量
+            double radius = Math.Min(Width, Height) / 2 - MarkerOffset - _markerSize / 2;
+
+            // 获取该方向对应的数学坐标系角度
+            double angleDegrees = PositionAngles[direction];
+            double angleRadians = angleDegrees * Math.PI / 180;
+
+            // 计算圆上的位置
+            // 数学坐标系：x = r * cos(θ), y = r * sin(θ)
+            // 但 WPF 的 Y 轴向下，所以 y = r * sin(θ) 正好对应向下
+            double x = centerX + radius * Math.Cos(angleRadians);
+            double y = centerY + radius * Math.Sin(angleRadians);
+
+            return new Point(x, y);
+        }
+
+        /// <summary>
+        /// 计算标记的旋转角度（使标记指向中心）
+        /// </summary>
+        /// <param name="direction">方向</param>
+        /// <returns>旋转角度（度）</returns>
+        internal double CalculateMarkerRotation(Direction direction)
+        {
+            return RotationAngles[direction];
+        }
+
+        /// <summary>
         /// 更新标记位置（窗口大小变化时调用）
+        /// 使用圆形布局，标记沿着以覆盖层为直径的圆形边缘分布
         /// </summary>
         private void UpdateMarkerPositions()
         {
-            double centerX = Width / 2 - 12;  // 箭头宽度约 24
-            double centerY = Height / 2 - 12; // 箭头高度约 24
+            double halfMarkerSize = _markerSize / 2;
 
-            // 更新各方向标记的位置
-            System.Windows.Controls.Canvas.SetLeft(MarkerNorth, centerX);
-            System.Windows.Controls.Canvas.SetTop(MarkerNorth, 5);
+            // 遍历所有方向，计算并应用位置
+            foreach (var kvp in _markers)
+            {
+                var direction = kvp.Key;
+                var marker = kvp.Value;
 
-            System.Windows.Controls.Canvas.SetLeft(MarkerSouth, centerX);
-            System.Windows.Controls.Canvas.SetBottom(MarkerSouth, 5);
+                // 计算圆形布局位置
+                var position = CalculateMarkerPosition(direction);
 
-            System.Windows.Controls.Canvas.SetLeft(MarkerWest, 5);
-            System.Windows.Controls.Canvas.SetTop(MarkerWest, centerY);
+                // 设置标记位置（Canvas.SetLeft/SetTop 设置的是元素左上角）
+                // 需要减去标记大小的一半，使标记中心位于计算的位置
+                Canvas.SetLeft(marker, position.X - halfMarkerSize);
+                Canvas.SetTop(marker, position.Y - halfMarkerSize);
 
-            System.Windows.Controls.Canvas.SetLeft(MarkerEast, Width - 20);
-            System.Windows.Controls.Canvas.SetTop(MarkerEast, centerY);
+                // 应用旋转角度
+                double rotationAngle = CalculateMarkerRotation(direction);
+                marker.RenderTransform = new RotateTransform(rotationAngle);
+            }
         }
 
         /// <summary>

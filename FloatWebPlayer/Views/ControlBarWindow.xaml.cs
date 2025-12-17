@@ -74,6 +74,11 @@ namespace FloatWebPlayer.Views
         /// </summary>
         public event EventHandler? SettingsRequested;
 
+        /// <summary>
+        /// 插件中心请求事件
+        /// </summary>
+        public event EventHandler? PluginCenterRequested;
+
         #endregion
 
         #region Fields
@@ -403,6 +408,14 @@ namespace FloatWebPlayer.Views
         private void MenuBookmarks_Click(object sender, RoutedEventArgs e)
         {
             BookmarksRequested?.Invoke(this, EventArgs.Empty);
+        }
+
+        /// <summary>
+        /// 插件中心菜单点击
+        /// </summary>
+        private void MenuPluginCenter_Click(object sender, RoutedEventArgs e)
+        {
+            PluginCenterRequested?.Invoke(this, EventArgs.Empty);
         }
 
         /// <summary>

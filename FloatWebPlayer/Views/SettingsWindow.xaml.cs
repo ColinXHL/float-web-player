@@ -168,6 +168,22 @@ namespace FloatWebPlayer.Views
         }
 
         /// <summary>
+        /// 打开插件中心
+        /// </summary>
+        private void BtnOpenPluginCenter_Click(object sender, RoutedEventArgs e)
+        {
+            var pluginCenter = new PluginCenterWindow();
+            pluginCenter.Owner = this;
+            pluginCenter.ShowDialog();
+            
+            // 插件中心关闭后刷新 Profile 列表（可能有变化）
+            _isInitializing = true;
+            ProfileManager.Instance.ReloadProfiles();
+            LoadProfileList();
+            _isInitializing = false;
+        }
+
+        /// <summary>
         /// 重置按钮 - 恢复默认设置
         /// </summary>
         private void BtnReset_Click(object sender, RoutedEventArgs e)
@@ -336,10 +352,6 @@ namespace FloatWebPlayer.Views
                 if (!selectedProfile.Id.Equals(currentProfile.Id, StringComparison.OrdinalIgnoreCase))
                 {
                     ProfileManager.Instance.SwitchProfile(selectedProfile.Id);
-                    
-                    // 刷新插件设置页面
-                    PluginSettingsPage?.RefreshAll();
-                    
                     Debug.WriteLine($"[Settings] 已切换到配置: {selectedProfile.Name}");
                 }
                 
@@ -351,7 +363,7 @@ namespace FloatWebPlayer.Views
         /// <summary>
         /// 取消订阅 Profile 按钮点击
         /// </summary>
-        private void BtnUnsubscribeProfile_Click(object sender, RoutedEventArgs e)
+        private async void BtnUnsubscribeProfile_Click(object sender, RoutedEventArgs e)
         {
             if (ProfileComboBox.SelectedItem is not GameProfile selectedProfile)
                 return;
@@ -359,18 +371,16 @@ namespace FloatWebPlayer.Views
             // 不能删除默认 Profile
             if (selectedProfile.Id.Equals("default", StringComparison.OrdinalIgnoreCase))
             {
-                MessageBox.Show("不能取消订阅默认配置。", "提示", MessageBoxButton.OK, MessageBoxImage.Information);
+                NotificationService.Instance.Info("不能取消订阅默认配置。", "提示");
                 return;
             }
             
             // 显示确认对话框
-            var result = MessageBox.Show(
-                $"确定要取消订阅配置 \"{selectedProfile.Name}\" 吗？\n\n此操作将删除该配置及其所有插件，无法撤销。",
-                "确认取消订阅",
-                MessageBoxButton.YesNo,
-                MessageBoxImage.Warning);
+            var confirmed = await NotificationService.Instance.ConfirmAsync(
+                $"确定要取消订阅配置 \"{selectedProfile.Name}\" 吗？\n\n此操作将删除该配置，无法撤销。",
+                "确认取消订阅");
             
-            if (result != MessageBoxResult.Yes)
+            if (!confirmed)
                 return;
             
             // 调用 ProfileManager.UnsubscribeProfile
@@ -384,17 +394,12 @@ namespace FloatWebPlayer.Views
                 _isInitializing = true;
                 LoadProfileList();
                 _isInitializing = false;
-                
-                // 刷新插件设置页面
-                PluginSettingsPage?.RefreshAll();
             }
             else
             {
-                MessageBox.Show(
+                NotificationService.Instance.Error(
                     unsubscribeResult.ErrorMessage ?? "取消订阅失败",
-                    "错误",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Error);
+                    "错误");
                 Debug.WriteLine($"[Settings] 取消订阅配置失败: {unsubscribeResult.ErrorMessage}");
             }
         }

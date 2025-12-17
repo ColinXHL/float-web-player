@@ -1,0 +1,25 @@
+{
+  "source": [
+    {
+      "id": "github",
+      "name": "GitHub",
+      "uri": "https://github.com/Sheep/FloatWebPlayer/releases/download/v${version}/FloatWebPlayer.Install.${version}.exe"
+    }
+  ],
+  "appName": "FloatWebPlayer",
+  "publisher": "Sheep",
+  "regName": "FloatWebPlayer",
+  "exeName": "FloatWebPlayer.exe",
+  "updaterName": "FloatWebPlayer.update.exe",
+  "programFilesPath": "FloatWebPlayer",
+  "title": "FloatWebPlayer",
+  "description": "悬浮网页播放器，专为游戏时观看攻略视频设计",
+  "windowTitle": "FloatWebPlayer 安装程序",
+  "userDataPath": [
+    "${INSTALL_PATH}/User"
+  ],
+  "uacStrategy": "prefer-admin",
+  "runtimes": [
+    "Microsoft.VCRedist.2015+.x64"
+  ]
+}

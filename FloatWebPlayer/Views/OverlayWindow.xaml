@@ -16,12 +16,12 @@
         KeyDown="Window_KeyDown">
     
     <Window.Resources>
-        <!-- 方向标记箭头样式 -->
-        <Style x:Key="DirectionMarkerStyle" TargetType="Path">
-            <Setter Property="Fill" Value="#FFFF6B6B"/>
-            <Setter Property="Stroke" Value="#FFFFFFFF"/>
-            <Setter Property="StrokeThickness" Value="2"/>
+        <!-- 方向标记图片样式 -->
+        <Style x:Key="DirectionMarkerStyle" TargetType="Image">
+            <Setter Property="Width" Value="32"/>
+            <Setter Property="Height" Value="32"/>
             <Setter Property="Visibility" Value="Collapsed"/>
+            <Setter Property="RenderTransformOrigin" Value="0.5,0.5"/>
             <Setter Property="Effect">
                 <Setter.Value>
                     <DropShadowEffect Color="Black" BlurRadius="8" ShadowDepth="2" Opacity="0.6"/>
@@ -58,45 +58,63 @@
         <!-- 主容器：使用 Canvas 精确定位方向标记 -->
         <Canvas x:Name="OverlayCanvas">
         
-        <!-- 北 (上) -->
-        <Path x:Name="MarkerNorth" Style="{StaticResource DirectionMarkerStyle}"
-              Data="M 0,15 L 12,0 L 24,15 Z"
-              Canvas.Left="88" Canvas.Top="5"/>
+        <!-- 方向标记图片：基础朝向为向右（东） -->
         
-        <!-- 东北 (右上) -->
-        <Path x:Name="MarkerNorthEast" Style="{StaticResource DirectionMarkerStyle}"
-              Data="M 0,17 L 17,0 L 17,17 Z"
-              Canvas.Right="5" Canvas.Top="5"/>
+        <!-- 北 (上) - 旋转 270° 指向中心 -->
+        <Image x:Name="MarkerNorth" Style="{StaticResource DirectionMarkerStyle}">
+            <Image.RenderTransform>
+                <RotateTransform Angle="270"/>
+            </Image.RenderTransform>
+        </Image>
         
-        <!-- 东 (右) -->
-        <Path x:Name="MarkerEast" Style="{StaticResource DirectionMarkerStyle}"
-              Data="M 0,0 L 15,12 L 0,24 Z"
-              Canvas.Right="5" Canvas.Top="88"/>
+        <!-- 东北 (右上) - 旋转 315° 指向中心 -->
+        <Image x:Name="MarkerNorthEast" Style="{StaticResource DirectionMarkerStyle}">
+            <Image.RenderTransform>
+                <RotateTransform Angle="315"/>
+            </Image.RenderTransform>
+        </Image>
         
-        <!-- 东南 (右下) -->
-        <Path x:Name="MarkerSouthEast" Style="{StaticResource DirectionMarkerStyle}"
-              Data="M 0,0 L 17,0 L 17,17 Z"
-              Canvas.Right="5" Canvas.Bottom="5"/>
+        <!-- 东 (右) - 旋转 0° 指向中心 -->
+        <Image x:Name="MarkerEast" Style="{StaticResource DirectionMarkerStyle}">
+            <Image.RenderTransform>
+                <RotateTransform Angle="0"/>
+            </Image.RenderTransform>
+        </Image>
         
-        <!-- 南 (下) -->
-        <Path x:Name="MarkerSouth" Style="{StaticResource DirectionMarkerStyle}"
-              Data="M 0,0 L 12,15 L 24,0 Z"
-              Canvas.Left="88" Canvas.Bottom="5"/>
+        <!-- 东南 (右下) - 旋转 45° 指向中心 -->
+        <Image x:Name="MarkerSouthEast" Style="{StaticResource DirectionMarkerStyle}">
+            <Image.RenderTransform>
+                <RotateTransform Angle="45"/>
+            </Image.RenderTransform>
+        </Image>
         
-        <!-- 西南 (左下) -->
-        <Path x:Name="MarkerSouthWest" Style="{StaticResource DirectionMarkerStyle}"
-              Data="M 0,0 L 17,17 L 0,17 Z"
-              Canvas.Left="5" Canvas.Bottom="5"/>
+        <!-- 南 (下) - 旋转 90° 指向中心 -->
+        <Image x:Name="MarkerSouth" Style="{StaticResource DirectionMarkerStyle}">
+            <Image.RenderTransform>
+                <RotateTransform Angle="90"/>
+            </Image.RenderTransform>
+        </Image>
         
-        <!-- 西 (左) -->
-        <Path x:Name="MarkerWest" Style="{StaticResource DirectionMarkerStyle}"
-              Data="M 15,0 L 0,12 L 15,24 Z"
-              Canvas.Left="5" Canvas.Top="88"/>
+        <!-- 西南 (左下) - 旋转 135° 指向中心 -->
+        <Image x:Name="MarkerSouthWest" Style="{StaticResource DirectionMarkerStyle}">
+            <Image.RenderTransform>
+                <RotateTransform Angle="135"/>
+            </Image.RenderTransform>
+        </Image>
         
-        <!-- 西北 (左上) -->
-        <Path x:Name="MarkerNorthWest" Style="{StaticResource DirectionMarkerStyle}"
-              Data="M 0,0 L 17,0 L 0,17 Z"
-              Canvas.Left="5" Canvas.Top="5"/>
+        <!-- 西 (左) - 旋转 180° 指向中心 -->
+        <Image x:Name="MarkerWest" Style="{StaticResource DirectionMarkerStyle}">
+            <Image.RenderTransform>
+                <RotateTransform Angle="180"/>
+            </Image.RenderTransform>
+        </Image>
+        
+        <!-- 西北 (左上) - 旋转 225° 指向中心 -->
+        <Image x:Name="MarkerNorthWest" Style="{StaticResource DirectionMarkerStyle}">
+            <Image.RenderTransform>
+                <RotateTransform Angle="225"/>
+            </Image.RenderTransform>
+        </Image>
         
         </Canvas>
         

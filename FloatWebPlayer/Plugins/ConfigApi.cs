@@ -48,10 +48,12 @@ namespace FloatWebPlayer.Plugins
             {
                 // 使用 PluginConfig 的 Get 方法
                 var value = _config.Get<object?>(key);
+                Services.LogService.Instance.Debug("ConfigApi", $"Get({key}) = {value ?? "null"}, defaultValue = {defaultValue ?? "null"}");
                 return value ?? defaultValue;
             }
-            catch
+            catch (Exception ex)
             {
+                Services.LogService.Instance.Error("ConfigApi", $"Get({key}) failed: {ex.Message}");
                 return defaultValue;
             }
         }

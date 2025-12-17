@@ -373,16 +373,17 @@ namespace FloatWebPlayer.Services
             {
                 var uri = e.Request.Uri;
                 
-                // 只拦截 B站 player API 请求（包括 wbi/v2 和 v2）
+                // 只拦截 B站 player/wbi/v2 或 player/v2 API 请求（字幕信息 API）
+                // 排除 online/total 等其他 player 相关 API
+                if (!uri.Contains("api.bilibili.com/x/player/wbi/v2") && 
+                    !uri.Contains("api.bilibili.com/x/player/v2"))
+                    return;
+
                 // 必须包含 cid 参数（B站页面自己的请求才有 cid）
-                if (!uri.Contains("api.bilibili.com/x/player/") || !uri.Contains("cid="))
+                if (!uri.Contains("cid="))
                     return;
 
-                // 排除我们自己的主动请求（没有 wbi 且参数很少）
-                if (!uri.Contains("wbi/v2") && !uri.Contains("&cid="))
-                    return;
-
-                LogService.Instance.Info("SubtitleService", $"★ 拦截到 player API: {uri.Substring(0, Math.Min(100, uri.Length))}...");
+                LogService.Instance.Info("SubtitleService", $"★ 拦截到 player/v2 API: {uri.Substring(0, Math.Min(100, uri.Length))}...");
 
                 var response = e.Response;
                 if (response == null || response.StatusCode != 200)
@@ -426,21 +427,28 @@ namespace FloatWebPlayer.Services
 
                 LogService.Instance.Info("SubtitleService", $"被动拦截到 {subtitles.Count} 个字幕");
 
-                // 优先选择中文字幕
+                // 优先选择中文字幕（ai-zh 优先，稳定性更好）
                 JsonElement? selectedSubtitle = null;
+                JsonElement? fallbackSubtitle = null;
                 foreach (var sub in subtitles)
                 {
                     if (sub.TryGetProperty("lan", out var lanEl))
                     {
                         var lan = lanEl.GetString() ?? "";
-                        if (lan == "zh-CN" || lan == "ai-zh" || lan.StartsWith("zh"))
+                        // ai-zh 最优先
+                        if (lan == "ai-zh")
                         {
                             selectedSubtitle = sub;
                             break;
                         }
+                        // 其他中文字幕作为备选
+                        if (fallbackSubtitle == null && (lan == "zh-CN" || lan.StartsWith("zh")))
+                        {
+                            fallbackSubtitle = sub;
+                        }
                     }
                 }
-                selectedSubtitle ??= subtitles.FirstOrDefault();
+                selectedSubtitle ??= fallbackSubtitle ?? subtitles.FirstOrDefault();
 
                 if (selectedSubtitle == null)
                     return;
@@ -605,9 +613,9 @@ namespace FloatWebPlayer.Services
             return;
         }
 
-        // 优先选择中文字幕（ai-zh 是 AI 生成的中文字幕）
-        let selectedSubtitle = subtitles.find(s => s.lan === 'zh-CN') || 
-                               subtitles.find(s => s.lan === 'ai-zh') || 
+        // 优先选择中文字幕（ai-zh 优先，稳定性更好）
+        let selectedSubtitle = subtitles.find(s => s.lan === 'ai-zh') || 
+                               subtitles.find(s => s.lan === 'zh-CN') || 
                                subtitles.find(s => s.lan.startsWith('zh')) ||
                                subtitles[0];
         let subtitleUrl = selectedSubtitle.subtitle_url;

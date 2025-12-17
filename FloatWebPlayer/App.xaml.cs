@@ -1,4 +1,5 @@
-﻿using System.Windows;
+﻿using System;
+using System.Windows;
 using FloatWebPlayer.Models;
 using FloatWebPlayer.Plugins;
 using FloatWebPlayer.Services;
@@ -28,6 +29,9 @@ namespace FloatWebPlayer
         /// </summary>
         private void Application_Startup(object sender, StartupEventArgs e)
         {
+            // 执行数据迁移（如果需要）
+            ExecuteDataMigration();
+            
             // 初始化服务（单例）
             _ = ProfileManager.Instance;
             _ = DataService.Instance;
@@ -151,6 +155,13 @@ namespace FloatWebPlayer
                 bookmarkPopup.ShowDialog();
             };
 
+            // 插件中心菜单事件
+            _controlBarWindow.PluginCenterRequested += (s, e) =>
+            {
+                var pluginCenterWindow = new PluginCenterWindow();
+                pluginCenterWindow.ShowDialog();
+            };
+
             // 设置菜单事件
             _controlBarWindow.SettingsRequested += (s, e) =>
             {
@@ -253,6 +264,59 @@ namespace FloatWebPlayer
             if (_hotkeyService != null)
             {
                 _hotkeyService.UpdateConfig(_config.ToHotkeyConfig());
+            }
+        }
+
+        /// <summary>
+        /// 执行数据迁移
+        /// </summary>
+        private void ExecuteDataMigration()
+        {
+            try
+            {
+                if (!DataMigration.Instance.NeedsMigration())
+                {
+                    return;
+                }
+
+                LogService.Instance.Info("App", "检测到需要数据迁移，开始执行...");
+
+                var result = DataMigration.Instance.Migrate();
+
+                switch (result.Status)
+                {
+                    case MigrationResultStatus.Success:
+                        LogService.Instance.Info("App", 
+                            $"数据迁移成功: {result.MigratedPluginCount} 个插件, {result.MigratedProfileCount} 个 Profile");
+                        break;
+
+                    case MigrationResultStatus.PartialSuccess:
+                        LogService.Instance.Warn("App", 
+                            $"数据迁移部分成功: {result.MigratedPluginCount} 个插件, {result.MigratedProfileCount} 个 Profile");
+                        foreach (var warning in result.Warnings)
+                        {
+                            LogService.Instance.Warn("App", $"迁移警告: {warning}");
+                        }
+                        break;
+
+                    case MigrationResultStatus.Failed:
+                        LogService.Instance.Error("App", $"数据迁移失败: {result.ErrorMessage}");
+                        MessageBox.Show(
+                            $"数据迁移失败：{result.ErrorMessage}\n\n应用将继续运行，但部分插件可能无法正常工作。",
+                            "迁移警告",
+                            MessageBoxButton.OK,
+                            MessageBoxImage.Warning);
+                        break;
+
+                    case MigrationResultStatus.NotNeeded:
+                        // 无需迁移，静默处理
+                        break;
+                }
+            }
+            catch (Exception ex)
+            {
+                LogService.Instance.Error("App", $"数据迁移过程中发生异常: {ex.Message}");
+                // 不阻止应用启动，只记录错误
             }
         }
 

@@ -251,8 +251,13 @@ namespace FloatWebPlayer.Models
         public void ApplyDefaults(Dictionary<string, JsonElement>? defaults)
         {
             if (defaults == null)
+            {
+                Services.LogService.Instance.Debug("PluginConfig", $"ApplyDefaults: defaults is null for {PluginId}");
                 return;
+            }
 
+            Services.LogService.Instance.Debug("PluginConfig", $"ApplyDefaults: applying {defaults.Count} defaults for {PluginId}");
+            
             foreach (var kvp in defaults)
             {
                 // 只在键不存在时应用默认值
@@ -262,9 +267,16 @@ namespace FloatWebPlayer.Models
                     if (node != null)
                     {
                         SetNodeByPath(kvp.Key, node);
+                        Services.LogService.Instance.Debug("PluginConfig", $"  Applied default: {kvp.Key} = {kvp.Value.GetRawText()}");
                     }
                 }
+                else
+                {
+                    Services.LogService.Instance.Debug("PluginConfig", $"  Skipped (exists): {kvp.Key}");
+                }
             }
+            
+            Services.LogService.Instance.Debug("PluginConfig", $"ApplyDefaults complete. Settings: {_settings.ToJsonString()}");
         }
 
         #endregion

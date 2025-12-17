@@ -114,9 +114,8 @@ namespace FloatWebPlayer.Tests
             // 尝试访问未授权的 API 应该返回 null
             bool unauthorizedApiReturnsNull = unauthorizedPermission switch
             {
-                "audio" => api.Speech == null,
                 "overlay" => api.Overlay == null,
-                _ => true // network 和 storage 尚未实现
+                _ => true // audio 已移除，network 和 storage 尚未实现
             };
 
             return (!hasUnauthorizedPermission && allGrantedPermissionsValid && unauthorizedApiReturnsNull)
@@ -171,8 +170,8 @@ namespace FloatWebPlayer.Tests
         [Property(MaxTest = 100)]
         public Property AuthorizedApiAccess_ShouldReturnNonNull(PositiveInt permIndex)
         {
-            // 需要权限的 API
-            var permissionApis = new[] { "audio", "overlay" };
+            // 需要权限的 API (audio 已移除)
+            var permissionApis = new[] { "overlay" };
             var authorizedPermission = permissionApis[permIndex.Get % permissionApis.Length];
 
             // 创建包含该权限的 API
@@ -184,7 +183,6 @@ namespace FloatWebPlayer.Tests
             // 访问已授权的 API 应该返回非 null
             bool authorizedApiReturnsNonNull = authorizedPermission switch
             {
-                "audio" => api.Speech != null,
                 "overlay" => api.Overlay != null,
                 _ => true
             };
@@ -357,18 +355,6 @@ namespace FloatWebPlayer.Tests
         #region Unit Tests
 
         /// <summary>
-        /// 无权限的插件应该无法访问 Speech API
-        /// </summary>
-        [Fact]
-        public void NoPermission_ShouldNotAccessSpeechApi()
-        {
-            var api = CreatePluginApi(new List<string>());
-
-            Assert.Null(api.Speech);
-            Assert.False(api.HasPermission("audio"));
-        }
-
-        /// <summary>
         /// 无权限的插件应该无法访问 Overlay API
         /// </summary>
         [Fact]
@@ -378,18 +364,6 @@ namespace FloatWebPlayer.Tests
 
             Assert.Null(api.Overlay);
             Assert.False(api.HasPermission("overlay"));
-        }
-
-        /// <summary>
-        /// 有 audio 权限的插件应该能访问 Speech API
-        /// </summary>
-        [Fact]
-        public void WithAudioPermission_ShouldAccessSpeechApi()
-        {
-            var api = CreatePluginApi(new List<string> { "audio" });
-
-            Assert.NotNull(api.Speech);
-            Assert.True(api.HasPermission("audio"));
         }
 
         /// <summary>

@@ -54,6 +54,15 @@ namespace FloatWebPlayer.Models
 
         #endregion
 
+        #region Profile
+
+        /// <summary>
+        /// 当前选择的 Profile ID
+        /// </summary>
+        public string CurrentProfileId { get; set; } = AppConstants.DefaultProfileId;
+
+        #endregion
+
         #region Window Behavior
 
         /// <summary>
