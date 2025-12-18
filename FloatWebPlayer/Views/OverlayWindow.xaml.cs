@@ -1044,6 +1044,9 @@ namespace FloatWebPlayer.Views
             double newWidth = _resizeStartRect.Width;
             double newHeight = _resizeStartRect.Height;
 
+            // 检测 Shift 键是否按下（正方形约束）
+            bool constrainSquare = Keyboard.IsKeyDown(Key.LeftShift) || Keyboard.IsKeyDown(Key.RightShift);
+
             // 根据方向调整
             switch (_resizeDirection)
             {
@@ -1052,34 +1055,99 @@ namespace FloatWebPlayer.Views
                     newTop = _resizeStartRect.Top + delta.Y;
                     newWidth = _resizeStartRect.Width - delta.X;
                     newHeight = _resizeStartRect.Height - delta.Y;
+                    if (constrainSquare)
+                    {
+                        var maxDelta = Math.Max(Math.Abs(delta.X), Math.Abs(delta.Y));
+                        var signX = delta.X >= 0 ? 1 : -1;
+                        var signY = delta.Y >= 0 ? 1 : -1;
+                        // 使用较大的变化量，保持符号一致
+                        var uniformDelta = maxDelta * (Math.Abs(delta.X) >= Math.Abs(delta.Y) ? signX : signY);
+                        newLeft = _resizeStartRect.Left + uniformDelta;
+                        newTop = _resizeStartRect.Top + uniformDelta;
+                        newWidth = _resizeStartRect.Width - uniformDelta;
+                        newHeight = newWidth;
+                    }
                     break;
                 case Win32Helper.ResizeDirection.TopRight:
                     newTop = _resizeStartRect.Top + delta.Y;
                     newWidth = _resizeStartRect.Width + delta.X;
                     newHeight = _resizeStartRect.Height - delta.Y;
+                    if (constrainSquare)
+                    {
+                        var maxDelta = Math.Max(Math.Abs(delta.X), Math.Abs(delta.Y));
+                        // 右上角：X 增加时宽度增加，Y 减少时高度增加
+                        var sign = Math.Abs(delta.X) >= Math.Abs(delta.Y) 
+                            ? (delta.X >= 0 ? 1 : -1) 
+                            : (delta.Y >= 0 ? -1 : 1);
+                        newWidth = _resizeStartRect.Width + maxDelta * sign;
+                        newHeight = newWidth;
+                        newTop = _resizeStartRect.Top + _resizeStartRect.Height - newHeight;
+                    }
                     break;
                 case Win32Helper.ResizeDirection.BottomLeft:
                     newLeft = _resizeStartRect.Left + delta.X;
                     newWidth = _resizeStartRect.Width - delta.X;
                     newHeight = _resizeStartRect.Height + delta.Y;
+                    if (constrainSquare)
+                    {
+                        var maxDelta = Math.Max(Math.Abs(delta.X), Math.Abs(delta.Y));
+                        // 左下角：X 减少时宽度增加，Y 增加时高度增加
+                        var sign = Math.Abs(delta.X) >= Math.Abs(delta.Y) 
+                            ? (delta.X >= 0 ? -1 : 1) 
+                            : (delta.Y >= 0 ? 1 : -1);
+                        newWidth = _resizeStartRect.Width + maxDelta * sign;
+                        newHeight = newWidth;
+                        newLeft = _resizeStartRect.Left + _resizeStartRect.Width - newWidth;
+                    }
                     break;
                 case Win32Helper.ResizeDirection.BottomRight:
                     newWidth = _resizeStartRect.Width + delta.X;
                     newHeight = _resizeStartRect.Height + delta.Y;
+                    if (constrainSquare)
+                    {
+                        var maxDelta = Math.Max(Math.Abs(delta.X), Math.Abs(delta.Y));
+                        var sign = Math.Abs(delta.X) >= Math.Abs(delta.Y) 
+                            ? (delta.X >= 0 ? 1 : -1) 
+                            : (delta.Y >= 0 ? 1 : -1);
+                        newWidth = _resizeStartRect.Width + maxDelta * sign;
+                        newHeight = newWidth;
+                    }
                     break;
                 case Win32Helper.ResizeDirection.Top:
                     newTop = _resizeStartRect.Top + delta.Y;
                     newHeight = _resizeStartRect.Height - delta.Y;
+                    if (constrainSquare)
+                    {
+                        // 边缘控制点：同时调整两个维度
+                        newWidth = newHeight;
+                        // 保持中心对齐
+                        newLeft = _resizeStartRect.Left + (_resizeStartRect.Width - newWidth) / 2;
+                    }
                     break;
                 case Win32Helper.ResizeDirection.Bottom:
                     newHeight = _resizeStartRect.Height + delta.Y;
+                    if (constrainSquare)
+                    {
+                        newWidth = newHeight;
+                        newLeft = _resizeStartRect.Left + (_resizeStartRect.Width - newWidth) / 2;
+                    }
                     break;
                 case Win32Helper.ResizeDirection.Left:
                     newLeft = _resizeStartRect.Left + delta.X;
                     newWidth = _resizeStartRect.Width - delta.X;
+                    if (constrainSquare)
+                    {
+                        newHeight = newWidth;
+                        newTop = _resizeStartRect.Top + (_resizeStartRect.Height - newHeight) / 2;
+                    }
                     break;
                 case Win32Helper.ResizeDirection.Right:
                     newWidth = _resizeStartRect.Width + delta.X;
+                    if (constrainSquare)
+                    {
+                        newHeight = newWidth;
+                        newTop = _resizeStartRect.Top + (_resizeStartRect.Height - newHeight) / 2;
+                    }
                     break;
             }
 

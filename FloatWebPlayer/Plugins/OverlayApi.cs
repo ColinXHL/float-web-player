@@ -443,19 +443,19 @@ namespace FloatWebPlayer.Plugins
                 if (_overlay == null)
                 {
                     // 从配置读取初始位置和大小
+                    // 使用 overlay.size 保持与 settings_ui.json 和 main.js 的一致性
                     var x = _configApi.Get("overlay.x", 50);
                     var y = _configApi.Get("overlay.y", 50);
-                    var width = _configApi.Get("overlay.width", 200);
-                    var height = _configApi.Get("overlay.height", 200);
+                    var size = _configApi.Get("overlay.size", 200);
 
-                    Services.LogService.Instance.Debug("OverlayApi", $"EnsureOverlay: Creating overlay at ({x}, {y}) size ({width}, {height})");
+                    Services.LogService.Instance.Debug("OverlayApi", $"EnsureOverlay: Creating overlay at ({x}, {y}) size ({size})");
 
                     var options = new OverlayOptions
                     {
                         X = Convert.ToDouble(x),
                         Y = Convert.ToDouble(y),
-                        Width = Convert.ToDouble(width),
-                        Height = Convert.ToDouble(height)
+                        Width = Convert.ToDouble(size),
+                        Height = Convert.ToDouble(size)
                     };
 
                     _overlay = OverlayManager.Instance.CreateOverlay(_context.PluginId, options);
@@ -489,8 +489,9 @@ namespace FloatWebPlayer.Plugins
             var rect = _overlay.GetRect();
             _configApi.Set("overlay.x", (int)rect.X);
             _configApi.Set("overlay.y", (int)rect.Y);
-            _configApi.Set("overlay.width", (int)rect.Width);
-            _configApi.Set("overlay.height", (int)rect.Height);
+            // 使用 overlay.size 保持与 settings_ui.json 和 main.js 的一致性
+            // 覆盖层为正方形，使用 Width 作为 size
+            _configApi.Set("overlay.size", (int)rect.Width);
         }
 
         /// <summary>

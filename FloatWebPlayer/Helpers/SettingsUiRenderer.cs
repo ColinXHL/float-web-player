@@ -34,6 +34,7 @@ namespace FloatWebPlayer.Helpers
         private readonly PluginConfig _config;
         private readonly SettingsUiDefinition _definition;
         private readonly Dictionary<string, FrameworkElement> _controlMap = new();
+        private readonly Dictionary<string, SettingsItem> _itemMap = new();
 
         #endregion
 
@@ -88,7 +89,9 @@ namespace FloatWebPlayer.Helpers
         {
             foreach (var kvp in _controlMap)
             {
-                RefreshControlValue(kvp.Key, kvp.Value);
+                // 获取对应的 SettingsItem 以便使用默认值
+                _itemMap.TryGetValue(kvp.Key, out var item);
+                RefreshControlValue(kvp.Key, kvp.Value, item);
             }
         }
 
@@ -190,6 +193,7 @@ namespace FloatWebPlayer.Helpers
             if (!string.IsNullOrEmpty(item.Key))
             {
                 _controlMap[item.Key] = textBox;
+                _itemMap[item.Key] = item;
             }
 
             container.Children.Add(textBox);
@@ -336,6 +340,7 @@ namespace FloatWebPlayer.Helpers
             if (!string.IsNullOrEmpty(item.Key))
             {
                 _controlMap[item.Key] = textBox;
+                _itemMap[item.Key] = item;
             }
 
             grid.Children.Add(textBox);
@@ -439,6 +444,7 @@ namespace FloatWebPlayer.Helpers
             if (!string.IsNullOrEmpty(item.Key))
             {
                 _controlMap[item.Key] = toggle;
+                _itemMap[item.Key] = item;
             }
 
             container.Children.Add(toggle);
@@ -554,6 +560,7 @@ namespace FloatWebPlayer.Helpers
             if (!string.IsNullOrEmpty(item.Key))
             {
                 _controlMap[item.Key] = comboBox;
+                _itemMap[item.Key] = item;
             }
 
             container.Children.Add(comboBox);
@@ -813,6 +820,7 @@ namespace FloatWebPlayer.Helpers
             if (!string.IsNullOrEmpty(item.Key))
             {
                 _controlMap[item.Key] = slider;
+                _itemMap[item.Key] = item;
             }
 
             sliderContainer.Children.Add(slider);
@@ -956,7 +964,7 @@ namespace FloatWebPlayer.Helpers
             return _config.Get(key, defaultValue);
         }
 
-        private void RefreshControlValue(string key, FrameworkElement control)
+        private void RefreshControlValue(string key, FrameworkElement control, SettingsItem? item = null)
         {
             switch (control)
             {
@@ -969,17 +977,49 @@ namespace FloatWebPlayer.Helpers
                     }
                     else
                     {
-                        textBox.Text = _config.Get(key, string.Empty);
+                        // 配置中没有值时，使用 settings_ui.json 中的默认值
+                        var strValue = _config.Get<string?>(key, null);
+                        if (strValue != null)
+                        {
+                            textBox.Text = strValue;
+                        }
+                        else
+                        {
+                            // 使用 SettingsItem 中的默认值
+                            var defaultNum = item?.GetDefaultValue<double?>();
+                            if (defaultNum.HasValue)
+                            {
+                                textBox.Text = defaultNum.Value.ToString();
+                            }
+                            else
+                            {
+                                textBox.Text = item?.GetDefaultValue<string>() ?? string.Empty;
+                            }
+                        }
                     }
                     break;
                 case ToggleButton toggle:
-                    toggle.IsChecked = _config.Get(key, false);
+                    var boolValue = _config.Get<bool?>(key, null);
+                    if (boolValue.HasValue)
+                    {
+                        toggle.IsChecked = boolValue.Value;
+                    }
+                    else
+                    {
+                        // 使用 SettingsItem 中的默认值
+                        toggle.IsChecked = item?.GetDefaultValue<bool?>() ?? false;
+                    }
                     break;
                 case ComboBox comboBox:
-                    var value = _config.Get(key, string.Empty);
+                    var selectValue = _config.Get<string?>(key, null);
+                    if (selectValue == null)
+                    {
+                        // 使用 SettingsItem 中的默认值
+                        selectValue = item?.GetDefaultValue<string>() ?? string.Empty;
+                    }
                     for (int i = 0; i < comboBox.Items.Count; i++)
                     {
-                        if (comboBox.Items[i] is ComboBoxItem cbi && cbi.Tag?.ToString() == value)
+                        if (comboBox.Items[i] is ComboBoxItem cbi && cbi.Tag?.ToString() == selectValue)
                         {
                             comboBox.SelectedIndex = i;
                             break;
@@ -987,7 +1027,16 @@ namespace FloatWebPlayer.Helpers
                     }
                     break;
                 case Slider slider:
-                    slider.Value = _config.Get(key, 0.0);
+                    var sliderValue = _config.Get<double?>(key, null);
+                    if (sliderValue.HasValue)
+                    {
+                        slider.Value = sliderValue.Value;
+                    }
+                    else
+                    {
+                        // 使用 SettingsItem 中的默认值
+                        slider.Value = item?.GetDefaultValue<double?>() ?? item?.Min ?? 0;
+                    }
                     break;
             }
         }
