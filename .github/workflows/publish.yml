@@ -126,7 +126,7 @@ jobs:
         run: |
           cd dist
           Write-Host "开始打包 installer..."
-          ..\kachina-builder.exe pack -c ..\Build\kachina.config.json -m metadata.json -d hashed -o FloatWebPlayer.Install.${{ needs.validate.outputs.version }}.exe
+          ..\kachina-builder.exe pack -c ..\Build\kachina.config.json -m metadata.json -t ..\assets\installer_left.webp -d hashed -o FloatWebPlayer.Install.${{ needs.validate.outputs.version }}.exe
           Write-Host "打包完成"
 
       - uses: actions/upload-artifact@v4
