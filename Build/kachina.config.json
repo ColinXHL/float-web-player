@@ -3,19 +3,19 @@
     {
       "id": "github",
       "name": "GitHub",
-      "uri": "https://github.com/ColinXHL/FloatWebPlayer/releases/download/v${version}/FloatWebPlayer.Install.${version}.exe"
+      "uri": "https://github.com/ColinXHL/SandronePlayer/releases/download/v${version}/SandronePlayer.Install.${version}.exe"
     }
   ],
-  "appName": "FloatWebPlayer",
+  "appName": "SandronePlayer",
   "publisher": "ColinXHL",
-  "regName": "FloatWebPlayer",
-  "exeName": "FloatWebPlayer.exe",
-  "uninstallName": "FloatWebPlayer.uninst.exe",
-  "updaterName": "FloatWebPlayer.update.exe",
-  "programFilesPath": "FloatWebPlayer",
-  "title": "FloatWebPlayer",
+  "regName": "SandronePlayer",
+  "exeName": "SandronePlayer.exe",
+  "uninstallName": "SandronePlayer.uninst.exe",
+  "updaterName": "SandronePlayer.update.exe",
+  "programFilesPath": "SandronePlayer",
+  "title": "SandronePlayer",
   "description": "悬浮网页播放器",
-  "windowTitle": "FloatWebPlayer 安装程序",
+  "windowTitle": "SandronePlayer 安装程序",
   "windowBorderless": false,
   "userDataPath": [
     "${INSTALL_PATH}/User"

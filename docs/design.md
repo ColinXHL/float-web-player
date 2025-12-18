@@ -1,8 +1,8 @@
-# FloatWebPlayer - 悬浮网页播放器设计文档
+# SandronePlayer - 悬浮网页播放器设计文档
 
 ## 项目概述
 
-**FloatWebPlayer** 是一个基于 C# WPF + WebView2 的悬浮网页播放器，主要用于游戏时观看攻略视频（如B站）。支持全局快捷键控制、透明度调节、鼠标穿透等功能。
+**SandronePlayer** 是一个基于 C# WPF + WebView2 的悬浮网页播放器，主要用于游戏时观看攻略视频（如B站）。支持全局快捷键控制、透明度调节、鼠标穿透等功能。
 
 ---
 
@@ -489,16 +489,16 @@ Data/
 
 ```powershell
 # 创建解决方案
-dotnet new sln -n FloatWebPlayer
+dotnet new sln -n SandronePlayer
 
 # 创建 WPF 项目
-dotnet new wpf -n FloatWebPlayer -f net8.0-windows
+dotnet new wpf -n SandronePlayer -f net8.0-windows
 
 # 添加项目到解决方案
-dotnet sln add FloatWebPlayer/FloatWebPlayer.csproj
+dotnet sln add SandronePlayer/SandronePlayer.csproj
 
 # 添加 NuGet 包
-cd FloatWebPlayer
+cd SandronePlayer
 dotnet add package Microsoft.Web.WebView2
 ```
 
@@ -512,8 +512,8 @@ dotnet add package Microsoft.Web.WebView2
     <Nullable>enable</Nullable>
     <UseWPF>true</UseWPF>
     <ApplicationIcon>Resources\app.ico</ApplicationIcon>
-    <AssemblyName>FloatWebPlayer</AssemblyName>
-    <RootNamespace>FloatWebPlayer</RootNamespace>
+    <AssemblyName>SandronePlayer</AssemblyName>
+    <RootNamespace>SandronePlayer</RootNamespace>
   </PropertyGroup>
 </Project>
 ```
@@ -530,10 +530,10 @@ mkdir Views, Services, Helpers, Models, Resources
 为实现 Cookie 持久化，需指定固定的 UserDataFolder：
 
 ```csharp
-// 推荐路径：AppData/Local/FloatWebPlayer/WebView2Data
+// 推荐路径：AppData/Local/SandronePlayer/WebView2Data
 var userDataFolder = Path.Combine(
     Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-    "FloatWebPlayer",
+    "SandronePlayer",
     "WebView2Data"
 );
 ```
@@ -545,7 +545,7 @@ var userDataFolder = Path.Combine(
 ```json
 {
   "profiles": {
-    "FloatWebPlayer": {
+    "SandronePlayer": {
       "commandName": "Project",
       "nativeDebugging": true
     }
@@ -558,9 +558,9 @@ var userDataFolder = Path.Combine(
 ## 项目结构
 
 ```
-FloatWebPlayer/
-├── FloatWebPlayer.sln
-├── FloatWebPlayer/
+SandronePlayer/
+├── SandronePlayer.sln
+├── SandronePlayer/
 │   ├── App.xaml
 │   ├── App.xaml.cs
 │   ├── Views/
@@ -941,7 +941,7 @@ public class ExternalTool
 **仓库结构**（GitHub）：
 
 ```
-float-web-player-profiles/
+sandrone-player-profiles/
 ├── registry.json              # 插件索引
 ├── genshin/
 │   ├── manifest.json          # 插件元数据

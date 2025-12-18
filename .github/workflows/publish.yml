@@ -1,11 +1,11 @@
-name: FloatWebPlayer Publish
-run-name: "FloatWebPlayer ${{ github.event.inputs.version }}"
+name: SandronePlayer Publish
+run-name: "SandronePlayer ${{ github.event.inputs.version }}"
 
 on:
   workflow_dispatch:
     inputs:
       version:
-        description: "FloatWebPlayer Version (e.g., 0.1.0, 0.1.1-alpha.1)"
+        description: "SandronePlayer Version (e.g., 0.1.0, 0.1.1-alpha.1)"
         required: true
         type: string
       channel:
@@ -52,12 +52,12 @@ jobs:
       - name: Verify version matches csproj
         run: |
           VERSION="${{ steps.set-version.outputs.version }}"
-          CSPROJ_VERSION=$(grep -oP '(?<=<Version>)[^<]+' FloatWebPlayer/FloatWebPlayer.csproj)
+          CSPROJ_VERSION=$(grep -oP '(?<=<Version>)[^<]+' SandronePlayer/SandronePlayer.csproj)
           echo "📋 输入版本号: $VERSION"
           echo "📋 csproj 版本号: $CSPROJ_VERSION"
           if [[ "$VERSION" != "$CSPROJ_VERSION" ]]; then
             echo "❌ 错误：输入的版本号 ($VERSION) 与 csproj 中的版本号 ($CSPROJ_VERSION) 不匹配！"
-            echo "请先更新 FloatWebPlayer/FloatWebPlayer.csproj 中的 <Version> 标签。"
+            echo "请先更新 SandronePlayer/SandronePlayer.csproj 中的 <Version> 标签。"
             exit 1
           fi
           echo "✅ 版本号匹配"
@@ -72,34 +72,34 @@ jobs:
         with:
           dotnet-version: 8.x
 
-      - name: 🛠️ Publish FloatWebPlayer
+      - name: 🛠️ Publish SandronePlayer
         run: |
-          dotnet publish FloatWebPlayer/FloatWebPlayer.csproj `
+          dotnet publish SandronePlayer/SandronePlayer.csproj `
             -c Release `
             -p:PublishProfile=FolderProfile `
             /p:Version=${{ needs.validate.outputs.version }}
 
       - name: 🧹 Collect publish files
         run: |
-          $sourceDir = ".\FloatWebPlayer\bin\Release\net8.0-windows\win-x64\publish"
-          # 清理 dist/FloatWebPlayer 目录，避免权限问题
-          if (Test-Path ".\dist\FloatWebPlayer") {
-              Remove-Item -Recurse -Force ".\dist\FloatWebPlayer"
+          $sourceDir = ".\SandronePlayer\bin\Release\net8.0-windows\win-x64\publish"
+          # 清理 dist/SandronePlayer 目录，避免权限问题
+          if (Test-Path ".\dist\SandronePlayer") {
+              Remove-Item -Recurse -Force ".\dist\SandronePlayer"
           }
-          New-Item -ItemType Directory -Path ".\dist\FloatWebPlayer"
-          Copy-Item "$sourceDir\*" ".\dist\FloatWebPlayer" -Recurse -Force
+          New-Item -ItemType Directory -Path ".\dist\SandronePlayer"
+          Copy-Item "$sourceDir\*" ".\dist\SandronePlayer" -Recurse -Force
           # 可选：删除无用文件
-          Get-ChildItem ".\dist\FloatWebPlayer" -Recurse -Include *.pdb,*.lib | Remove-Item -Force
+          Get-ChildItem ".\dist\SandronePlayer" -Recurse -Include *.pdb,*.lib | Remove-Item -Force
 
       - name: 📦 Pack 7z
         run: |
           cd dist
-          7z a "FloatWebPlayer_v${{ needs.validate.outputs.version }}.7z" FloatWebPlayer -t7z -mx=5 -r -y
+          7z a "SandronePlayer_v${{ needs.validate.outputs.version }}.7z" SandronePlayer -t7z -mx=5 -r -y
 
       - uses: actions/upload-artifact@v4
         with:
-          name: FloatWebPlayer_7z
-          path: dist/FloatWebPlayer_v*.7z
+          name: SandronePlayer_7z
+          path: dist/SandronePlayer_v*.7z
 
   build_installer:
     runs-on: windows-latest
@@ -109,7 +109,7 @@ jobs:
 
       - uses: actions/download-artifact@v4
         with:
-          name: FloatWebPlayer_7z
+          name: SandronePlayer_7z
           path: dist
 
       - name: 📦 Unpack
@@ -118,7 +118,7 @@ jobs:
           Write-Host "当前目录：$(Get-Location)"
           Write-Host "Unpack 前文件列表："
           Get-ChildItem -Recurse | ForEach-Object { Write-Host $_.FullName }
-          7z x "FloatWebPlayer_v${{ needs.validate.outputs.version }}.7z"
+          7z x "SandronePlayer_v${{ needs.validate.outputs.version }}.7z"
           Write-Host "Unpack 后文件列表："
           Get-ChildItem -Recurse | ForEach-Object { Write-Host $_.FullName }
 
@@ -133,7 +133,7 @@ jobs:
         run: |
           cd dist
           Write-Host "生成 hashed 临时目录..."
-          ..\kachina-builder.exe gen -j 4 -i FloatWebPlayer -m metadata.json -o hashed -r YourRepo/FloatWebPlayer -t ${{ needs.validate.outputs.version }}
+          ..\kachina-builder.exe gen -j 4 -i SandronePlayer -m metadata.json -o hashed -r YourRepo/SandronePlayer -t ${{ needs.validate.outputs.version }}
           Write-Host "hashed 目录内容："
           Get-ChildItem hashed -Recurse | ForEach-Object { Write-Host $_.FullName }
 
@@ -141,13 +141,13 @@ jobs:
         run: |
           cd dist
           Write-Host "开始打包 installer..."
-          ..\kachina-builder.exe pack -c ..\Build\kachina.config.json -m metadata.json -t ..\assets\installer_left.webp -d hashed -o FloatWebPlayer.Install.${{ needs.validate.outputs.version }}.exe
+          ..\kachina-builder.exe pack -c ..\Build\kachina.config.json -m metadata.json -t ..\assets\installer_left.webp -d hashed -o SandronePlayer.Install.${{ needs.validate.outputs.version }}.exe
           Write-Host "打包完成"
 
       - uses: actions/upload-artifact@v4
         with:
-          name: FloatWebPlayer_Installer
-          path: dist/FloatWebPlayer.Install.*.exe
+          name: SandronePlayer_Installer
+          path: dist/SandronePlayer.Install.*.exe
 
   create_release:
     name: Create GitHub Release
@@ -160,22 +160,22 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
-          name: FloatWebPlayer_Installer
+          name: SandronePlayer_Installer
           path: release
 
       - uses: actions/download-artifact@v4
         with:
-          name: FloatWebPlayer_7z
+          name: SandronePlayer_7z
           path: release
 
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
           tag_name: v${{ needs.validate.outputs.version }}
-          name: FloatWebPlayer v${{ needs.validate.outputs.version }}
+          name: SandronePlayer v${{ needs.validate.outputs.version }}
           draft: true
           prerelease: ${{ github.event.inputs.channel == 'dev' }}
           fail_on_unmatched_files: true
           files: |
-            release/FloatWebPlayer.Install.*.exe
-            release/FloatWebPlayer_v*.7z
+            release/SandronePlayer.Install.*.exe
+            release/SandronePlayer_v*.7z

@@ -1,6 +1,6 @@
-# FloatWebPlayer 插件仓库
+# SandronePlayer 插件仓库
 
-官方和社区验证的 FloatWebPlayer 插件集合。
+官方和社区验证的 SandronePlayer 插件集合。
 
 ## 目录结构
 
@@ -24,7 +24,7 @@ plugins/
 
 ### 方式一：通过插件市场（推荐）
 
-1. 打开 FloatWebPlayer
+1. 打开 SandronePlayer
 2. 进入设置 → 插件管理
 3. 浏览并安装所需插件
 

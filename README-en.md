@@ -1,7 +1,7 @@
-# 🎬 FloatWebPlayer
+# 🎬 SandronePlayer
 
 <p align="center">
-  <img src="assets/float-web-player-logo.png" alt="Float Web Player Logo" width="128">
+  <img src="assets/sandrone-player-logo.png" alt="Float Web Player Logo" width="128">
 </p>
 
 [简体中文](README.md) | English
@@ -47,7 +47,7 @@
 
 ### Option 1: Download Release
 
-Download the latest version from [Releases](https://github.com/ColinXHL/float-web-player/releases), extract and run `FloatWebPlayer.exe`.
+Download the latest version from [Releases](https://github.com/ColinXHL/sandrone-player/releases), extract and run `SandronePlayer.exe`.
 
 > 💡 Portable version - all data stored in `User/` folder.
 
@@ -55,14 +55,14 @@ Download the latest version from [Releases](https://github.com/ColinXHL/float-we
 
 ```powershell
 # Clone the repository
-git clone https://github.com/ColinXHL/float-web-player.git
-cd float-web-player
+git clone https://github.com/ColinXHL/sandrone-player.git
+cd sandrone-player
 
 # Build
 dotnet build -c Release
 
 # Run
-dotnet run --project FloatWebPlayer
+dotnet run --project SandronePlayer
 ```
 
 ---
@@ -97,7 +97,7 @@ dotnet run --project FloatWebPlayer
 ## 📁 Project Structure
 
 ```
-FloatWebPlayer/
+SandronePlayer/
 ├── Views/              # WPF Windows (Player, ControlBar, OSD, History, Bookmark, Settings)
 ├── Services/           # HotkeyService, ProfileManager, DataService, WindowStateService
 ├── Helpers/            # Win32Helper, ScriptInjector, AnimatedWindow

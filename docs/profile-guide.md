@@ -1,6 +1,6 @@
 # Profile 创建与发布指南
 
-本文档介绍如何创建和发布 FloatWebPlayer Profile。
+本文档介绍如何创建和发布 SandronePlayer Profile。
 
 ## 什么是 Profile
 

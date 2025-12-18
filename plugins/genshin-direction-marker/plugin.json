@@ -5,7 +5,7 @@
   "main": "main.js",
   "description": "识别攻略视频中的方位词，在小地图上显示方向标记",
   "author": "ColinXHL",
-  "homepage": "https://github.com/user/floatwebplayer",
+  "homepage": "https://github.com/user/SandronePlayer",
   "permissions": ["subtitle", "overlay"],
   "profiles": ["genshin"],
   "defaultConfig": {

@@ -1,6 +1,6 @@
-# FloatWebPlayer 插件 API 文档
+# SandronePlayer 插件 API 文档
 
-本文档描述 FloatWebPlayer 插件系统的 API 接口。
+本文档描述 SandronePlayer 插件系统的 API 接口。
 
 ## 目录
 

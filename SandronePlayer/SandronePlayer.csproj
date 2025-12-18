@@ -1,0 +1,34 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>..\assets\icons\sandrone-player-icon-256x256.ico</ApplicationIcon>
+    <Version>0.2.1</Version>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.2420.47" />
+    <PackageReference Include="Jint" Version="3.1.6" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Scripts\InjectedStyles.css" />
+    <EmbeddedResource Include="Scripts\InjectedScripts.js" />
+  </ItemGroup>
+
+  <!-- 复制内置 Profile 模板到输出目录 -->
+  <ItemGroup>
+    <None Include="..\profiles\**\*" CopyToOutputDirectory="PreserveNewest" LinkBase="Profiles" />
+  </ItemGroup>
+
+  <!-- 复制内置插件到输出目录 -->
+  <ItemGroup>
+    <None Include="..\plugins\**\*" CopyToOutputDirectory="PreserveNewest" LinkBase="Plugins" />
+  </ItemGroup>
+
+</Project>

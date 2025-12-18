@@ -1,4 +1,4 @@
-# FloatWebPlayer - 开发任务清单
+# SandronePlayer - 开发任务清单
 
 ## Phase 1: 基础框架
 
