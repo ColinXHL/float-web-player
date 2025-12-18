@@ -121,6 +121,8 @@ namespace FloatWebPlayer.Services
         {
             // 获取主屏幕工作区域
             var workArea = System.Windows.SystemParameters.WorkArea;
+            // 获取主屏幕完整高度（包含任务栏）
+            double screenHeight = System.Windows.SystemParameters.PrimaryScreenHeight;
 
             // 计算默认大小：宽度为屏幕的 1/4，高度按 16:9 比例计算
             double defaultWidth = Math.Max(workArea.Width / 4, AppConstants.MinWindowWidth);
@@ -135,7 +137,7 @@ namespace FloatWebPlayer.Services
             return new WindowState
             {
                 Left = workArea.Left,
-                Top = workArea.Bottom - defaultHeight,
+                Top = screenHeight - defaultHeight,  // 贴到屏幕最底部（任务栏底部）
                 Width = defaultWidth,
                 Height = defaultHeight,
                 Opacity = AppConstants.MaxOpacity,

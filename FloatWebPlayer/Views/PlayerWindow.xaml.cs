@@ -150,12 +150,13 @@ namespace FloatWebPlayer.Views
             Width = Math.Max(state.Width, AppConstants.MinWindowWidth);
             Height = Math.Max(state.Height, AppConstants.MinWindowHeight);
             
-            // 确保窗口在屏幕范围内
+            // 确保窗口在屏幕范围内（允许延伸到任务栏区域）
             var workArea = SystemParameters.WorkArea;
+            double screenHeight = SystemParameters.PrimaryScreenHeight;
             if (Left < workArea.Left) Left = workArea.Left;
             if (Top < workArea.Top) Top = workArea.Top;
             if (Left + Width > workArea.Right) Left = workArea.Right - Width;
-            if (Top + Height > workArea.Bottom) Top = workArea.Bottom - Height;
+            if (Top + Height > screenHeight) Top = screenHeight - Height;  // 使用屏幕高度而非工作区
         }
 
         /// <summary>
@@ -421,7 +422,7 @@ namespace FloatWebPlayer.Views
         /// <summary>
         /// 切换最大化/还原
         /// </summary>
-        private void ToggleMaximize()
+        public void ToggleMaximize()
         {
             if (!_isMaximized)
             {
@@ -446,6 +447,11 @@ namespace FloatWebPlayer.Views
         #endregion
 
         #region Public Properties
+
+        /// <summary>
+        /// 是否处于最大化状态
+        /// </summary>
+        public bool IsMaximized => _isMaximized;
 
         /// <summary>
         /// 是否可以后退
