@@ -28,6 +28,8 @@ jobs:
     outputs:
       version: ${{ steps.set-version.outputs.version }}
     steps:
+      - uses: actions/checkout@v4
+
       - name: Set version from input or tag
         id: set-version
         run: |
@@ -46,6 +48,19 @@ jobs:
             echo "version=$VERSION" >> $GITHUB_OUTPUT
             echo "🏷️ 从 tag 触发构建，版本号：$VERSION"
           fi
+
+      - name: Verify version matches csproj
+        run: |
+          VERSION="${{ steps.set-version.outputs.version }}"
+          CSPROJ_VERSION=$(grep -oP '(?<=<Version>)[^<]+' FloatWebPlayer/FloatWebPlayer.csproj)
+          echo "📋 输入版本号: $VERSION"
+          echo "📋 csproj 版本号: $CSPROJ_VERSION"
+          if [[ "$VERSION" != "$CSPROJ_VERSION" ]]; then
+            echo "❌ 错误：输入的版本号 ($VERSION) 与 csproj 中的版本号 ($CSPROJ_VERSION) 不匹配！"
+            echo "请先更新 FloatWebPlayer/FloatWebPlayer.csproj 中的 <Version> 标签。"
+            exit 1
+          fi
+          echo "✅ 版本号匹配"
 
   build_dist:
     runs-on: windows-latest
