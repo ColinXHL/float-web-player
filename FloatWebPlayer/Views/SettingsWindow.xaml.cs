@@ -64,6 +64,7 @@ namespace FloatWebPlayer.Views
             LoadHotkey(HotkeyDecreaseOpacity, _config.HotkeyDecreaseOpacity, _config.HotkeyDecreaseOpacityMod);
             LoadHotkey(HotkeyIncreaseOpacity, _config.HotkeyIncreaseOpacity, _config.HotkeyIncreaseOpacityMod);
             LoadHotkey(HotkeyToggleClickThrough, _config.HotkeyToggleClickThrough, _config.HotkeyToggleClickThroughMod);
+            LoadHotkey(HotkeyToggleMaximize, _config.HotkeyToggleMaximize, _config.HotkeyToggleMaximizeMod);
 
             // 配置 (Profile)
             LoadProfileList();
@@ -99,6 +100,7 @@ namespace FloatWebPlayer.Views
             SaveHotkey(HotkeyDecreaseOpacity, v => _config.HotkeyDecreaseOpacity = v, m => _config.HotkeyDecreaseOpacityMod = m);
             SaveHotkey(HotkeyIncreaseOpacity, v => _config.HotkeyIncreaseOpacity = v, m => _config.HotkeyIncreaseOpacityMod = m);
             SaveHotkey(HotkeyToggleClickThrough, v => _config.HotkeyToggleClickThrough = v, m => _config.HotkeyToggleClickThroughMod = m);
+            SaveHotkey(HotkeyToggleMaximize, v => _config.HotkeyToggleMaximize = v, m => _config.HotkeyToggleMaximizeMod = m);
         }
 
         /// <summary>
@@ -209,6 +211,7 @@ namespace FloatWebPlayer.Views
             LoadHotkey(HotkeyDecreaseOpacity, defaultConfig.HotkeyDecreaseOpacity, defaultConfig.HotkeyDecreaseOpacityMod);
             LoadHotkey(HotkeyIncreaseOpacity, defaultConfig.HotkeyIncreaseOpacity, defaultConfig.HotkeyIncreaseOpacityMod);
             LoadHotkey(HotkeyToggleClickThrough, defaultConfig.HotkeyToggleClickThrough, defaultConfig.HotkeyToggleClickThroughMod);
+            LoadHotkey(HotkeyToggleMaximize, defaultConfig.HotkeyToggleMaximize, defaultConfig.HotkeyToggleMaximizeMod);
             
             _isInitializing = false;
         }

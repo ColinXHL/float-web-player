@@ -38,31 +38,24 @@ namespace FloatWebPlayer.Views
             var profiles = ProfileManager.Instance.Profiles;
             var currentProfile = ProfileManager.Instance.CurrentProfile;
 
-            // 填充 ComboBox
-            ProfileSelector.Items.Clear();
-            foreach (var profile in profiles)
+            // 创建 ViewModel 列表
+            var viewModels = profiles.Select(p => new ProfileSelectorViewModel
             {
-                ProfileSelector.Items.Add(new ComboBoxItem
-                {
-                    Content = profile.Name,
-                    Tag = profile.Id
-                });
-            }
+                Id = p.Id,
+                Name = p.Name ?? p.Id,
+                IsCurrent = p.Id.Equals(currentProfile.Id, StringComparison.OrdinalIgnoreCase)
+            }).ToList();
+
+            // 设置 ItemsSource
+            ProfileSelector.ItemsSource = viewModels;
 
             // 选中当前 Profile
-            for (int i = 0; i < ProfileSelector.Items.Count; i++)
+            var currentVm = viewModels.FirstOrDefault(vm => vm.IsCurrent);
+            if (currentVm != null)
             {
-                if (ProfileSelector.Items[i] is ComboBoxItem item && 
-                    item.Tag is string id && 
-                    id.Equals(currentProfile.Id, StringComparison.OrdinalIgnoreCase))
-                {
-                    ProfileSelector.SelectedIndex = i;
-                    break;
-                }
+                ProfileSelector.SelectedItem = currentVm;
             }
-
-            // 如果没有选中，选择第一个
-            if (ProfileSelector.SelectedIndex < 0 && ProfileSelector.Items.Count > 0)
+            else if (viewModels.Count > 0)
             {
                 ProfileSelector.SelectedIndex = 0;
             }
@@ -214,9 +207,9 @@ namespace FloatWebPlayer.Views
         /// </summary>
         private void ProfileSelector_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            if (ProfileSelector.SelectedItem is ComboBoxItem item && item.Tag is string profileId)
+            if (ProfileSelector.SelectedItem is ProfileSelectorViewModel vm)
             {
-                _currentProfileId = profileId;
+                _currentProfileId = vm.Id;
                 RefreshPluginList();
                 UpdateProfileButtons();
             }
@@ -229,10 +222,15 @@ namespace FloatWebPlayer.Views
         {
             if (string.IsNullOrEmpty(_currentProfileId))
             {
+                BtnSetCurrent.Visibility = Visibility.Collapsed;
                 BtnEditProfile.IsEnabled = false;
                 BtnDeleteProfile.IsEnabled = false;
                 return;
             }
+
+            // 「设为当前」按钮：当选中的 Profile 不是当前 Profile 时显示
+            var isCurrent = _currentProfileId.Equals(ProfileManager.Instance.CurrentProfile.Id, StringComparison.OrdinalIgnoreCase);
+            BtnSetCurrent.Visibility = isCurrent ? Visibility.Collapsed : Visibility.Visible;
 
             // 编辑按钮始终可用
             BtnEditProfile.IsEnabled = true;
@@ -240,6 +238,43 @@ namespace FloatWebPlayer.Views
             // 删除按钮对默认 Profile 禁用
             var isDefault = ProfileManager.Instance.IsDefaultProfile(_currentProfileId);
             BtnDeleteProfile.IsEnabled = !isDefault;
+        }
+
+        /// <summary>
+        /// 设为当前 Profile 按钮点击
+        /// </summary>
+        private void BtnSetCurrent_Click(object sender, RoutedEventArgs e)
+        {
+            if (string.IsNullOrEmpty(_currentProfileId))
+            {
+                NotificationService.Instance.Warning("请先选择一个 Profile");
+                return;
+            }
+
+            // 检查是否已经是当前 Profile
+            if (_currentProfileId.Equals(ProfileManager.Instance.CurrentProfile.Id, StringComparison.OrdinalIgnoreCase))
+            {
+                NotificationService.Instance.Info("该 Profile 已经是当前使用的 Profile");
+                return;
+            }
+
+            var profile = ProfileManager.Instance.GetProfileById(_currentProfileId);
+            var profileName = profile?.Name ?? _currentProfileId;
+
+            // 切换 Profile
+            var success = ProfileManager.Instance.SwitchProfile(_currentProfileId);
+            
+            if (success)
+            {
+                // 刷新 UI 以更新「当前使用」标识
+                RefreshProfileList();
+                
+                NotificationService.Instance.Success($"已切换到 Profile \"{profileName}\"");
+            }
+            else
+            {
+                NotificationService.Instance.Error($"切换到 Profile \"{profileName}\" 失败");
+            }
         }
 
         /// <summary>
@@ -372,9 +407,24 @@ namespace FloatWebPlayer.Views
 
             RefreshPluginList();
 
+            // 检查补全的 Profile 是否是当前正在使用的 Profile
+            var isCurrentProfile = _currentProfileId.Equals(
+                ProfileManager.Instance.CurrentProfile.Id, 
+                StringComparison.OrdinalIgnoreCase);
+
+            if (isCurrentProfile && successCount > 0)
+            {
+                // 重新加载当前 Profile 的插件，使新安装的插件生效
+                PluginHost.Instance.LoadPluginsForProfile(_currentProfileId);
+            }
+
             if (failCount > 0)
             {
                 NotificationService.Instance.Warning($"安装完成: 成功 {successCount} 个，失败 {failCount} 个");
+            }
+            else if (isCurrentProfile)
+            {
+                NotificationService.Instance.Success($"成功安装 {successCount} 个插件，已自动加载");
             }
             else
             {
@@ -540,14 +590,12 @@ namespace FloatWebPlayer.Views
         /// </summary>
         private void SelectProfile(string profileId)
         {
-            for (int i = 0; i < ProfileSelector.Items.Count; i++)
+            if (ProfileSelector.ItemsSource is IEnumerable<ProfileSelectorViewModel> viewModels)
             {
-                if (ProfileSelector.Items[i] is ComboBoxItem item && 
-                    item.Tag is string id && 
-                    id.Equals(profileId, StringComparison.OrdinalIgnoreCase))
+                var vm = viewModels.FirstOrDefault(v => v.Id.Equals(profileId, StringComparison.OrdinalIgnoreCase));
+                if (vm != null)
                 {
-                    ProfileSelector.SelectedIndex = i;
-                    break;
+                    ProfileSelector.SelectedItem = vm;
                 }
             }
         }
@@ -655,16 +703,7 @@ namespace FloatWebPlayer.Views
                 RefreshProfileList();
                 
                 // 选中导入的 Profile
-                for (int i = 0; i < ProfileSelector.Items.Count; i++)
-                {
-                    if (ProfileSelector.Items[i] is ComboBoxItem item && 
-                        item.Tag is string id && 
-                        id.Equals(data.ProfileId, StringComparison.OrdinalIgnoreCase))
-                    {
-                        ProfileSelector.SelectedIndex = i;
-                        break;
-                    }
-                }
+                SelectProfile(data.ProfileId);
 
                 var successMessage = $"Profile \"{data.ProfileName}\" 导入成功！";
                 if (importResult.MissingPlugins.Count > 0)
@@ -680,6 +719,16 @@ namespace FloatWebPlayer.Views
             }
         }
 
+    }
+
+    /// <summary>
+    /// Profile 选择器视图模型
+    /// </summary>
+    public class ProfileSelectorViewModel
+    {
+        public string Id { get; set; } = string.Empty;
+        public string Name { get; set; } = string.Empty;
+        public bool IsCurrent { get; set; } = false;
     }
 
     /// <summary>

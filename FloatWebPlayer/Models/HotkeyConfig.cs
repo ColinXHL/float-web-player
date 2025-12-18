@@ -87,7 +87,9 @@ namespace FloatWebPlayer.Models
                             // 8 键 - 增加透明度
                             new HotkeyBinding { Key = 0x38, Modifiers = ModifierKeys.None, Action = "IncreaseOpacity" },
                             // 0 键 - 切换鼠标穿透
-                            new HotkeyBinding { Key = 0x30, Modifiers = ModifierKeys.None, Action = "ToggleClickThrough" }
+                            new HotkeyBinding { Key = 0x30, Modifiers = ModifierKeys.None, Action = "ToggleClickThrough" },
+                            // Alt+Enter - 切换最大化
+                            new HotkeyBinding { Key = 0x0D, Modifiers = ModifierKeys.Alt, Action = "ToggleMaximize" }
                         }
                     }
                 }

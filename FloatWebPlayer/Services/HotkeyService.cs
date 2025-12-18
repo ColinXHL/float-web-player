@@ -73,6 +73,13 @@ namespace FloatWebPlayer.Services
             remove => _dispatcher.ToggleClickThrough -= value;
         }
 
+        /// <summary>切换最大化事件</summary>
+        public event EventHandler? ToggleMaximize
+        {
+            add => _dispatcher.ToggleMaximize += value;
+            remove => _dispatcher.ToggleMaximize -= value;
+        }
+
         #endregion
 
         #region Constructor

@@ -1,3 +1,4 @@
+using System.Reflection;
 using System.Windows;
 using System.Windows.Input;
 using FloatWebPlayer.Helpers;
@@ -9,8 +10,16 @@ namespace FloatWebPlayer.Views
     /// </summary>
     public partial class AboutWindow : AnimatedWindow
     {
+        /// <summary>
+        /// 版本号（从程序集读取）
+        /// </summary>
+        public string VersionText { get; }
+
         public AboutWindow()
         {
+            var version = Assembly.GetExecutingAssembly().GetName().Version;
+            VersionText = version != null ? $"v{version.Major}.{version.Minor}.{version.Build}" : "v0.0.0";
+            DataContext = this;
             InitializeComponent();
         }
 

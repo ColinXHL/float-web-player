@@ -52,6 +52,10 @@ namespace FloatWebPlayer.Models
         public uint HotkeyToggleClickThrough { get; set; } = Helpers.Win32Helper.VK_0;
         public ModifierKeys HotkeyToggleClickThroughMod { get; set; } = ModifierKeys.None;
 
+        // 切换最大化键 (Alt+Enter)
+        public uint HotkeyToggleMaximize { get; set; } = 0x0D; // VK_RETURN (Enter)
+        public ModifierKeys HotkeyToggleMaximizeMod { get; set; } = ModifierKeys.Alt;
+
         #endregion
 
         #region Profile
@@ -104,7 +108,7 @@ namespace FloatWebPlayer.Models
         /// <summary>
         /// 创建快捷键绑定列表
         /// </summary>
-        /// <returns>包含所有 6 个快捷键绑定的列表</returns>
+        /// <returns>包含所有 7 个快捷键绑定的列表</returns>
         private List<HotkeyBinding> CreateHotkeyBindings()
         {
             return new List<HotkeyBinding>
@@ -114,7 +118,8 @@ namespace FloatWebPlayer.Models
                 new HotkeyBinding { Key = HotkeyTogglePlay, Modifiers = HotkeyTogglePlayMod, Action = "TogglePlay" },
                 new HotkeyBinding { Key = HotkeyDecreaseOpacity, Modifiers = HotkeyDecreaseOpacityMod, Action = "DecreaseOpacity" },
                 new HotkeyBinding { Key = HotkeyIncreaseOpacity, Modifiers = HotkeyIncreaseOpacityMod, Action = "IncreaseOpacity" },
-                new HotkeyBinding { Key = HotkeyToggleClickThrough, Modifiers = HotkeyToggleClickThroughMod, Action = "ToggleClickThrough" }
+                new HotkeyBinding { Key = HotkeyToggleClickThrough, Modifiers = HotkeyToggleClickThroughMod, Action = "ToggleClickThrough" },
+                new HotkeyBinding { Key = HotkeyToggleMaximize, Modifiers = HotkeyToggleMaximizeMod, Action = "ToggleMaximize" }
             };
         }
 

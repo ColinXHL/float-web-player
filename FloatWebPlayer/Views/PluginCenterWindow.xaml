@@ -165,26 +165,26 @@
                 <!-- 左侧导航栏 -->
                 <Border Grid.Column="0" Background="#252525" CornerRadius="0,0,0,8">
                     <StackPanel Margin="8,16,8,16">
-                        <!-- 插件管理分组 -->
-                        <TextBlock Text="插件管理" Foreground="#666" FontSize="11" FontWeight="SemiBold"
-                                   Margin="12,0,0,8"/>
-                        <RadioButton x:Name="NavInstalledPlugins" Content="📦 已安装插件" 
-                                     Style="{StaticResource NavButtonStyle}"
-                                     IsChecked="True"
-                                     Checked="NavButton_Checked"/>
-                        <RadioButton x:Name="NavAvailablePlugins" Content="🔍 可用插件" 
-                                     Style="{StaticResource NavButtonStyle}"
-                                     Checked="NavButton_Checked"/>
-
-                        <Border Style="{StaticResource NavSeparatorStyle}"/>
-
                         <!-- Profile 管理分组 -->
                         <TextBlock Text="Profile 管理" Foreground="#666" FontSize="11" FontWeight="SemiBold"
                                    Margin="12,0,0,8"/>
                         <RadioButton x:Name="NavMyProfiles" Content="📋 我的 Profile" 
                                      Style="{StaticResource NavButtonStyle}"
+                                     IsChecked="True"
                                      Checked="NavButton_Checked"/>
                         <RadioButton x:Name="NavProfileMarket" Content="🛒 Profile 市场" 
+                                     Style="{StaticResource NavButtonStyle}"
+                                     Checked="NavButton_Checked"/>
+
+                        <Border Style="{StaticResource NavSeparatorStyle}"/>
+
+                        <!-- 插件管理分组 -->
+                        <TextBlock Text="插件管理" Foreground="#666" FontSize="11" FontWeight="SemiBold"
+                                   Margin="12,0,0,8"/>
+                        <RadioButton x:Name="NavInstalledPlugins" Content="📦 已安装插件" 
+                                     Style="{StaticResource NavButtonStyle}"
+                                     Checked="NavButton_Checked"/>
+                        <RadioButton x:Name="NavAvailablePlugins" Content="🔍 可用插件" 
                                      Style="{StaticResource NavButtonStyle}"
                                      Checked="NavButton_Checked"/>
                     </StackPanel>
@@ -193,17 +193,17 @@
                 <!-- 右侧内容区 -->
                 <Border Grid.Column="1" Background="#1E1E1E" CornerRadius="0,0,8,0">
                     <Grid x:Name="ContentArea" Margin="24">
-                        <!-- 已安装插件页面 -->
-                        <local:InstalledPluginsPage x:Name="InstalledPluginsPage" Visibility="Visible"/>
-                        
-                        <!-- 可用插件页面 -->
-                        <local:AvailablePluginsPage x:Name="AvailablePluginsPage" Visibility="Collapsed"/>
-                        
                         <!-- 我的 Profile 页面 -->
-                        <local:MyProfilesPage x:Name="MyProfilesPage" Visibility="Collapsed"/>
+                        <local:MyProfilesPage x:Name="MyProfilesPage" Visibility="Visible"/>
                         
                         <!-- Profile 市场页面 -->
                         <local:ProfileMarketPage x:Name="ProfileMarketPage" Visibility="Collapsed"/>
+                        
+                        <!-- 已安装插件页面 -->
+                        <local:InstalledPluginsPage x:Name="InstalledPluginsPage" Visibility="Collapsed"/>
+                        
+                        <!-- 可用插件页面 -->
+                        <local:AvailablePluginsPage x:Name="AvailablePluginsPage" Visibility="Collapsed"/>
                     </Grid>
                 </Border>
             </Grid>

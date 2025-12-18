@@ -519,13 +519,23 @@
                                  Style="{StaticResource HotkeyTextBoxStyle}"
                                  PreviewKeyDown="Hotkey_PreviewKeyDown" GotFocus="Hotkey_GotFocus" LostFocus="Hotkey_LostFocus"/>
                     </Grid>
-                    <Grid Margin="0,0,0,12">
+                    <Grid Margin="0,0,0,6">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="110"/>
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
                         <TextBlock Grid.Column="0" Text="鼠标穿透" Style="{StaticResource LabelStyle}"/>
                         <TextBox x:Name="HotkeyToggleClickThrough" Grid.Column="1" 
+                                 Style="{StaticResource HotkeyTextBoxStyle}"
+                                 PreviewKeyDown="Hotkey_PreviewKeyDown" GotFocus="Hotkey_GotFocus" LostFocus="Hotkey_LostFocus"/>
+                    </Grid>
+                    <Grid Margin="0,0,0,12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="110"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="切换最大化" Style="{StaticResource LabelStyle}"/>
+                        <TextBox x:Name="HotkeyToggleMaximize" Grid.Column="1" 
                                  Style="{StaticResource HotkeyTextBoxStyle}"
                                  PreviewKeyDown="Hotkey_PreviewKeyDown" GotFocus="Hotkey_GotFocus" LostFocus="Hotkey_LostFocus"/>
                     </Grid>

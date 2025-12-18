@@ -348,15 +348,31 @@
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
-            <TextBlock Grid.Column="0" Text="当前 Profile:" Foreground="#AAA" FontSize="13" 
+            <TextBlock Grid.Column="0" Text="查看 Profile:" Foreground="#AAA" FontSize="13" 
                        VerticalAlignment="Center" Margin="0,0,12,0"/>
             <ComboBox x:Name="ProfileSelector" Grid.Column="1" Style="{StaticResource DarkComboBoxStyle}"
                       ItemContainerStyle="{StaticResource DarkComboBoxItemStyle}"
-                      SelectionChanged="ProfileSelector_SelectionChanged" MinWidth="200"/>
-            <!-- Profile 操作按钮：编辑、删除 -->
+                      SelectionChanged="ProfileSelector_SelectionChanged" MinWidth="200">
+                <ComboBox.ItemTemplate>
+                    <DataTemplate>
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <TextBlock Text="{Binding Name}" Foreground="White" VerticalAlignment="Center"/>
+                            <Border Background="#0078D4" CornerRadius="3" Padding="4,1" Margin="8,0,0,0"
+                                    VerticalAlignment="Center"
+                                    Visibility="{Binding IsCurrent, Converter={StaticResource BoolToVisibilityConverter}}">
+                                <TextBlock Text="当前使用" Foreground="White" FontSize="10" VerticalAlignment="Center"/>
+                            </Border>
+                        </StackPanel>
+                    </DataTemplate>
+                </ComboBox.ItemTemplate>
+            </ComboBox>
+            <!-- Profile 操作按钮：设为当前、编辑、删除 -->
             <StackPanel Grid.Column="2" Orientation="Horizontal" Margin="8,0,0,0">
+                <Button x:Name="BtnSetCurrent" Content="设为当前" Style="{StaticResource PrimaryButtonStyle}"
+                        Click="BtnSetCurrent_Click" ToolTip="将此 Profile 设为当前使用" Padding="8,6"
+                        Visibility="Collapsed"/>
                 <Button x:Name="BtnEditProfile" Content="✏️" Style="{StaticResource ActionButtonStyle}"
-                        Click="BtnEditProfile_Click" ToolTip="编辑 Profile" Padding="8,6"/>
+                        Click="BtnEditProfile_Click" ToolTip="编辑 Profile" Padding="8,6" Margin="4,0,0,0"/>
                 <Button x:Name="BtnDeleteProfile" Content="🗑️" Style="{StaticResource DangerButtonStyle}"
                         Click="BtnDeleteProfile_Click" ToolTip="删除 Profile" Padding="8,6" Margin="4,0,0,0"/>
             </StackPanel>

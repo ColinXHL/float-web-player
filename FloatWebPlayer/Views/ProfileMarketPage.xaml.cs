@@ -245,8 +245,11 @@ namespace FloatWebPlayer.Views
 
             if (result.IsSuccess)
             {
-                // 更新 ViewModel 状态
-                vm.IsInstalled = false;
+                // 强制刷新 ViewModel 的 IsInstalled 属性（从服务重新检查状态）
+                vm.IsInstalled = ProfileMarketplaceService.Instance.ProfileExists(profileId);
+
+                // 刷新列表以更新 UI 状态
+                FilterProfiles();
 
                 // 构建成功消息
                 var message = $"Profile \"{profileName}\" 已成功卸载。";
@@ -267,9 +270,6 @@ namespace FloatWebPlayer.Views
                 }
 
                 NotificationService.Instance.Success(message, "卸载成功");
-
-                // 刷新列表以更新 UI 状态
-                FilterProfiles();
             }
             else
             {
@@ -322,6 +322,16 @@ namespace FloatWebPlayer.Views
 
             if (installResult.IsSuccess)
             {
+                // 强制刷新 ViewModel 的 IsInstalled 属性
+                var vm = _allProfiles.FirstOrDefault(p => p.Id == profile.Id);
+                if (vm != null)
+                {
+                    vm.IsInstalled = ProfileMarketplaceService.Instance.ProfileExists(profile.Id);
+                }
+
+                // 刷新列表显示
+                FilterProfiles();
+
                 var successMessage = $"Profile \"{profile.Name}\" 安装成功！";
                 if (installResult.MissingPlugins.Count > 0)
                 {

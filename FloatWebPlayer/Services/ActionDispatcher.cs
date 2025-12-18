@@ -24,6 +24,8 @@ namespace FloatWebPlayer.Services
         public const string ActionIncreaseOpacity = "IncreaseOpacity";
         /// <summary>切换鼠标穿透</summary>
         public const string ActionToggleClickThrough = "ToggleClickThrough";
+        /// <summary>切换最大化</summary>
+        public const string ActionToggleMaximize = "ToggleMaximize";
 
         #endregion
 
@@ -47,6 +49,8 @@ namespace FloatWebPlayer.Services
         public event EventHandler? IncreaseOpacity;
         /// <summary>切换鼠标穿透模式事件</summary>
         public event EventHandler? ToggleClickThrough;
+        /// <summary>切换最大化事件</summary>
+        public event EventHandler? ToggleMaximize;
 
         #endregion
 
@@ -141,6 +145,7 @@ namespace FloatWebPlayer.Services
             RegisterAction(ActionDecreaseOpacity, () => DecreaseOpacity?.Invoke(this, EventArgs.Empty));
             RegisterAction(ActionIncreaseOpacity, () => IncreaseOpacity?.Invoke(this, EventArgs.Empty));
             RegisterAction(ActionToggleClickThrough, () => ToggleClickThrough?.Invoke(this, EventArgs.Empty));
+            RegisterAction(ActionToggleMaximize, () => ToggleMaximize?.Invoke(this, EventArgs.Empty));
         }
 
         /// <summary>

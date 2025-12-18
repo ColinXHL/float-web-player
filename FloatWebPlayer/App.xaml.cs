@@ -241,6 +241,13 @@ namespace FloatWebPlayer
                 }
             };
 
+            _hotkeyService.ToggleMaximize += (s, e) =>
+            {
+                _playerWindow?.ToggleMaximize();
+                var msg = _playerWindow?.IsMaximized == true ? "窗口: 最大化" : "窗口: 还原";
+                ShowOsd(msg, "🔲");
+            };
+
             _hotkeyService.Start();
         }
 
