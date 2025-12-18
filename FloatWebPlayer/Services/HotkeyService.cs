@@ -165,7 +165,8 @@ namespace FloatWebPlayer.Services
         /// </summary>
         private IntPtr HookCallback(int nCode, IntPtr wParam, IntPtr lParam)
         {
-            if (nCode >= 0 && wParam == (IntPtr)Win32Helper.WM_KEYDOWN)
+            // WM_KEYDOWN: 普通按键; WM_SYSKEYDOWN: Alt 组合键
+            if (nCode >= 0 && (wParam == (IntPtr)Win32Helper.WM_KEYDOWN || wParam == (IntPtr)Win32Helper.WM_SYSKEYDOWN))
             {
                 var hookStruct = Marshal.PtrToStructure<Win32Helper.KBDLLHOOKSTRUCT>(lParam);
                 var vkCode = hookStruct.vkCode;
@@ -176,27 +177,32 @@ namespace FloatWebPlayer.Services
                 // 获取前台进程名
                 var processName = Win32Helper.GetForegroundWindowProcessName();
 
-                // 在 UI 线程上处理
-                System.Windows.Application.Current?.Dispatcher.BeginInvoke(() =>
+                // 同步检测是否匹配快捷键（用于决定是否拦截 Alt 组合键）
+                var profile = _config.FindProfileForProcess(processName);
+                var binding = profile?.FindMatchingBinding(vkCode, modifiers, processName);
+                bool shouldBlock = binding != null && modifiers.HasFlag(Models.ModifierKeys.Alt);
+
+                // 在 UI 线程上执行动作
+                if (binding != null)
                 {
-                    // 输入模式检测：焦点在输入控件时不触发快捷键
-                    if (IsInputMode())
-                        return;
-
-                    // 查找匹配的快捷键绑定
-                    var profile = _config.FindProfileForProcess(processName);
-                    if (profile == null)
-                        return;
-
-                    var binding = profile.FindMatchingBinding(vkCode, modifiers, processName);
-                    if (binding != null)
+                    System.Windows.Application.Current?.Dispatcher.BeginInvoke(() =>
                     {
+                        // 输入模式检测：焦点在输入控件时不触发快捷键
+                        if (IsInputMode())
+                            return;
+
                         _dispatcher.Dispatch(binding.Action);
-                    }
-                });
+                    });
+                }
+
+                // Alt 组合键匹配时拦截消息，避免 Windows 警告声
+                if (shouldBlock)
+                {
+                    return (IntPtr)1;
+                }
             }
 
-            // 关键：调用 CallNextHookEx 让按键继续传递，不拦截
+            // 普通按键继续传递，不拦截
             return Win32Helper.CallNextHook(_hookId, nCode, wParam, lParam);
         }
 

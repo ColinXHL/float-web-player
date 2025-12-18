@@ -254,30 +254,45 @@ namespace FloatWebPlayer.Views
         {
             if (sender is not TextBox textBox) return;
             
-            e.Handled = true;
+            Key targetKey = e.Key;
+            bool isSystemKey = e.Key == Key.System;
+
+            if (isSystemKey)
+            {
+                // Alt+任意键时，取实际按键（e.SystemKey）
+                targetKey = e.SystemKey;
+                // 排除系统级快捷键（Alt+Tab/Alt+Esc 等，避免干扰系统）
+                if (targetKey == Key.Tab || targetKey == Key.Escape)
+                {
+                    e.Handled = false;
+                    return;
+                }
+            }
             
             // 忽略修饰键本身
-            if (e.Key == Key.LeftCtrl || e.Key == Key.RightCtrl ||
-                e.Key == Key.LeftAlt || e.Key == Key.RightAlt ||
-                e.Key == Key.LeftShift || e.Key == Key.RightShift ||
-                e.Key == Key.LWin || e.Key == Key.RWin ||
-                e.Key == Key.System)
+            if (targetKey == Key.LeftCtrl || targetKey == Key.RightCtrl ||
+                targetKey == Key.LeftAlt || targetKey == Key.RightAlt ||
+                targetKey == Key.LeftShift || targetKey == Key.RightShift ||
+                targetKey == Key.LWin || targetKey == Key.RWin)
             {
+                e.Handled = true;
                 return;
             }
             
             // 获取虚拟键码
-            var vkCode = (uint)KeyInterop.VirtualKeyFromKey(e.Key == Key.System ? e.SystemKey : e.Key);
+            var vkCode = (uint)KeyInterop.VirtualKeyFromKey(targetKey);
             
             // 获取当前修饰键状态
             var modifiers = Models.ModifierKeys.None;
             if (Keyboard.Modifiers.HasFlag(System.Windows.Input.ModifierKeys.Control))
                 modifiers |= Models.ModifierKeys.Ctrl;
-            if (Keyboard.Modifiers.HasFlag(System.Windows.Input.ModifierKeys.Alt))
+            if (isSystemKey || Keyboard.IsKeyDown(Key.LeftAlt) || Keyboard.IsKeyDown(Key.RightAlt))
                 modifiers |= Models.ModifierKeys.Alt;
             if (Keyboard.Modifiers.HasFlag(System.Windows.Input.ModifierKeys.Shift))
                 modifiers |= Models.ModifierKeys.Shift;
             
+            e.Handled = true;
+
             // 更新显示和存储
             textBox.Text = Win32Helper.GetHotkeyDisplayName(vkCode, modifiers);
             _hotkeyValues[textBox] = vkCode;
