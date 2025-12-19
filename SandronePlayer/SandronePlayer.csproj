@@ -8,7 +8,7 @@
     <UseWPF>true</UseWPF>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <ApplicationIcon>..\assets\icons\sandrone-player-icon-256x256.ico</ApplicationIcon>
-    <Version>0.2.2-alpha.1</Version>
+    <Version>0.2.2-alpha.2</Version>
   </PropertyGroup>
 
   <ItemGroup>
