@@ -67,6 +67,15 @@ namespace SandronePlayer.Models
 
         #endregion
 
+        #region First Launch
+
+        /// <summary>
+        /// 是否首次启动（用于显示欢迎弹窗）
+        /// </summary>
+        public bool IsFirstLaunch { get; set; } = true;
+
+        #endregion
+
         #region Window Behavior
 
         /// <summary>

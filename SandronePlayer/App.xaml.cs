@@ -39,6 +39,17 @@ namespace SandronePlayer
             // 加载配置
             _config = ConfigService.Instance.Config;
             
+            // 首次启动显示欢迎弹窗
+            if (_config.IsFirstLaunch)
+            {
+                var welcomeDialog = new WelcomeDialog();
+                welcomeDialog.ShowDialog();
+
+                // 标记为非首次启动并保存
+                _config.IsFirstLaunch = false;
+                ConfigService.Instance.Save();
+            }
+            
             // 订阅配置变更事件
             ConfigService.Instance.ConfigChanged += (s, config) =>
             {
@@ -104,10 +115,11 @@ namespace SandronePlayer
                 _playerWindow.Refresh();
             };
 
-            // 播放器窗口关闭时，关闭控制栏
+            // 播放器窗口关闭时，关闭控制栏并退出应用
             _playerWindow.Closed += (s, e) =>
             {
                 _controlBarWindow.Close();
+                Shutdown();
             };
 
             // 播放器 URL 变化时，同步到控制栏
