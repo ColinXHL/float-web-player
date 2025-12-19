@@ -29,6 +29,9 @@ namespace SandronePlayer.Helpers
         private bool _isCursorInWindowWhileClickThrough;
         private DispatcherTimer? _clickThroughTimer;
 
+        // 最大化时临时禁用穿透模式
+        private bool _clickThroughSuspendedByMaximize;
+
         #endregion
 
         #region Constructor
@@ -191,6 +194,44 @@ namespace SandronePlayer.Helpers
                 _clickThroughTimer = null;
             }
             _isCursorInWindowWhileClickThrough = false;
+        }
+
+        /// <summary>
+        /// 最大化时临时禁用穿透模式
+        /// </summary>
+        public void SuspendClickThroughForMaximize()
+        {
+            if (!_isClickThrough)
+                return;
+
+            _clickThroughSuspendedByMaximize = true;
+
+            // 停止定时器
+            StopClickThroughTimer();
+
+            // 恢复透明度
+            _windowOpacity = _opacityBeforeClickThrough;
+            Win32Helper.SetWindowOpacity(_window, _windowOpacity);
+
+            // 禁用穿透
+            Win32Helper.SetClickThrough(_window, false);
+        }
+
+        /// <summary>
+        /// 还原窗口时恢复穿透模式
+        /// </summary>
+        public void ResumeClickThroughAfterRestore()
+        {
+            if (!_clickThroughSuspendedByMaximize)
+                return;
+
+            _clickThroughSuspendedByMaximize = false;
+
+            // 重新启用穿透
+            Win32Helper.SetClickThrough(_window, true);
+
+            // 启动定时器
+            StartClickThroughTimer();
         }
 
         #endregion

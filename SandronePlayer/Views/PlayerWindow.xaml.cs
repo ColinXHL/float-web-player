@@ -426,6 +426,9 @@ namespace SandronePlayer.Views
         {
             if (!_isMaximized)
             {
+                // 最大化前临时禁用穿透模式
+                _windowBehavior.SuspendClickThroughForMaximize();
+
                 _restoreBounds = new Rect(Left, Top, Width, Height);
                 var workArea = SystemParameters.WorkArea;
                 Left = workArea.Left;
@@ -441,6 +444,9 @@ namespace SandronePlayer.Views
                 Width = _restoreBounds.Width;
                 Height = _restoreBounds.Height;
                 _isMaximized = false;
+
+                // 还原后恢复穿透模式
+                _windowBehavior.ResumeClickThroughAfterRestore();
             }
         }
 
