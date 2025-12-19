@@ -141,7 +141,7 @@
                     <TextBlock Text="🎬" FontSize="48" HorizontalAlignment="Center" Margin="0,0,0,16"/>
                     
                     <!-- 开源免费提示 -->
-                    <TextBlock Text="桑多涅播放器" FontSize="18" FontWeight="Bold" 
+                    <TextBlock Text="木偶播播" FontSize="18" FontWeight="Bold" 
                                Foreground="White" HorizontalAlignment="Center" Margin="0,0,0,12"/>
                     
                     <TextBlock TextWrapping="Wrap" FontSize="13" Foreground="#BBB" 
