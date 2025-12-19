@@ -22,6 +22,11 @@
     <EmbeddedResource Include="Scripts\InjectedScripts.js" />
   </ItemGroup>
 
+  <!-- 图片资源 -->
+  <ItemGroup>
+    <Resource Include="..\assets\sandrone-player-logo.png" Link="Assets\sandrone-player-logo.png" />
+  </ItemGroup>
+
   <!-- 复制内置 Profile 模板到输出目录 -->
   <ItemGroup>
     <None Include="..\profiles\**\*" CopyToOutputDirectory="PreserveNewest" LinkBase="Profiles" />

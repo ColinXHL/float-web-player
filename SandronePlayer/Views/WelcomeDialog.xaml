@@ -138,7 +138,9 @@
             <Border Grid.Row="1" Padding="24,20">
                 <StackPanel>
                     <!-- 应用图标 -->
-                    <TextBlock Text="🎬" FontSize="48" HorizontalAlignment="Center" Margin="0,0,0,16"/>
+                    <Image Source="/Assets/sandrone-player-logo.png" Width="80" Height="80" 
+                           RenderOptions.BitmapScalingMode="HighQuality"
+                           HorizontalAlignment="Center" Margin="0,0,0,16"/>
                     
                     <!-- 开源免费提示 -->
                     <TextBlock Text="木偶播播" FontSize="18" FontWeight="Bold" 
