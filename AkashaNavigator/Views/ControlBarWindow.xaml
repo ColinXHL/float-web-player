@@ -244,7 +244,7 @@
                     </Button>
                 </StackPanel>
 
-                <!-- 右侧：收藏和菜单按钮 -->
+                <!-- 右侧：收藏、归档和菜单按钮 -->
                 <StackPanel DockPanel.Dock="Right"
                             Orientation="Horizontal"
                             VerticalAlignment="Center">
@@ -258,6 +258,15 @@
                         <TextBlock Text="☆" FontSize="14"/>
                     </Button>
 
+                    <!-- 归档按钮 -->
+                    <Button x:Name="BtnArchive"
+                            Style="{StaticResource NavButtonStyle}"
+                            Click="BtnArchive_Click"
+                            ToolTip="归档"
+                            Margin="0,0,4,0">
+                        <TextBlock Text="📁" FontSize="14"/>
+                    </Button>
+
                     <!-- 菜单按钮 -->
                     <Button x:Name="BtnMenu"
                             Style="{StaticResource NavButtonStyle}"
@@ -268,6 +277,7 @@
                             <ContextMenu x:Name="MainMenu" Style="{StaticResource DarkContextMenuStyle}">
                                 <MenuItem x:Name="MenuHistory" Header="📜 历史记录" Style="{StaticResource DarkMenuItemStyle}" Click="MenuHistory_Click"/>
                                 <MenuItem x:Name="MenuBookmarks" Header="⭐ 收藏夹" Style="{StaticResource DarkMenuItemStyle}" Click="MenuBookmarks_Click"/>
+                                <MenuItem x:Name="MenuArchives" Header="📁 归档管理" Style="{StaticResource DarkMenuItemStyle}" Click="MenuArchives_Click"/>
                                 <Separator Style="{StaticResource DarkSeparatorStyle}"/>
                                 <MenuItem x:Name="MenuPluginCenter" Header="🔌 插件中心" Style="{StaticResource DarkMenuItemStyle}" Click="MenuPluginCenter_Click"/>
                                 <MenuItem x:Name="MenuSettings" Header="⚙️ 设置" Style="{StaticResource DarkMenuItemStyle}" Click="MenuSettings_Click"/>

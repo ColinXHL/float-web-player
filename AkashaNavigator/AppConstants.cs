@@ -161,6 +161,11 @@ namespace AkashaNavigator
         /// </summary>
         public const string PluginConfigFileName = "config.json";
 
+        /// <summary>
+        /// 归档数据文件名
+        /// </summary>
+        public const string ArchivesFileName = "archives.json";
+
         #endregion
 
         #region IDs and Names

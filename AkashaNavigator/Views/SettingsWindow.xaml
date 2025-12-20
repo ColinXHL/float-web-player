@@ -464,6 +464,8 @@
                         <TextBlock x:Name="SnapThresholdValue" Grid.Column="2" Text="15px"
                                    Style="{StaticResource LabelStyle}" HorizontalAlignment="Right"/>
                     </Grid>
+                    <CheckBox x:Name="PromptArchiveOnExitCheckBox" Content="退出时提示归档"
+                              Style="{StaticResource DarkCheckBoxStyle}" Margin="0,0,0,12"/>
 
                     <!-- 快捷键设置 -->
                     <TextBlock Text="快捷键设置" Style="{StaticResource GroupHeaderStyle}"/>
