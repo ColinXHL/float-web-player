@@ -29,12 +29,12 @@
 
   <!-- 复制内置 Profile 模板到输出目录 -->
   <ItemGroup>
-    <None Include="..\profiles\**\*" CopyToOutputDirectory="PreserveNewest" LinkBase="Profiles" />
+    <None Include="..\repo\profiles\**\*" CopyToOutputDirectory="PreserveNewest" LinkBase="Repos\Profiles" />
   </ItemGroup>
 
   <!-- 复制内置插件到输出目录 -->
   <ItemGroup>
-    <None Include="..\plugins\**\*" CopyToOutputDirectory="PreserveNewest" LinkBase="Plugins" />
+    <None Include="..\repo\plugins\**\*" CopyToOutputDirectory="PreserveNewest" LinkBase="Repos\Plugins" />
   </ItemGroup>
 
 </Project>
