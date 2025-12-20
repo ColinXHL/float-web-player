@@ -21,6 +21,7 @@ public partial class PluginSettingsWindow : AnimatedWindow
     private readonly string _pluginName;
     private readonly string _pluginDirectory;
     private readonly string _configDirectory;
+    private readonly string? _profileId; // 所属的 Profile ID
     private readonly PluginConfig _config;
     private readonly SettingsUiDefinition? _settingsDefinition;
     private SettingsUiRenderer? _renderer;
@@ -36,7 +37,9 @@ public partial class PluginSettingsWindow : AnimatedWindow
     /// <param name="pluginName">插件名称</param>
     /// <param name="pluginDirectory">插件源码目录</param>
     /// <param name="configDirectory">插件配置目录</param>
-    public PluginSettingsWindow(string pluginId, string pluginName, string pluginDirectory, string configDirectory)
+    /// <param name="profileId">所属的 Profile ID（可选）</param>
+    public PluginSettingsWindow(string pluginId, string pluginName, string pluginDirectory, string configDirectory,
+                                string? profileId = null)
     {
         InitializeComponent();
 
@@ -44,6 +47,7 @@ public partial class PluginSettingsWindow : AnimatedWindow
         _pluginName = pluginName;
         _pluginDirectory = pluginDirectory;
         _configDirectory = configDirectory;
+        _profileId = profileId;
 
         // 设置窗口标题
         TitleText.Text = $"{pluginName} - 设置";
@@ -165,6 +169,18 @@ public partial class PluginSettingsWindow : AnimatedWindow
     /// </summary>
     private void EnterOverlayEditMode()
     {
+        // 检查是否是当前激活的 Profile
+        var currentProfileId = ProfileManager.Instance.CurrentProfile?.Id;
+        var isCurrentProfile = !string.IsNullOrEmpty(_profileId) && !string.IsNullOrEmpty(currentProfileId) &&
+                               string.Equals(_profileId, currentProfileId, StringComparison.OrdinalIgnoreCase);
+
+        if (!isCurrentProfile)
+        {
+            // 非当前激活的 Profile，提示用户先激活
+            NotificationService.Instance.Warning("请先激活此 Profile 后再调整覆盖层位置");
+            return;
+        }
+
         // 隐藏设置窗口，避免阻挡 overlay 编辑
         Hide();
 
@@ -172,35 +188,24 @@ public partial class PluginSettingsWindow : AnimatedWindow
         // 这样才能让用户与 overlay 交互
         HideParentModalWindows();
 
-        // 通过 OverlayManager 获取覆盖层并进入编辑模式
+        // 当前激活的 Profile，使用 OverlayManager 中已存在的 overlay
         var overlay = OverlayManager.Instance.GetOverlay(_pluginId);
-        if (overlay != null)
+        if (overlay == null)
         {
-            overlay.Show();
-            overlay.EnterEditMode();
-
-            // 监听编辑模式退出，恢复设置窗口
-            overlay.EditModeExited += OnOverlayEditModeExited;
-        }
-        else
-        {
-            // 覆盖层不存在，尝试创建一个临时的用于位置调整
-            // 从配置中读取当前位置
+            // overlay 不存在，从配置创建
             var x = _config.Get("overlay.x", 100.0);
             var y = _config.Get("overlay.y", 100.0);
             var size = _config.Get("overlay.size", 200.0);
 
-            // 创建临时覆盖层用于位置调整
             var options = new OverlayOptions { X = x, Y = y, Width = size, Height = size };
-            var tempOverlay = OverlayManager.Instance.CreateOverlay(_pluginId, options);
-
-            // 显示并进入编辑模式
-            tempOverlay.Show();
-            tempOverlay.EnterEditMode();
-
-            // 监听编辑模式退出，保存位置后销毁临时覆盖层
-            tempOverlay.EditModeExited += OnTempOverlayEditModeExited;
+            overlay = OverlayManager.Instance.CreateOverlay(_pluginId, options);
         }
+
+        overlay.Show();
+        overlay.EnterEditMode();
+
+        // 监听编辑模式退出，恢复设置窗口
+        overlay.EditModeExited += OnOverlayEditModeExited;
     }
 
     /// <summary>
@@ -269,40 +274,6 @@ public partial class PluginSettingsWindow : AnimatedWindow
 
             // 通知插件配置已变更
             NotifyPluginConfigChanged(null, null);
-
-            // 恢复父级模态窗口
-            RestoreParentModalWindows();
-
-            // 恢复设置窗口显示
-            Show();
-            Activate();
-        }
-    }
-
-    /// <summary>
-    /// 临时覆盖层编辑模式退出处理
-    /// </summary>
-    private void OnTempOverlayEditModeExited(object? sender, EventArgs e)
-    {
-        if (sender is OverlayWindow overlay)
-        {
-            // 取消事件订阅
-            overlay.EditModeExited -= OnTempOverlayEditModeExited;
-
-            // 保存位置到配置
-            _config.Set("overlay.x", overlay.Left);
-            _config.Set("overlay.y", overlay.Top);
-            _config.Set("overlay.size", overlay.Width);
-            SaveConfig();
-
-            // 刷新 UI 显示
-            _renderer?.RefreshValues();
-
-            // 通知插件配置已变更
-            NotifyPluginConfigChanged(null, null);
-
-            // 销毁临时覆盖层
-            OverlayManager.Instance.DestroyOverlay(_pluginId);
 
             // 恢复父级模态窗口
             RestoreParentModalWindows();
@@ -494,11 +465,24 @@ public partial class PluginSettingsWindow : AnimatedWindow
         // 通知插件配置已变更
         NotifyPluginConfigChanged(null, null);
 
-        // 重新加载当前 Profile 的插件
+        // 检查是否需要重新加载插件
+        // 只有当设置窗口对应的 Profile 是当前激活的 Profile 时，才重新加载
         var currentProfileId = ProfileManager.Instance.CurrentProfile?.Id;
-        if (!string.IsNullOrEmpty(currentProfileId))
+
+        // 调试日志
+        LogService.Instance.Debug(
+            "PluginSettingsWindow",
+            $"保存配置 - pluginId={_pluginId}, _profileId={_profileId ?? "null"}, currentProfileId={currentProfileId ?? "null"}, configDirectory={_configDirectory}");
+
+        var needsReload = !string.IsNullOrEmpty(_profileId) && !string.IsNullOrEmpty(currentProfileId) &&
+                          string.Equals(_profileId, currentProfileId, StringComparison.OrdinalIgnoreCase);
+
+        LogService.Instance.Debug("PluginSettingsWindow", $"needsReload={needsReload}");
+
+        if (needsReload)
         {
-            PluginHost.Instance.LoadPluginsForProfile(currentProfileId);
+            // 重新加载插件以应用新配置
+            PluginHost.Instance.ReloadPlugin(_pluginId);
             NotificationService.Instance.Success("设置已保存，插件已重新加载");
         }
         else
@@ -535,10 +519,11 @@ public partial class PluginSettingsWindow : AnimatedWindow
     /// <param name="pluginDirectory">插件源码目录</param>
     /// <param name="configDirectory">插件配置目录</param>
     /// <param name="owner">父窗口，设置 Owner 以建立父子关系，关闭时焦点自动回到父窗口</param>
+    /// <param name="profileId">所属的 Profile ID（可选）</param>
     public static void ShowSettings(string pluginId, string pluginName, string pluginDirectory, string configDirectory,
-                                    Window? owner = null)
+                                    Window? owner = null, string? profileId = null)
     {
-        var window = new PluginSettingsWindow(pluginId, pluginName, pluginDirectory, configDirectory);
+        var window = new PluginSettingsWindow(pluginId, pluginName, pluginDirectory, configDirectory, profileId);
 
         if (owner != null)
         {
