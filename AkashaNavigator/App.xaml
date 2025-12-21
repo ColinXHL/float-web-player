@@ -7,7 +7,16 @@
     <Application.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
-                <ResourceDictionary Source="Styles/DialogStyles.xaml"/>
+                <!-- 基础资源（顺序重要：颜色和转换器必须先加载） -->
+                <ResourceDictionary Source="Styles/Colors.xaml"/>
+                <ResourceDictionary Source="Styles/Converters.xaml"/>
+                
+                <!-- 控件样式（按功能模块拆分） -->
+                <ResourceDictionary Source="Styles/ButtonStyles.xaml"/>
+                <ResourceDictionary Source="Styles/InputStyles.xaml"/>
+                <ResourceDictionary Source="Styles/ListStyles.xaml"/>
+                <ResourceDictionary Source="Styles/ScrollStyles.xaml"/>
+                <ResourceDictionary Source="Styles/NavigationStyles.xaml"/>
             </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>
     </Application.Resources>

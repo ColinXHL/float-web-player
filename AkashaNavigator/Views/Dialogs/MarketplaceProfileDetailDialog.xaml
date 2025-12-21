@@ -1,15 +1,10 @@
 <Window x:Class="AkashaNavigator.Views.Dialogs.MarketplaceProfileDetailDialog"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:helpers="clr-namespace:AkashaNavigator.Helpers"
         Title="Profile 详情" Height="500" Width="500"
         WindowStartupLocation="CenterOwner"
         Background="#1E1E1E" ResizeMode="NoResize"
         WindowStyle="None" AllowsTransparency="True">
-    
-    <Window.Resources>
-        <helpers:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
-    </Window.Resources>
 
     <Border Background="#1E1E1E" BorderBrush="#333" BorderThickness="1" CornerRadius="4">
         <Grid>

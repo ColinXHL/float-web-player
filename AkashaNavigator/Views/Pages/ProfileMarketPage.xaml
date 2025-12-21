@@ -1,29 +1,14 @@
 <UserControl x:Class="AkashaNavigator.Views.Pages.ProfileMarketPage"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:helpers="clr-namespace:AkashaNavigator.Helpers"
              Background="Transparent"
              Cursor="Arrow">
     
-    <UserControl.Resources>
-        <!-- 值转换器 -->
-        <helpers:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
-        <helpers:InverseBoolToVisibilityConverter x:Key="InverseBoolToVisibilityConverter"/>
-        <helpers:ZeroToVisibleConverter x:Key="ZeroToVisibleConverter"/>
-
-        <!-- 本地主按钮样式 (继承全局 ActionButtonStyle) -->
-        <Style x:Key="LocalPrimaryButtonStyle" TargetType="Button" BasedOn="{StaticResource ActionButtonStyle}">
-            <Setter Property="Background" Value="#0078D4"/>
-            <Style.Triggers>
-                <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="#1084D8"/>
-                </Trigger>
-                <Trigger Property="IsPressed" Value="True">
-                    <Setter Property="Background" Value="#006CBD"/>
-                </Trigger>
-            </Style.Triggers>
-        </Style>
-    </UserControl.Resources>
+    <!-- 已移除本地资源定义，使用全局样式：
+         - BoolToVisibilityConverter -> 全局 Converters.xaml
+         - InverseBoolToVisibilityConverter -> 全局 Converters.xaml
+         - ZeroToVisibleConverter -> 全局 Converters.xaml
+         - LocalPrimaryButtonStyle -> 全局 PrimaryActionButtonStyle -->
 
     <Grid>
         <Grid.RowDefinitions>
@@ -149,7 +134,7 @@
                                                 Click="BtnProfileDetails_Click" 
                                                 Tag="{Binding}" Margin="0,0,8,0"/>
                                         <!-- 安装按钮：未安装时显示 -->
-                                        <Button Content="安装" Style="{StaticResource LocalPrimaryButtonStyle}"
+                                        <Button Content="安装" Style="{StaticResource PrimaryActionButtonStyle}"
                                                 Click="BtnProfileInstall_Click" 
                                                 Tag="{Binding}"
                                                 Visibility="{Binding IsInstalled, Converter={StaticResource InverseBoolToVisibilityConverter}}"/>

@@ -4,10 +4,6 @@
         Title="订阅源管理" Height="450" Width="550"
         WindowStartupLocation="CenterOwner"
         Background="#1E1E1E" ResizeMode="NoResize">
-    
-    <Window.Resources>
-        <BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
-    </Window.Resources>
 
     <Grid Margin="20">
         <Grid.RowDefinitions>

@@ -10,9 +10,6 @@
         ResizeMode="NoResize">
 
     <helpers:AnimatedWindow.Resources>
-        <!-- Bool 到 Visibility 转换器 -->
-        <BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
-
         <!-- TreeViewItem 样式 (包含 EventSetter，必须本地定义) -->
         <Style x:Key="ArchiveTreeViewItemStyle" TargetType="TreeViewItem">
             <Setter Property="Background" Value="Transparent"/>

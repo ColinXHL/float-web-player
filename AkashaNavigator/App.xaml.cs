@@ -107,6 +107,22 @@ public partial class App : System.Windows.Application
         if (_playerWindow == null || _controlBarWindow == null)
             return;
 
+        SetupNavigationBindings();
+        SetupPlayerBindings();
+        SetupMenuBindings();
+        SetupBookmarkBindings();
+        SetupPluginUpdateCheck();
+    }
+
+    /// <summary>
+    /// 设置导航相关事件绑定
+    /// 包含导航请求、后退、前进、刷新事件
+    /// </summary>
+    private void SetupNavigationBindings()
+    {
+        if (_playerWindow == null || _controlBarWindow == null)
+            return;
+
         // 控制栏导航请求 → 播放器窗口加载
         _controlBarWindow.NavigateRequested += (s, url) =>
         { _playerWindow.Navigate(url); };
@@ -122,6 +138,16 @@ public partial class App : System.Windows.Application
         // 控制栏刷新请求
         _controlBarWindow.RefreshRequested += (s, e) =>
         { _playerWindow.Refresh(); };
+    }
+
+    /// <summary>
+    /// 设置播放器窗口相关事件绑定
+    /// 包含窗口关闭、URL 变化、导航状态变化事件
+    /// </summary>
+    private void SetupPlayerBindings()
+    {
+        if (_playerWindow == null || _controlBarWindow == null)
+            return;
 
         // 播放器窗口关闭时，关闭控制栏并退出应用
         _playerWindow.Closed += (s, e) =>
@@ -141,15 +167,22 @@ public partial class App : System.Windows.Application
             _controlBarWindow.UpdateForwardButtonState(_playerWindow.CanGoForward);
         };
 
-        // 收藏按钮点击事件
-        _controlBarWindow.BookmarkRequested += (s, e) =>
+        // 播放器 URL 变化时，检查收藏状态
+        _playerWindow.UrlChanged += (s, url) =>
         {
-            var url = _controlBarWindow.CurrentUrl;
-            var title = _playerWindow.CurrentTitle;
-            var isBookmarked = DataService.Instance.ToggleBookmark(url, title);
+            var isBookmarked = DataService.Instance.IsBookmarked(url);
             _controlBarWindow.UpdateBookmarkState(isBookmarked);
-            ShowOsd(isBookmarked ? "已添加收藏" : "已取消收藏", "⭐");
         };
+    }
+
+    /// <summary>
+    /// 设置菜单相关事件绑定
+    /// 包含历史记录、收藏夹、插件中心、设置、归档菜单事件
+    /// </summary>
+    private void SetupMenuBindings()
+    {
+        if (_playerWindow == null || _controlBarWindow == null)
+            return;
 
         // 历史记录菜单事件
         _controlBarWindow.HistoryRequested += (s, e) =>
@@ -210,15 +243,36 @@ public partial class App : System.Windows.Application
             archiveWindow.Owner = _playerWindow;
             archiveWindow.ShowDialog();
         };
+    }
 
-        // 播放器 URL 变化时，检查收藏状态
-        _playerWindow.UrlChanged += (s, url) =>
+    /// <summary>
+    /// 设置收藏按钮相关事件绑定
+    /// </summary>
+    private void SetupBookmarkBindings()
+    {
+        if (_playerWindow == null || _controlBarWindow == null)
+            return;
+
+        // 收藏按钮点击事件
+        _controlBarWindow.BookmarkRequested += (s, e) =>
         {
-            var isBookmarked = DataService.Instance.IsBookmarked(url);
+            var url = _controlBarWindow.CurrentUrl;
+            var title = _playerWindow.CurrentTitle;
+            var isBookmarked = DataService.Instance.ToggleBookmark(url, title);
             _controlBarWindow.UpdateBookmarkState(isBookmarked);
+            ShowOsd(isBookmarked ? "已添加收藏" : "已取消收藏", "⭐");
         };
+    }
 
-        // WebView 首次加载完成后检查插件更新（非首次启动且启用了更新提示）
+    /// <summary>
+    /// 设置插件更新检查
+    /// WebView 首次加载完成后检查插件更新（非首次启动且启用了更新提示）
+    /// </summary>
+    private void SetupPluginUpdateCheck()
+    {
+        if (_playerWindow == null)
+            return;
+
         if (!_config.IsFirstLaunch && _config.EnablePluginUpdateNotification)
         {
             // 使用一次性事件处理器

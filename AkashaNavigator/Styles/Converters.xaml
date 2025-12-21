@@ -1,0 +1,24 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:helpers="clr-namespace:AkashaNavigator.Helpers">
+
+    <!-- ==================== 全局值转换器 ==================== -->
+    
+    <!-- Bool 到 Visibility 转换器 -->
+    <!-- 用法: Visibility="{Binding IsVisible, Converter={StaticResource BoolToVisibilityConverter}}" -->
+    <helpers:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
+    
+    <!-- 反向 Bool 到 Visibility 转换器 -->
+    <!-- 用法: Visibility="{Binding IsHidden, Converter={StaticResource InverseBoolToVisibilityConverter}}" -->
+    <helpers:InverseBoolToVisibilityConverter x:Key="InverseBoolToVisibilityConverter"/>
+    
+    <!-- 零值到 Visible 转换器 -->
+    <!-- 当值为 0 时显示，否则隐藏，用于搜索结果为空时显示提示 -->
+    <!-- 用法: Visibility="{Binding Count, Converter={StaticResource ZeroToVisibleConverter}}" -->
+    <helpers:ZeroToVisibleConverter x:Key="ZeroToVisibleConverter"/>
+    
+    <!-- 系统内置 Bool 到 Visibility 转换器 -->
+    <!-- 用法: Visibility="{Binding IsVisible, Converter={StaticResource SystemBoolToVisibilityConverter}}" -->
+    <BooleanToVisibilityConverter x:Key="SystemBoolToVisibilityConverter"/>
+
+</ResourceDictionary>
