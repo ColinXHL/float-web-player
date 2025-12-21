@@ -86,7 +86,7 @@ function extractDirections(text) {
  * Plugin API v2: 不再需要 api 参数，直接使用全局对象
  */
 function onLoad() {
-    log.info("原神方向标记插件 v2.0.0 已加载（字幕版）");
+    log.info(plugin.name + " v" + plugin.version + " 已加载（字幕版）");
     
     // 检查字幕 API 是否可用
     if (!subtitle) {
