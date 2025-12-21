@@ -23,7 +23,9 @@ public class HttpApiTests : IDisposable
         Directory.CreateDirectory(_tempDir);
 
         var manifest = new PluginManifest { Id = "test-http-plugin", Name = "Test Http Plugin", Version = "1.0.0",
-                                            Main = "main.js", Permissions = new List<string> { "network" } };
+                                            Main = "main.js", Permissions = new List<string> { "network" },
+                                            // 配置 HTTP 白名单以允许测试 URL
+                                            HttpAllowedUrls = new List<string> { "http://*", "https://*", "ftp://*" } };
 
         File.WriteAllText(Path.Combine(_tempDir, "main.js"), "function onLoad() {} function onUnload() {}");
 
@@ -293,6 +295,115 @@ public class HttpApiTests : IDisposable
     public void Constructor_NullContext_ShouldThrow()
     {
         Assert.Throws<ArgumentNullException>(() => new HttpApi(null!));
+    }
+
+    /// <summary>
+    /// 使用 pluginId 和 allowedUrls 的构造函数应该正常工作
+    /// </summary>
+    [Fact]
+    public void Constructor_WithPluginIdAndAllowedUrls_ShouldWork()
+    {
+        var api = new HttpApi("test-plugin", new[] { "https://example.com/*" });
+        Assert.NotNull(api);
+    }
+
+#endregion
+
+#region HTTP 白名单测试
+
+    /// <summary>
+    /// **Feature: plugin-api-new, Task 3: HTTP 白名单机制**
+    /// 没有配置白名单时，所有请求应该被拒绝
+    /// **Validates: Requirements 12.5**
+    /// </summary>
+    [Fact]
+    public void Get_NoWhitelist_ShouldRejectRequest()
+    {
+        var api = new HttpApi("test-plugin", null);
+        var result = api.Get("https://example.com/api");
+
+        AssertErrorResponse(result, "no http_allowed_urls configured");
+    }
+
+    /// <summary>
+    /// **Feature: plugin-api-new, Task 3: HTTP 白名单机制**
+    /// 空白名单时，所有请求应该被拒绝
+    /// **Validates: Requirements 12.5**
+    /// </summary>
+    [Fact]
+    public void Get_EmptyWhitelist_ShouldRejectRequest()
+    {
+        var api = new HttpApi("test-plugin", Array.Empty<string>());
+        var result = api.Get("https://example.com/api");
+
+        AssertErrorResponse(result, "no http_allowed_urls configured");
+    }
+
+    /// <summary>
+    /// **Feature: plugin-api-new, Task 3: HTTP 白名单机制**
+    /// URL 不在白名单中时，请求应该被拒绝
+    /// **Validates: Requirements 12.4**
+    /// </summary>
+    [Fact]
+    public void Get_UrlNotInWhitelist_ShouldRejectRequest()
+    {
+        var api = new HttpApi("test-plugin", new[] { "https://allowed.com/*" });
+        var result = api.Get("https://notallowed.com/api");
+
+        AssertErrorResponse(result, "is not allowed to access URL");
+    }
+
+    /// <summary>
+    /// **Feature: plugin-api-new, Task 3: HTTP 白名单机制**
+    /// URL 在白名单中时，请求应该被允许（验证不会因白名单而失败）
+    /// **Validates: Requirements 12.2**
+    /// </summary>
+    [Fact]
+    public void Get_UrlInWhitelist_ShouldAllowRequest()
+    {
+        var api = new HttpApi("test-plugin", new[] { "https://example.com/*" });
+        // 使用不存在的主机，但 URL 应该通过白名单验证
+        var result = api.Get("https://example.com/api");
+
+        // 应该是网络错误，而不是白名单错误
+        var type = result.GetType();
+        var error = type.GetProperty("error")!.GetValue(result) as string;
+        Assert.DoesNotContain("not allowed", error ?? "", StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
+    /// **Feature: plugin-api-new, Task 3: HTTP 白名单机制**
+    /// 通配符模式应该正确匹配
+    /// **Validates: Requirements 12.3**
+    /// </summary>
+    [Fact]
+    public void Get_WildcardPattern_ShouldMatchCorrectly()
+    {
+        var api = new HttpApi("test-plugin", new[] { "https://api.example.com/*" });
+
+        // 应该匹配
+        var result1 = api.Get("https://api.example.com/v1/users");
+        var error1 = result1.GetType().GetProperty("error")!.GetValue(result1) as string;
+        Assert.DoesNotContain("not allowed", error1 ?? "", StringComparison.OrdinalIgnoreCase);
+
+        // 不应该匹配（不同的子域名）
+        var result2 = api.Get("https://other.example.com/v1/users");
+        var error2 = result2.GetType().GetProperty("error")!.GetValue(result2) as string;
+        Assert.Contains("not allowed", error2 ?? "", StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
+    /// **Feature: plugin-api-new, Task 3: HTTP 白名单机制**
+    /// Post 请求也应该验证白名单
+    /// **Validates: Requirements 12.2**
+    /// </summary>
+    [Fact]
+    public void Post_UrlNotInWhitelist_ShouldRejectRequest()
+    {
+        var api = new HttpApi("test-plugin", new[] { "https://allowed.com/*" });
+        var result = api.Post("https://notallowed.com/api", new { data = "test" });
+
+        AssertErrorResponse(result, "is not allowed to access URL");
     }
 
 #endregion

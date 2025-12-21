@@ -1,4 +1,5 @@
 // main.js - 原神方向标记插件（字幕版）v2.0.0
+// 适配 Plugin API v2 - 使用扁平化全局对象
 
 /**
  * 从文本中提取方向信息
@@ -80,93 +81,95 @@ function extractDirections(text) {
 
 /**
  * 插件加载时调用
- * @param {object} api - 插件 API 对象
+ * Plugin API v2: 不再需要 api 参数，直接使用全局对象
  */
-function onLoad(api) {
-    api.log("原神方向标记插件 v2.0.0 已加载（字幕版）");
+function onLoad() {
+    log.info("原神方向标记插件 v2.0.0 已加载（字幕版）");
     
     // 检查字幕 API 是否可用
-    if (!api.subtitle) {
-        api.log("警告：字幕 API 不可用，请检查插件权限");
+    if (!subtitle) {
+        log.warn("警告：字幕 API 不可用，请检查插件权限");
         return;
     }
     
     // 从配置读取覆盖层位置（原神小地图默认位置）
-    var x = api.config.get("overlay.x", 43);
-    var y = api.config.get("overlay.y", 43);
-    var size = api.config.get("overlay.size", 212);
-    var duration = api.config.get("markerDuration", 0);
+    // Plugin API v2: 使用 config.get() 或 settings.xxx
+    var x = config.get("overlay.x", 43);
+    var y = config.get("overlay.y", 43);
+    var size = config.get("overlay.size", 212);
+    var duration = config.get("markerDuration", 0);
 
-    api.log("覆盖层位置和大小: x=" + x + ", y=" + y + ", size=" + size);
-    api.log("duration 值: " + duration + ", 类型: " + typeof duration + ", === 0: " + (duration === 0) + ", == 0: " + (duration == 0));
+    log.info("覆盖层位置和大小: x=" + x + ", y=" + y + ", size=" + size);
+    log.debug("duration 值: " + duration + ", 类型: " + typeof duration + ", === 0: " + (duration === 0) + ", == 0: " + (duration == 0));
 
     // 从配置读取标记样式
-    var markerSize = api.config.get("marker.size", 32);
-    var markerImage = api.config.get("marker.image", "assets/right.png");
+    var markerSize = config.get("marker.size", 32);
+    var markerImage = config.get("marker.image", "assets/right.png");
 
-    api.log("markerImage 配置: " + markerImage + " | " + typeof markerImage);
+    log.debug("markerImage 配置: " + markerImage + " | " + typeof markerImage);
     
     // 设置覆盖层
-    api.log("设置覆盖层位置和大小...");
-    api.overlay.setPosition(x, y);
-    api.overlay.setSize(size, size);
+    log.info("设置覆盖层位置和大小...");
+    overlay.setPosition(x, y);
+    overlay.setSize(size, size);
+    
     // 只有常驻模式（duration == 0）才在启动时显示覆盖层
     // 非常驻模式等待第一次方向词匹配时再显示
     var isPermanentMode = (duration == 0 || duration === null || duration === undefined);
-    api.log("isPermanentMode: " + isPermanentMode);
+    log.debug("isPermanentMode: " + isPermanentMode);
     if (isPermanentMode) {
-        api.overlay.show();
+        overlay.show();
     }
-    api.log("覆盖层设置完成");
+    log.info("覆盖层设置完成");
     
     // 应用标记样式
-    api.log("应用标记样式, size=" + markerSize);
+    log.debug("应用标记样式, size=" + markerSize);
     try {
-        api.overlay.setMarkerStyle({ size: markerSize });
-        api.log("标记样式设置完成");
+        overlay.setMarkerStyle({ size: markerSize });
+        log.debug("标记样式设置完成");
     } catch (e) {
-        api.log("设置标记样式失败: " + e.message);
+        log.error("设置标记样式失败: " + e.message);
     }
     
     // 调试：检查 overlay 对象的方法
-    api.log("检查 overlay 对象...");
-    api.log("overlay.setMarkerImage 类型: " + typeof api.overlay.setMarkerImage);
-    api.log("overlay.SetMarkerImage 类型: " + typeof api.overlay.SetMarkerImage);
+    log.debug("检查 overlay 对象...");
+    log.debug("overlay.setMarkerImage 类型: " + typeof overlay.setMarkerImage);
+    log.debug("overlay.SetMarkerImage 类型: " + typeof overlay.SetMarkerImage);
     
     // 设置标记图片（图片应指向右/东方向）
     if (markerImage) {
-        api.log("准备设置标记图片: " + markerImage);
+        log.debug("准备设置标记图片: " + markerImage);
         try {
-            // 尝试小写方法名（Jint 的 camelCase 转换）
-            if (typeof api.overlay.setMarkerImage === 'function') {
-                var result = api.overlay.setMarkerImage(markerImage);
-                api.log("setMarkerImage 结果: " + result);
+            // 尝试小写方法名（ClearScript 的 camelCase 转换）
+            if (typeof overlay.setMarkerImage === 'function') {
+                var result = overlay.setMarkerImage(markerImage);
+                log.debug("setMarkerImage 结果: " + result);
             } 
             // 尝试原始方法名
-            else if (typeof api.overlay.SetMarkerImage === 'function') {
-                var result = api.overlay.SetMarkerImage(markerImage);
-                api.log("SetMarkerImage 结果: " + result);
+            else if (typeof overlay.SetMarkerImage === 'function') {
+                var result = overlay.SetMarkerImage(markerImage);
+                log.debug("SetMarkerImage 结果: " + result);
             } else {
-                api.log("错误: setMarkerImage 方法不存在！");
+                log.error("错误: setMarkerImage 方法不存在！");
             }
         } catch (e) {
-            api.log("设置标记图片失败: " + e.message + " | " + e.toString());
+            log.error("设置标记图片失败: " + e.message + " | " + e.toString());
         }
     } else {
-        api.log("markerImage 配置为空，跳过设置");
+        log.debug("markerImage 配置为空，跳过设置");
     }
     
     // 如果 duration 为 0（常驻模式），初始化时显示北方向标记，让用户知道遮罩层已生效
     // 如果设置了显示时长，则不显示初始标记，等待字幕中出现方向词时再显示
     if (isPermanentMode) {
-        api.log("常驻模式：显示初始北方向标记");
-        api.overlay.showMarker("north", 0);
+        log.info("常驻模式：显示初始北方向标记");
+        overlay.showMarker("north", 0);
     } else {
-        api.log("非常驻模式：不显示初始标记，等待方向词匹配");
+        log.info("非常驻模式：不显示初始标记，等待方向词匹配");
     }
     
     // 字幕加载时，预处理并统计方向信息
-    api.subtitle.on("load", function(subtitleData) {
+    subtitle.on("load", function(subtitleData) {
         var directionCount = 0;
         
         subtitleData.body.forEach(function(entry) {
@@ -176,38 +179,38 @@ function onLoad(api) {
             }
         });
         
-        api.log("字幕已加载，共 " + subtitleData.body.length + " 条字幕，其中 " + directionCount + " 条包含方向信息");
+        log.info("字幕已加载，共 " + subtitleData.body.length + " 条字幕，其中 " + directionCount + " 条包含方向信息");
     });
     
     // 监听字幕变化，实时显示方向标记
-    api.subtitle.on("change", function(subtitle) {
-        if (subtitle) {
-            var directions = extractDirections(subtitle.content);
+    subtitle.on("change", function(sub) {
+        if (sub) {
+            var directions = extractDirections(sub.content);
             
             if (directions.length > 0) {
-                api.log("识别到方向: " + directions.join(", ") + " (字幕: " + subtitle.content + ")");
+                log.info("识别到方向: " + directions.join(", ") + " (字幕: " + sub.content + ")");
                 
                 // 显示最后一个方向（通常是最新提到的）
                 var lastDirection = directions[directions.length - 1];
-                api.overlay.showMarker(lastDirection, duration);
+                overlay.showMarker(lastDirection, duration);
             }
         }
     });
     
     // 字幕清除时的处理
-    api.subtitle.on("clear", function() {
-        api.log("字幕已清除");
+    subtitle.on("clear", function() {
+        log.info("字幕已清除");
     });
 }
 
 /**
  * 插件卸载时调用
- * @param {object} api - 插件 API 对象
+ * Plugin API v2: 不再需要 api 参数，直接使用全局对象
  */
-function onUnload(api) {
-    api.log("原神方向标记插件已卸载");
-    api.subtitle.off("load");
-    api.subtitle.off("change");
-    api.subtitle.off("clear");
-    api.overlay.hide();
+function onUnload() {
+    log.info("原神方向标记插件已卸载");
+    subtitle.off("load");
+    subtitle.off("change");
+    subtitle.off("clear");
+    overlay.hide();
 }

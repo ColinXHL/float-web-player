@@ -594,11 +594,19 @@ public class PluginHost : IDisposable
             return;
         }
 
-        // 创建插件上下文（使用源码目录）
-        var context = new PluginContext(manifest, sourceDir) {
-            IsEnabled = config.Enabled,
-            ConfigDirectory = configDir // 设置配置目录
+        // 创建 Profile 信息
+        var profileInfo = new ProfileInfo(_currentProfileId ?? string.Empty, _currentProfileId ?? string.Empty,
+                                          GetPluginConfigDirectory(_currentProfileId ?? string.Empty, pluginId));
+
+        // 创建引擎选项
+        var engineOptions = new PluginEngineOptions {
+            ProfileId = _currentProfileId ?? string.Empty, ProfileName = _currentProfileId ?? string.Empty,
+            ProfileDirectory = GetPluginConfigDirectory(_currentProfileId ?? string.Empty, pluginId)
         };
+
+        // 创建插件上下文（使用新引擎 v2 API）
+        var context = PluginContext.CreateWithNewEngine(manifest, sourceDir, configDir, config, engineOptions);
+        context.IsEnabled = config.Enabled;
 
         // 加载脚本
         if (!context.LoadScript())
@@ -608,13 +616,11 @@ public class PluginHost : IDisposable
             return;
         }
 
-        // 创建 PluginApi 并传入 onLoad
-        var profileInfo = new ProfileInfo(_currentProfileId ?? string.Empty, _currentProfileId ?? string.Empty,
-                                          GetPluginConfigDirectory(_currentProfileId ?? string.Empty, pluginId));
+        // 创建 PluginApi（用于事件广播等）
         var pluginApi = new PluginApi(context, config, profileInfo);
 
-        // 调用 onLoad
-        if (!context.CallOnLoad(pluginApi))
+        // 调用 onLoad（新引擎模式不需要传递 api 参数，API 已作为全局对象暴露）
+        if (!context.CallOnLoad())
         {
             Log($"插件 {manifest.Id} onLoad 调用失败: {context.LastError}");
             // 即使 onLoad 失败，也保留插件（异常隔离）

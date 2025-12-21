@@ -107,6 +107,24 @@ public class PluginManifest
     [JsonPropertyName("defaultConfig")]
     public Dictionary<string, JsonElement>? DefaultConfig { get; set; }
 
+    /// <summary>
+    /// ES6 模块搜索路径列表
+    /// 用于 import 语句解析模块时的搜索路径
+    /// 支持相对路径（相对于插件目录）和绝对路径
+    /// </summary>
+    /// <example>["./lib", "./node_modules"]</example>
+    [JsonPropertyName("library")]
+    public List<string>? Library { get; set; }
+
+    /// <summary>
+    /// HTTP 请求白名单
+    /// 插件只能向白名单中的 URL 发起 HTTP 请求
+    /// 支持通配符 * 进行模式匹配
+    /// </summary>
+    /// <example>["https://api.example.com/*", "https://cdn.example.com/assets/*"]</example>
+    [JsonPropertyName("http_allowed_urls")]
+    public List<string>? HttpAllowedUrls { get; set; }
+
 #endregion
 
 #region Validation

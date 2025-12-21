@@ -168,6 +168,54 @@ public class ConfigApi
         return result;
     }
 
+    /// <summary>
+    /// 注册配置变更事件监听器
+    /// </summary>
+    /// <param name="eventName">事件名称（目前仅支持 "change"）</param>
+    /// <param name="callback">回调函数，接收 (key, newValue, oldValue) 参数</param>
+    /// <returns>监听器 ID，用于取消监听</returns>
+    [ScriptMember("on")]
+    public int On(string eventName, object callback)
+    {
+        if (_eventManager == null)
+        {
+            Services.LogService.Instance.Warn("ConfigApi", "EventManager not available, cannot register listener");
+            return -1;
+        }
+
+        if (string.IsNullOrWhiteSpace(eventName))
+            return -1;
+
+        // 将 "change" 映射到内部事件名
+        var internalEventName = eventName.ToLowerInvariant() switch { "change" => EventManager.ConfigChanged,
+                                                                      _ => $"config.{eventName}" };
+
+        return _eventManager.On(internalEventName, callback);
+    }
+
+    /// <summary>
+    /// 取消配置变更事件监听
+    /// </summary>
+    /// <param name="eventName">事件名称</param>
+    /// <param name="id">监听器 ID（可选，不提供则取消该事件的所有监听器）</param>
+    [ScriptMember("off")]
+    public void Off(string eventName, int? id = null)
+    {
+        if (_eventManager == null)
+            return;
+
+        if (id.HasValue)
+        {
+            _eventManager.Off(id.Value);
+        }
+        else if (!string.IsNullOrWhiteSpace(eventName))
+        {
+            var internalEventName = eventName.ToLowerInvariant() switch { "change" => EventManager.ConfigChanged,
+                                                                          _ => $"config.{eventName}" };
+            _eventManager.Off(internalEventName);
+        }
+    }
+
 #endregion
 }
 }

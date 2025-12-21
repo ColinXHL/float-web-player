@@ -20,6 +20,7 @@ public class HttpApi
 
     private readonly PluginContext _context;
     private readonly HttpClient _httpClient;
+    private readonly HttpUrlValidator _urlValidator;
     private const int DefaultTimeout = 30000; // 30 秒
 
 #endregion
@@ -34,6 +35,22 @@ public class HttpApi
     {
         _context = context ?? throw new ArgumentNullException(nameof(context));
         _httpClient = new HttpClient();
+
+        // 从插件 manifest 获取允许的 URL 列表
+        var allowedUrls = context.Manifest?.HttpAllowedUrls;
+        _urlValidator = new HttpUrlValidator(context.PluginId, allowedUrls);
+    }
+
+    /// <summary>
+    /// 创建 HTTP API 实例（带显式白名单）
+    /// </summary>
+    /// <param name="pluginId">插件 ID</param>
+    /// <param name="allowedUrls">允许的 URL 列表</param>
+    public HttpApi(string pluginId, string[]? allowedUrls)
+    {
+        _context = null!;
+        _httpClient = new HttpClient();
+        _urlValidator = new HttpUrlValidator(pluginId, allowedUrls);
     }
 
 #endregion
@@ -78,11 +95,13 @@ public class HttpApi
         try
         {
             _httpClient?.Dispose();
-            Services.LogService.Instance.Debug($"Plugin:{_context.PluginId}", "HttpApi: cleaned up");
+            var pluginId = _context?.PluginId ?? "unknown";
+            Services.LogService.Instance.Debug($"Plugin:{pluginId}", "HttpApi: cleaned up");
         }
         catch (Exception ex)
         {
-            Services.LogService.Instance.Error($"Plugin:{_context.PluginId}", $"HttpApi cleanup failed: {ex.Message}");
+            var pluginId = _context?.PluginId ?? "unknown";
+            Services.LogService.Instance.Error($"Plugin:{pluginId}", $"HttpApi cleanup failed: {ex.Message}");
         }
     }
 
@@ -97,7 +116,7 @@ public class HttpApi
     {
         try
         {
-            // 验证 URL
+            // 验证 URL 格式
             if (string.IsNullOrWhiteSpace(url))
             {
                 return CreateErrorResponse("Invalid URL: URL cannot be empty");
@@ -106,6 +125,16 @@ public class HttpApi
             if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
             {
                 return CreateErrorResponse($"Invalid URL: {url}");
+            }
+
+            // 验证 URL 是否在白名单中
+            try
+            {
+                _urlValidator.ValidateUrl(url);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return CreateErrorResponse(ex.Message);
             }
 
             // 解析选项
@@ -171,7 +200,8 @@ public class HttpApi
         }
         catch (Exception ex)
         {
-            Services.LogService.Instance.Error($"Plugin:{_context.PluginId}", $"HttpApi request failed: {ex.Message}");
+            var pluginId = _context?.PluginId ?? "unknown";
+            Services.LogService.Instance.Error($"Plugin:{pluginId}", $"HttpApi request failed: {ex.Message}");
             return CreateErrorResponse($"Request failed: {ex.Message}");
         }
     }

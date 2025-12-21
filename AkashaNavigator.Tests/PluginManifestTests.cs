@@ -146,5 +146,194 @@ public class PluginManifestTests
         var result = PluginManifest.LoadFromJson("");
         Assert.False(result.IsSuccess);
     }
+
+    /// <summary>
+    /// Library 字段应正确反序列化
+    /// </summary>
+    [Fact]
+    public void Library_ShouldDeserializeCorrectly()
+    {
+        var json = @"{
+            ""id"": ""test-plugin"",
+            ""name"": ""Test Plugin"",
+            ""version"": ""1.0.0"",
+            ""main"": ""main.js"",
+            ""library"": [""./lib"", ""./node_modules"", ""shared/utils""]
+        }";
+
+        var result = PluginManifest.LoadFromJson(json);
+
+        Assert.True(result.IsSuccess);
+        Assert.NotNull(result.Manifest?.Library);
+        Assert.Equal(3, result.Manifest!.Library!.Count);
+        Assert.Contains("./lib", result.Manifest.Library);
+        Assert.Contains("./node_modules", result.Manifest.Library);
+        Assert.Contains("shared/utils", result.Manifest.Library);
+    }
+
+    /// <summary>
+    /// HttpAllowedUrls 字段应正确反序列化
+    /// </summary>
+    [Fact]
+    public void HttpAllowedUrls_ShouldDeserializeCorrectly()
+    {
+        var json = @"{
+            ""id"": ""test-plugin"",
+            ""name"": ""Test Plugin"",
+            ""version"": ""1.0.0"",
+            ""main"": ""main.js"",
+            ""http_allowed_urls"": [
+                ""https://api.example.com/*"",
+                ""https://cdn.example.com/assets/*"",
+                ""https://specific.url.com/path""
+            ]
+        }";
+
+        var result = PluginManifest.LoadFromJson(json);
+
+        Assert.True(result.IsSuccess);
+        Assert.NotNull(result.Manifest?.HttpAllowedUrls);
+        Assert.Equal(3, result.Manifest!.HttpAllowedUrls!.Count);
+        Assert.Contains("https://api.example.com/*", result.Manifest.HttpAllowedUrls);
+        Assert.Contains("https://cdn.example.com/assets/*", result.Manifest.HttpAllowedUrls);
+        Assert.Contains("https://specific.url.com/path", result.Manifest.HttpAllowedUrls);
+    }
+
+    /// <summary>
+    /// DefaultConfig 字段应正确反序列化
+    /// </summary>
+    [Fact]
+    public void DefaultConfig_ShouldDeserializeCorrectly()
+    {
+        var json = @"{
+            ""id"": ""test-plugin"",
+            ""name"": ""Test Plugin"",
+            ""version"": ""1.0.0"",
+            ""main"": ""main.js"",
+            ""defaultConfig"": {
+                ""theme"": ""dark"",
+                ""fontSize"": 14,
+                ""enabled"": true
+            }
+        }";
+
+        var result = PluginManifest.LoadFromJson(json);
+
+        Assert.True(result.IsSuccess);
+        Assert.NotNull(result.Manifest?.DefaultConfig);
+        Assert.Equal(3, result.Manifest!.DefaultConfig!.Count);
+        Assert.True(result.Manifest.DefaultConfig.ContainsKey("theme"));
+        Assert.True(result.Manifest.DefaultConfig.ContainsKey("fontSize"));
+        Assert.True(result.Manifest.DefaultConfig.ContainsKey("enabled"));
+        Assert.Equal("dark", result.Manifest.DefaultConfig["theme"].GetString());
+        Assert.Equal(14, result.Manifest.DefaultConfig["fontSize"].GetInt32());
+        Assert.True(result.Manifest.DefaultConfig["enabled"].GetBoolean());
+    }
+
+    /// <summary>
+    /// 完整的 plugin.json 应正确反序列化所有新字段
+    /// </summary>
+    [Fact]
+    public void FullManifest_WithAllNewFields_ShouldDeserializeCorrectly()
+    {
+        var json = @"{
+            ""id"": ""my-plugin"",
+            ""name"": ""My Plugin"",
+            ""version"": ""1.0.0"",
+            ""main"": ""main.js"",
+            ""description"": ""A test plugin"",
+            ""author"": ""Test Author"",
+            ""permissions"": [""overlay"", ""player"", ""http""],
+            ""library"": [""./lib"", ""./node_modules""],
+            ""http_allowed_urls"": [
+                ""https://api.example.com/*"",
+                ""https://cdn.example.com/assets/*""
+            ],
+            ""defaultConfig"": {
+                ""theme"": ""dark"",
+                ""fontSize"": 14,
+                ""display"": {
+                    ""mode"": ""auto""
+                }
+            }
+        }";
+
+        var result = PluginManifest.LoadFromJson(json);
+
+        Assert.True(result.IsSuccess);
+        var manifest = result.Manifest!;
+
+        // 验证基本字段
+        Assert.Equal("my-plugin", manifest.Id);
+        Assert.Equal("My Plugin", manifest.Name);
+        Assert.Equal("1.0.0", manifest.Version);
+        Assert.Equal("main.js", manifest.Main);
+        Assert.Equal("A test plugin", manifest.Description);
+        Assert.Equal("Test Author", manifest.Author);
+
+        // 验证权限
+        Assert.NotNull(manifest.Permissions);
+        Assert.Equal(3, manifest.Permissions!.Count);
+
+        // 验证 Library
+        Assert.NotNull(manifest.Library);
+        Assert.Equal(2, manifest.Library!.Count);
+
+        // 验证 HttpAllowedUrls
+        Assert.NotNull(manifest.HttpAllowedUrls);
+        Assert.Equal(2, manifest.HttpAllowedUrls!.Count);
+
+        // 验证 DefaultConfig
+        Assert.NotNull(manifest.DefaultConfig);
+        Assert.Equal(3, manifest.DefaultConfig!.Count);
+    }
+
+    /// <summary>
+    /// 缺少可选的新字段时应正常加载
+    /// </summary>
+    [Fact]
+    public void MissingOptionalNewFields_ShouldLoadSuccessfully()
+    {
+        var json = @"{
+            ""id"": ""test-plugin"",
+            ""name"": ""Test Plugin"",
+            ""version"": ""1.0.0"",
+            ""main"": ""main.js""
+        }";
+
+        var result = PluginManifest.LoadFromJson(json);
+
+        Assert.True(result.IsSuccess);
+        Assert.Null(result.Manifest?.Library);
+        Assert.Null(result.Manifest?.HttpAllowedUrls);
+        Assert.Null(result.Manifest?.DefaultConfig);
+    }
+
+    /// <summary>
+    /// 空数组的新字段应正确反序列化
+    /// </summary>
+    [Fact]
+    public void EmptyArrayNewFields_ShouldDeserializeCorrectly()
+    {
+        var json = @"{
+            ""id"": ""test-plugin"",
+            ""name"": ""Test Plugin"",
+            ""version"": ""1.0.0"",
+            ""main"": ""main.js"",
+            ""library"": [],
+            ""http_allowed_urls"": [],
+            ""defaultConfig"": {}
+        }";
+
+        var result = PluginManifest.LoadFromJson(json);
+
+        Assert.True(result.IsSuccess);
+        Assert.NotNull(result.Manifest?.Library);
+        Assert.Empty(result.Manifest!.Library!);
+        Assert.NotNull(result.Manifest.HttpAllowedUrls);
+        Assert.Empty(result.Manifest.HttpAllowedUrls!);
+        Assert.NotNull(result.Manifest.DefaultConfig);
+        Assert.Empty(result.Manifest.DefaultConfig!);
+    }
 }
 }
