@@ -3,33 +3,33 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using AkashaNavigator.Helpers;
-using AkashaNavigator.Models.Archive;
+using AkashaNavigator.Models.PioneerNote;
 
 namespace AkashaNavigator.Services
 {
 /// <summary>
-/// 归档服务
-/// 负责归档数据的 CRUD 操作
+/// 开荒笔记服务
+/// 负责笔记数据的 CRUD 操作
 /// 参考 DataService 的实现模式
 /// </summary>
-public class ArchiveService
+public class PioneerNoteService
 {
 #region Singleton
 
-    private static ArchiveService? _instance;
+    private static PioneerNoteService? _instance;
     private static readonly object _lock = new();
 
     /// <summary>
     /// 获取单例实例
     /// </summary>
-    public static ArchiveService Instance
+    public static PioneerNoteService Instance
     {
         get {
             if (_instance == null)
             {
                 lock (_lock)
                 {
-                    _instance ??= new ArchiveService();
+                    _instance ??= new PioneerNoteService();
                 }
             }
             return _instance;
@@ -51,20 +51,20 @@ public class ArchiveService
 
 #region Fields
 
-    private ArchiveData _cache = new();
+    private PioneerNoteData _cache = new();
     private bool _cacheLoaded;
 
 #endregion
 
 #region Constructor
 
-    private ArchiveService()
+    private PioneerNoteService()
     {
         // 监听 Profile 切换，清除缓存（与 DataService 保持一致）
         ProfileManager.Instance.ProfileChanged += (s, e) =>
         {
             _cacheLoaded = false;
-            _cache = new ArchiveData();
+            _cache = new PioneerNoteData();
         };
     }
 
@@ -90,19 +90,19 @@ public class ArchiveService
 
 #endregion
 
-#region Archive Item Operations
+#region Note Item Operations
 
     /// <summary>
-    /// 创建归档项
+    /// 记录笔记
     /// </summary>
     /// <param name="url">页面 URL</param>
-    /// <param name="title">归档标题</param>
+    /// <param name="title">笔记标题</param>
     /// <param name="folderId">目标目录 ID（null 表示根目录）</param>
-    /// <returns>创建的归档项</returns>
-    public ArchiveItem CreateArchive(string url, string title, string? folderId = null)
+    /// <returns>创建的笔记项</returns>
+    public NoteItem RecordNote(string url, string title, string? folderId = null)
     {
         if (string.IsNullOrWhiteSpace(title))
-            throw new ArgumentException("归档标题不能为空", nameof(title));
+            throw new ArgumentException("笔记标题不能为空", nameof(title));
 
         EnsureLoaded();
 
@@ -113,18 +113,18 @@ public class ArchiveService
             folderId = null;
         }
 
-        // 检查同级目录是否已存在相同标题+URL的归档
+        // 检查同级目录是否已存在相同标题+URL的笔记
         var duplicateExists =
             _cache.Items.Any(i => i.FolderId == folderId && i.Title == title.Trim() && i.Url == (url ?? string.Empty));
 
         if (duplicateExists)
         {
-            throw new InvalidOperationException($"同级目录下已存在相同标题和URL的归档：{title}");
+            throw new InvalidOperationException($"同级目录下已存在相同标题和URL的笔记：{title}");
         }
 
         var now = DateTime.Now;
-        var item = new ArchiveItem { Id = Guid.NewGuid().ToString(), Url = url ?? string.Empty, Title = title.Trim(),
-                                     FolderId = folderId, ArchivedTime = now };
+        var item = new NoteItem { Id = Guid.NewGuid().ToString(), Url = url ?? string.Empty, Title = title.Trim(),
+                                  FolderId = folderId, RecordedTime = now };
 
         _cache.Items.Add(item);
 
@@ -137,18 +137,18 @@ public class ArchiveService
     }
 
     /// <summary>
-    /// 更新归档项标题
+    /// 更新笔记标题
     /// </summary>
-    /// <param name="id">归档项 ID</param>
+    /// <param name="id">笔记项 ID</param>
     /// <param name="newTitle">新标题</param>
     /// <param name="newUrl">新 URL（可选，为 null 时不更新）</param>
-    public void UpdateArchive(string id, string newTitle, string? newUrl = null)
+    public void UpdateNote(string id, string newTitle, string? newUrl = null)
     {
         if (string.IsNullOrWhiteSpace(id))
             return;
 
         if (string.IsNullOrWhiteSpace(newTitle))
-            throw new ArgumentException("归档标题不能为空", nameof(newTitle));
+            throw new ArgumentException("笔记标题不能为空", nameof(newTitle));
 
         EnsureLoaded();
 
@@ -164,7 +164,7 @@ public class ArchiveService
                 item.Url = newUrl.Trim();
             }
 
-            item.ArchivedTime = now;
+            item.RecordedTime = now;
 
             // 更新父目录的修改时间
             UpdateParentFolderTime(item.FolderId, now);
@@ -174,10 +174,10 @@ public class ArchiveService
     }
 
     /// <summary>
-    /// 删除归档项
+    /// 删除笔记
     /// </summary>
-    /// <param name="id">归档项 ID</param>
-    public void DeleteArchive(string id)
+    /// <param name="id">笔记项 ID</param>
+    public void DeleteNote(string id)
     {
         if (string.IsNullOrWhiteSpace(id))
             return;
@@ -189,11 +189,11 @@ public class ArchiveService
     }
 
     /// <summary>
-    /// 移动归档项到指定目录
+    /// 移动笔记到指定目录
     /// </summary>
-    /// <param name="id">归档项 ID</param>
+    /// <param name="id">笔记项 ID</param>
     /// <param name="targetFolderId">目标目录 ID（null 表示根目录）</param>
-    public void MoveArchive(string id, string? targetFolderId)
+    public void MoveNote(string id, string? targetFolderId)
     {
         if (string.IsNullOrWhiteSpace(id))
             return;
@@ -212,7 +212,7 @@ public class ArchiveService
         {
             var now = DateTime.Now;
             item.FolderId = targetFolderId;
-            item.ArchivedTime = now;
+            item.RecordedTime = now;
 
             // 更新目标目录的修改时间
             UpdateParentFolderTime(targetFolderId, now);
@@ -222,11 +222,11 @@ public class ArchiveService
     }
 
     /// <summary>
-    /// 根据 ID 获取归档项
+    /// 根据 ID 获取笔记项
     /// </summary>
-    /// <param name="id">归档项 ID</param>
-    /// <returns>归档项，不存在返回 null</returns>
-    public ArchiveItem? GetArchiveById(string id)
+    /// <param name="id">笔记项 ID</param>
+    /// <returns>笔记项，不存在返回 null</returns>
+    public NoteItem? GetNoteById(string id)
     {
         if (string.IsNullOrWhiteSpace(id))
             return null;
@@ -240,12 +240,12 @@ public class ArchiveService
 #region Folder Operations
 
     /// <summary>
-    /// 创建归档目录
+    /// 创建目录
     /// </summary>
     /// <param name="name">目录名称</param>
     /// <param name="parentId">父目录 ID（null 表示根目录）</param>
     /// <returns>创建的目录</returns>
-    public ArchiveFolder CreateFolder(string name, string? parentId = null)
+    public NoteFolder CreateFolder(string name, string? parentId = null)
     {
         if (string.IsNullOrWhiteSpace(name))
             throw new ArgumentException("目录名称不能为空", nameof(name));
@@ -263,8 +263,8 @@ public class ArchiveService
         var maxSortOrder =
             _cache.Folders.Where(f => f.ParentId == parentId).Select(f => f.SortOrder).DefaultIfEmpty(-1).Max();
 
-        var folder = new ArchiveFolder { Id = Guid.NewGuid().ToString(), Name = name.Trim(), ParentId = parentId,
-                                         CreatedTime = DateTime.Now, SortOrder = maxSortOrder + 1 };
+        var folder = new NoteFolder { Id = Guid.NewGuid().ToString(), Name = name.Trim(), ParentId = parentId,
+                                      CreatedTime = DateTime.Now, SortOrder = maxSortOrder + 1 };
 
         _cache.Folders.Add(folder);
         Save();
@@ -305,7 +305,7 @@ public class ArchiveService
     /// 删除目录
     /// </summary>
     /// <param name="id">目录 ID</param>
-    /// <param name="cascade">是否级联删除子目录和归档项</param>
+    /// <param name="cascade">是否级联删除子目录和笔记项</param>
     public void DeleteFolder(string id, bool cascade = true)
     {
         if (string.IsNullOrWhiteSpace(id))
@@ -315,7 +315,7 @@ public class ArchiveService
 
         if (cascade)
         {
-            // 递归删除所有子目录和归档项
+            // 递归删除所有子目录和笔记项
             DeleteFolderCascade(id);
         }
         else
@@ -327,7 +327,7 @@ public class ArchiveService
                 childFolder.ParentId = null;
             }
 
-            // 移动归档项到根目录
+            // 移动笔记项到根目录
             foreach (var item in _cache.Items.Where(i => i.FolderId == id))
             {
                 item.FolderId = null;
@@ -345,7 +345,7 @@ public class ArchiveService
     /// </summary>
     /// <param name="id">目录 ID</param>
     /// <returns>目录，不存在返回 null</returns>
-    public ArchiveFolder? GetFolderById(string id)
+    public NoteFolder? GetFolderById(string id)
     {
         if (string.IsNullOrWhiteSpace(id))
             return null;
@@ -382,7 +382,7 @@ public class ArchiveService
             DeleteFolderCascade(childFolder.Id);
         }
 
-        // 删除该目录下的所有归档项
+        // 删除该目录下的所有笔记项
         _cache.Items.RemoveAll(i => i.FolderId == folderId);
 
         // 删除目录本身
@@ -413,24 +413,24 @@ public class ArchiveService
 #region Query Operations
 
     /// <summary>
-    /// 获取完整的归档数据（包含目录和项目）
+    /// 获取完整的笔记数据（包含目录和项目）
     /// </summary>
-    /// <returns>归档数据</returns>
-    public ArchiveData GetArchiveTree()
+    /// <returns>笔记数据</returns>
+    public PioneerNoteData GetNoteTree()
     {
         EnsureLoaded();
         return _cache;
     }
 
     /// <summary>
-    /// 获取指定目录下的归档项
+    /// 获取指定目录下的笔记项
     /// </summary>
     /// <param name="folderId">目录 ID（null 表示根目录）</param>
-    /// <returns>归档项列表</returns>
-    public List<ArchiveItem> GetItemsByFolder(string? folderId)
+    /// <returns>笔记项列表</returns>
+    public List<NoteItem> GetItemsByFolder(string? folderId)
     {
         EnsureLoaded();
-        return _cache.Items.Where(i => i.FolderId == folderId).OrderByDescending(i => i.ArchivedTime).ToList();
+        return _cache.Items.Where(i => i.FolderId == folderId).OrderByDescending(i => i.RecordedTime).ToList();
     }
 
     /// <summary>
@@ -438,31 +438,31 @@ public class ArchiveService
     /// </summary>
     /// <param name="parentId">父目录 ID（null 表示根目录）</param>
     /// <returns>子目录列表</returns>
-    public List<ArchiveFolder> GetFoldersByParent(string? parentId)
+    public List<NoteFolder> GetFoldersByParent(string? parentId)
     {
         EnsureLoaded();
         return _cache.Folders.Where(f => f.ParentId == parentId).OrderBy(f => f.SortOrder).ToList();
     }
 
     /// <summary>
-    /// 获取排序后的所有归档项
+    /// 获取排序后的所有笔记项
     /// </summary>
     /// <param name="direction">排序方向</param>
-    /// <returns>排序后的归档项列表</returns>
-    public List<ArchiveItem> GetSortedItems(SortDirection direction)
+    /// <returns>排序后的笔记项列表</returns>
+    public List<NoteItem> GetSortedItems(SortDirection direction)
     {
         EnsureLoaded();
 
-        return direction == SortDirection.Ascending ? _cache.Items.OrderBy(i => i.ArchivedTime).ToList()
-                                                    : _cache.Items.OrderByDescending(i => i.ArchivedTime).ToList();
+        return direction == SortDirection.Ascending ? _cache.Items.OrderBy(i => i.RecordedTime).ToList()
+                                                    : _cache.Items.OrderByDescending(i => i.RecordedTime).ToList();
     }
 
     /// <summary>
-    /// 搜索归档项
+    /// 搜索笔记
     /// </summary>
     /// <param name="keyword">搜索关键词</param>
-    /// <returns>匹配的归档项列表</returns>
-    public List<ArchiveItem> SearchArchives(string keyword)
+    /// <returns>匹配的笔记项列表</returns>
+    public List<NoteItem> SearchNotes(string keyword)
     {
         EnsureLoaded();
 
@@ -474,7 +474,7 @@ public class ArchiveService
         return _cache.Items
             .Where(i => i.Title.Contains(keyword, StringComparison.OrdinalIgnoreCase) ||
                         i.Url.Contains(keyword, StringComparison.OrdinalIgnoreCase))
-            .OrderByDescending(i => i.ArchivedTime)
+            .OrderByDescending(i => i.RecordedTime)
             .ToList();
     }
 
@@ -494,9 +494,9 @@ public class ArchiveService
     }
 
     /// <summary>
-    /// 获取所有归档项数量
+    /// 获取所有笔记项数量
     /// </summary>
-    /// <returns>归档项数量</returns>
+    /// <returns>笔记项数量</returns>
     public int GetItemCount()
     {
         EnsureLoaded();
@@ -514,11 +514,11 @@ public class ArchiveService
     }
 
     /// <summary>
-    /// 检查 URL 是否已归档
+    /// 检查 URL 是否已记录
     /// </summary>
     /// <param name="url">要检查的 URL</param>
-    /// <returns>如果 URL 已归档返回 true，否则返回 false</returns>
-    public bool IsUrlArchived(string url)
+    /// <returns>如果 URL 已记录返回 true，否则返回 false</returns>
+    public bool IsUrlRecorded(string url)
     {
         if (string.IsNullOrWhiteSpace(url))
             return false;
@@ -532,11 +532,11 @@ public class ArchiveService
 #region Private Methods
 
     /// <summary>
-    /// 获取归档数据文件路径
+    /// 获取笔记数据文件路径
     /// </summary>
-    private string GetArchiveFilePath()
+    private string GetNoteFilePath()
     {
-        return Path.Combine(ProfileManager.Instance.GetCurrentProfileDirectory(), AppConstants.ArchivesFileName);
+        return Path.Combine(ProfileManager.Instance.GetCurrentProfileDirectory(), AppConstants.PioneerNotesFileName);
     }
 
     /// <summary>
@@ -547,33 +547,33 @@ public class ArchiveService
         if (_cacheLoaded)
             return;
 
-        var filePath = GetArchiveFilePath();
+        var filePath = GetNoteFilePath();
         try
         {
-            _cache = JsonHelper.LoadFromFile<ArchiveData>(filePath) ?? new ArchiveData();
+            _cache = JsonHelper.LoadFromFile<PioneerNoteData>(filePath) ?? new PioneerNoteData();
         }
         catch (Exception ex)
         {
-            LogService.Instance.Warn("ArchiveService", "加载归档数据失败 [{FilePath}]: {ErrorMessage}", filePath,
+            LogService.Instance.Warn("PioneerNoteService", "加载笔记数据失败 [{FilePath}]: {ErrorMessage}", filePath,
                                      ex.Message);
-            _cache = new ArchiveData();
+            _cache = new PioneerNoteData();
         }
         _cacheLoaded = true;
     }
 
     /// <summary>
-    /// 保存归档数据
+    /// 保存笔记数据
     /// </summary>
     private void Save()
     {
-        var filePath = GetArchiveFilePath();
+        var filePath = GetNoteFilePath();
         try
         {
             JsonHelper.SaveToFile(filePath, _cache);
         }
         catch (Exception ex)
         {
-            LogService.Instance.Debug("ArchiveService", "保存归档数据失败 [{FilePath}]: {ErrorMessage}", filePath,
+            LogService.Instance.Debug("PioneerNoteService", "保存笔记数据失败 [{FilePath}]: {ErrorMessage}", filePath,
                                       ex.Message);
         }
     }

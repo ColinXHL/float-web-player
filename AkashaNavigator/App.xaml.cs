@@ -220,28 +220,28 @@ public partial class App : System.Windows.Application
             settingsWindow.ShowDialog();
         };
 
-        // 归档按钮点击事件
-        _controlBarWindow.ArchiveRequested += (s, e) =>
+        // 记录笔记按钮点击事件
+        _controlBarWindow.RecordNoteRequested += (s, e) =>
         {
             var url = _controlBarWindow.CurrentUrl;
             var title = _playerWindow.CurrentTitle;
-            var archiveDialog = new ArchiveDialog(url, title);
-            archiveDialog.Owner = _playerWindow;
-            archiveDialog.ShowDialog();
-            if (archiveDialog.Result)
+            var recordDialog = new RecordNoteDialog(url, title);
+            recordDialog.Owner = _playerWindow;
+            recordDialog.ShowDialog();
+            if (recordDialog.Result)
             {
-                ShowOsd("已归档", "📁");
+                ShowOsd("已记录", "💾");
             }
         };
 
-        // 归档管理菜单事件
-        _controlBarWindow.ArchivesRequested += (s, e) =>
+        // 开荒笔记菜单事件
+        _controlBarWindow.PioneerNotesRequested += (s, e) =>
         {
-            var archiveWindow = new ArchiveWindow();
-            archiveWindow.ArchiveItemSelected += (sender, url) =>
+            var noteWindow = new PioneerNoteWindow();
+            noteWindow.NoteItemSelected += (sender, url) =>
             { _playerWindow.Navigate(url); };
-            archiveWindow.Owner = _playerWindow;
-            archiveWindow.ShowDialog();
+            noteWindow.Owner = _playerWindow;
+            noteWindow.ShowDialog();
         };
     }
 

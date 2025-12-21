@@ -107,9 +107,9 @@ public class AppConfig
     public int SnapThreshold { get; set; } = AppConstants.SnapThreshold;
 
     /// <summary>
-    /// 退出时是否提示归档（默认 false，即不提示）
+    /// 退出时是否提示记录（默认 false，即不提示）
     /// </summary>
-    public bool PromptArchiveOnExit { get; set; } = false;
+    public bool PromptRecordOnExit { get; set; } = false;
 
 #endregion
 

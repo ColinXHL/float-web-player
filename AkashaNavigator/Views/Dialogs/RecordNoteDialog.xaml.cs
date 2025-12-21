@@ -7,17 +7,17 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using AkashaNavigator.Helpers;
-using AkashaNavigator.Models.Archive;
+using AkashaNavigator.Models.PioneerNote;
 using AkashaNavigator.Services;
 using AkashaNavigator.Views.Windows;
 
 namespace AkashaNavigator.Views.Dialogs
 {
 /// <summary>
-/// 归档对话框
-/// 用于创建新的归档项，支持选择目录和新建目录
+/// 记录笔记对话框
+/// 用于创建新的笔记项，支持选择目录和新建目录
 /// </summary>
-public partial class ArchiveDialog : AnimatedWindow
+public partial class RecordNoteDialog : AnimatedWindow
 {
 #region Properties
 
@@ -27,9 +27,9 @@ public partial class ArchiveDialog : AnimatedWindow
     public bool Result { get; private set; }
 
     /// <summary>
-    /// 创建的归档项（确认后可用）
+    /// 创建的笔记项（确认后可用）
     /// </summary>
-    public ArchiveItem? CreatedArchive { get; private set; }
+    public NoteItem? CreatedNote { get; private set; }
 
 #endregion
 
@@ -45,11 +45,11 @@ public partial class ArchiveDialog : AnimatedWindow
 #region Constructor
 
     /// <summary>
-    /// 创建归档对话框
+    /// 创建记录笔记对话框
     /// </summary>
-    /// <param name="url">要归档的 URL</param>
+    /// <param name="url">要记录的 URL</param>
     /// <param name="title">默认标题（通常是页面标题）</param>
-    public ArchiveDialog(string url, string title)
+    public RecordNoteDialog(string url, string title)
     {
         InitializeComponent();
 
@@ -72,7 +72,7 @@ public partial class ArchiveDialog : AnimatedWindow
 #region Folder Tree
 
     /// <summary>
-    /// 加载归档目录树
+    /// 加载笔记目录树
     /// </summary>
     private void LoadFolderTree()
     {
@@ -84,7 +84,7 @@ public partial class ArchiveDialog : AnimatedWindow
                                             Children = new ObservableCollection<FolderTreeItem>() };
 
         // 获取所有顶级目录
-        var folders = ArchiveService.Instance.GetFoldersByParent(null);
+        var folders = PioneerNoteService.Instance.GetFoldersByParent(null);
 
         // 递归构建目录树，作为根目录的子项
         foreach (var folder in folders)
@@ -106,13 +106,13 @@ public partial class ArchiveDialog : AnimatedWindow
     /// <summary>
     /// 递归构建目录树项
     /// </summary>
-    private FolderTreeItem BuildFolderTreeItem(ArchiveFolder folder)
+    private FolderTreeItem BuildFolderTreeItem(NoteFolder folder)
     {
         var item = new FolderTreeItem { Id = folder.Id, Name = folder.Name, Icon = folder.Icon ?? "📁",
                                         Children = new ObservableCollection<FolderTreeItem>() };
 
         // 获取子目录
-        var childFolders = ArchiveService.Instance.GetFoldersByParent(folder.Id);
+        var childFolders = PioneerNoteService.Instance.GetFoldersByParent(folder.Id);
         foreach (var childFolder in childFolders)
         {
             var childItem = BuildFolderTreeItem(childFolder);
@@ -196,7 +196,7 @@ public partial class ArchiveDialog : AnimatedWindow
         }
         else
         {
-            // 没有选中任何项时，默认归档到根目录
+            // 没有选中任何项时，默认记录到根目录
             _selectedFolderId = null;
         }
     }
@@ -352,8 +352,7 @@ public partial class ArchiveDialog : AnimatedWindow
             }
 
             // 打开编辑对话框
-            var editDialog =
-                new ArchiveEditDialog("编辑目录", selectedItem.Name, "请输入新的目录名称：") { Owner = this };
+            var editDialog = new NoteEditDialog("编辑目录", selectedItem.Name, "请输入新的目录名称：") { Owner = this };
 
             editDialog.ShowDialog();
 
@@ -361,7 +360,7 @@ public partial class ArchiveDialog : AnimatedWindow
             {
                 try
                 {
-                    ArchiveService.Instance.UpdateFolder(selectedItem.Id!, editDialog.InputText);
+                    PioneerNoteService.Instance.UpdateFolder(selectedItem.Id!, editDialog.InputText);
                     RefreshFolderTree();
                 }
                 catch (Exception ex)
@@ -387,7 +386,7 @@ public partial class ArchiveDialog : AnimatedWindow
 
             // 确认删除
             var confirmDialog = new ConfirmDialog(
-                $"确定要删除目录 \"{selectedItem.Name}\" 吗？\n\n该目录下的所有子目录和归档项也将被删除。",
+                $"确定要删除目录 \"{selectedItem.Name}\" 吗？\n\n该目录下的所有子目录和笔记项也将被删除。",
                 "删除目录") { Owner = this };
 
             confirmDialog.ShowDialog();
@@ -396,7 +395,7 @@ public partial class ArchiveDialog : AnimatedWindow
             {
                 try
                 {
-                    ArchiveService.Instance.DeleteFolder(selectedItem.Id!, cascade: true);
+                    PioneerNoteService.Instance.DeleteFolder(selectedItem.Id!, cascade: true);
                     RefreshFolderTree();
                     _selectedFolderId = null; // 重置选中
                 }
@@ -459,10 +458,10 @@ public partial class ArchiveDialog : AnimatedWindow
 
         try
         {
-            // 创建归档，使用输入框中的 URL
+            // 创建笔记，使用输入框中的 URL
             var title = TxtTitle.Text.Trim();
             var url = TxtUrl.Text.Trim();
-            CreatedArchive = ArchiveService.Instance.CreateArchive(url, title, _selectedFolderId);
+            CreatedNote = PioneerNoteService.Instance.RecordNote(url, title, _selectedFolderId);
             Result = true;
             CloseWithAnimation();
         }
@@ -491,16 +490,16 @@ public partial class ArchiveDialog : AnimatedWindow
     }
 
     /// <summary>
-    /// 归档管理按钮点击
+    /// 开荒笔记按钮点击
     /// </summary>
-    private void BtnArchiveManager_Click(object sender, RoutedEventArgs e)
+    private void BtnPioneerNotes_Click(object sender, RoutedEventArgs e)
     {
-        // 打开归档管理窗口
-        var archiveWindow = new ArchiveWindow();
-        archiveWindow.Owner = this.Owner ?? this; // 使用对话框的 Owner 或自己作为 Owner
-        archiveWindow.ShowDialog();
+        // 打开开荒笔记窗口
+        var noteWindow = new PioneerNoteWindow();
+        noteWindow.Owner = this.Owner ?? this; // 使用对话框的 Owner 或自己作为 Owner
+        noteWindow.ShowDialog();
 
-        // 刷新目录树（可能在归档管理中修改了目录）
+        // 刷新目录树（可能在开荒笔记中修改了目录）
         RefreshFolderTree();
     }
 
@@ -541,7 +540,7 @@ public partial class ArchiveDialog : AnimatedWindow
         try
         {
             // 在当前选中的目录下创建新目录
-            var newFolder = ArchiveService.Instance.CreateFolder(folderName, _selectedFolderId);
+            var newFolder = PioneerNoteService.Instance.CreateFolder(folderName, _selectedFolderId);
 
             // 刷新目录树
             RefreshFolderTree();
@@ -609,7 +608,7 @@ public partial class ArchiveDialog : AnimatedWindow
 
         if (string.IsNullOrWhiteSpace(title))
         {
-            ShowError("归档标题不能为空");
+            ShowError("笔记标题不能为空");
             TxtTitle.Focus();
             return false;
         }

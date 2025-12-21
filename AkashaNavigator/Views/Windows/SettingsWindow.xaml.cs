@@ -58,7 +58,7 @@ public partial class SettingsWindow : AnimatedWindow
         EdgeSnapCheckBox.IsChecked = _config.EnableEdgeSnap;
         SnapThresholdSlider.Value = _config.SnapThreshold;
         SnapThresholdValue.Text = $"{_config.SnapThreshold}px";
-        PromptArchiveOnExitCheckBox.IsChecked = _config.PromptArchiveOnExit;
+        PromptRecordOnExitCheckBox.IsChecked = _config.PromptRecordOnExit;
 
         // 高级设置
         EnablePluginUpdateNotificationCheckBox.IsChecked = _config.EnablePluginUpdateNotification;
@@ -99,7 +99,7 @@ public partial class SettingsWindow : AnimatedWindow
         // 窗口行为
         _config.EnableEdgeSnap = EdgeSnapCheckBox.IsChecked ?? true;
         _config.SnapThreshold = (int)SnapThresholdSlider.Value;
-        _config.PromptArchiveOnExit = PromptArchiveOnExitCheckBox.IsChecked ?? false;
+        _config.PromptRecordOnExit = PromptRecordOnExitCheckBox.IsChecked ?? false;
 
         // 高级设置
         _config.EnablePluginUpdateNotification = EnablePluginUpdateNotificationCheckBox.IsChecked ?? true;
@@ -217,7 +217,7 @@ public partial class SettingsWindow : AnimatedWindow
         EdgeSnapCheckBox.IsChecked = true;
         SnapThresholdSlider.Value = AppConstants.SnapThreshold;
         SnapThresholdValue.Text = $"{AppConstants.SnapThreshold}px";
-        PromptArchiveOnExitCheckBox.IsChecked = false;
+        PromptRecordOnExitCheckBox.IsChecked = false;
 
         // 重置高级设置
         EnablePluginUpdateNotificationCheckBox.IsChecked = true;

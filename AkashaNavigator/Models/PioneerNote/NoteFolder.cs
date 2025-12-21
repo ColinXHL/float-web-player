@@ -1,12 +1,12 @@
 using System;
 
-namespace AkashaNavigator.Models.Archive
+namespace AkashaNavigator.Models.PioneerNote
 {
 /// <summary>
-/// 归档目录模型
+/// 笔记目录模型
 /// 支持多级嵌套的树形结构
 /// </summary>
-public class ArchiveFolder
+public class NoteFolder
 {
     /// <summary>
     /// 唯一标识符 (GUID)

@@ -1,22 +1,22 @@
 using System.Collections.Generic;
 
-namespace AkashaNavigator.Models.Archive
+namespace AkashaNavigator.Models.PioneerNote
 {
 /// <summary>
-/// 归档数据容器
-/// 用于 JSON 序列化整个归档结构
+/// 开荒笔记数据容器
+/// 用于 JSON 序列化整个笔记结构
 /// </summary>
-public class ArchiveData
+public class PioneerNoteData
 {
     /// <summary>
-    /// 所有归档目录
+    /// 所有笔记目录
     /// </summary>
-    public List<ArchiveFolder> Folders { get; set; } = new();
+    public List<NoteFolder> Folders { get; set; } = new();
 
     /// <summary>
-    /// 所有归档项目
+    /// 所有笔记项目
     /// </summary>
-    public List<ArchiveItem> Items { get; set; } = new();
+    public List<NoteItem> Items { get; set; } = new();
 
     /// <summary>
     /// 当前排序方向

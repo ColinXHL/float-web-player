@@ -1,4 +1,4 @@
-<helpers:AnimatedWindow x:Class="AkashaNavigator.Views.Dialogs.ArchiveEditDialog"
+<helpers:AnimatedWindow x:Class="AkashaNavigator.Views.Dialogs.NoteEditDialog"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:helpers="clr-namespace:AkashaNavigator.Helpers"

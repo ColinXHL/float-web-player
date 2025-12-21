@@ -7,10 +7,10 @@ using AkashaNavigator.Services;
 namespace AkashaNavigator.Views.Dialogs
 {
 /// <summary>
-/// 退出归档提示窗口
-/// 当用户退出应用且当前页面未归档时显示
+/// 退出记录提示窗口
+/// 当用户退出应用且当前页面未记录时显示
 /// </summary>
-public partial class ExitArchivePrompt : AnimatedWindow
+public partial class ExitRecordPrompt : AnimatedWindow
 {
 #region Enums
 
@@ -30,14 +30,14 @@ public partial class ExitArchivePrompt : AnimatedWindow
         Exit,
 
         /// <summary>
-        /// 打开归档管理窗口
+        /// 打开开荒笔记窗口
         /// </summary>
-        OpenArchiveManager,
+        OpenPioneerNotes,
 
         /// <summary>
-        /// 打开快速归档对话框
+        /// 打开快速记录对话框
         /// </summary>
-        QuickArchive
+        QuickRecord
     }
 
 #endregion
@@ -64,11 +64,11 @@ public partial class ExitArchivePrompt : AnimatedWindow
 #region Constructor
 
     /// <summary>
-    /// 创建退出归档提示窗口
+    /// 创建退出记录提示窗口
     /// </summary>
     /// <param name="url">当前页面 URL</param>
     /// <param name="title">当前页面标题</param>
-    public ExitArchivePrompt(string url, string title)
+    public ExitRecordPrompt(string url, string title)
     {
         InitializeComponent();
 
@@ -85,18 +85,18 @@ public partial class ExitArchivePrompt : AnimatedWindow
 #region Static Methods
 
     /// <summary>
-    /// 检查是否需要显示退出归档提示
+    /// 检查是否需要显示退出记录提示
     /// </summary>
     /// <param name="url">当前页面 URL</param>
-    /// <returns>如果 URL 未归档且非空，返回 true</returns>
+    /// <returns>如果 URL 未记录且非空，返回 true</returns>
     public static bool ShouldShowPrompt(string url)
     {
         // 如果 URL 为空，不显示提示
         if (string.IsNullOrWhiteSpace(url))
             return false;
 
-        // 检查 URL 是否已归档
-        return !ArchiveService.Instance.IsUrlArchived(url);
+        // 检查 URL 是否已记录
+        return !PioneerNoteService.Instance.IsUrlRecorded(url);
     }
 
 #endregion
@@ -121,20 +121,20 @@ public partial class ExitArchivePrompt : AnimatedWindow
     }
 
     /// <summary>
-    /// 打开归档管理按钮点击
+    /// 打开开荒笔记按钮点击
     /// </summary>
-    private void BtnOpenArchiveManager_Click(object sender, RoutedEventArgs e)
+    private void BtnOpenPioneerNotes_Click(object sender, RoutedEventArgs e)
     {
-        Result = PromptResult.OpenArchiveManager;
+        Result = PromptResult.OpenPioneerNotes;
         CloseWithAnimation();
     }
 
     /// <summary>
-    /// 快速归档按钮点击
+    /// 快速记录按钮点击
     /// </summary>
-    private void BtnQuickArchive_Click(object sender, RoutedEventArgs e)
+    private void BtnQuickRecord_Click(object sender, RoutedEventArgs e)
     {
-        Result = PromptResult.QuickArchive;
+        Result = PromptResult.QuickRecord;
         CloseWithAnimation();
     }
 

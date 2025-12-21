@@ -916,8 +916,8 @@ public partial class PlayerWindow : Window
     /// </summary>
     private void PlayerWindow_Closing(object? sender, System.ComponentModel.CancelEventArgs e)
     {
-        // 检查是否需要显示归档提示
-        if (_config.PromptArchiveOnExit && WebView.CoreWebView2 != null)
+        // 检查是否需要显示记录提示
+        if (_config.PromptRecordOnExit && WebView.CoreWebView2 != null)
         {
             var currentUrl = WebView.CoreWebView2.Source;
             var currentTitle = WebView.CoreWebView2.DocumentTitle;
@@ -926,46 +926,46 @@ public partial class PlayerWindow : Window
             if (!string.IsNullOrWhiteSpace(currentUrl) && !currentUrl.StartsWith("about:") &&
                 !currentUrl.StartsWith("data:"))
             {
-                // 检查 URL 是否已归档
-                if (ExitArchivePrompt.ShouldShowPrompt(currentUrl))
+                // 检查 URL 是否已记录
+                if (ExitRecordPrompt.ShouldShowPrompt(currentUrl))
                 {
-                    // 显示退出归档提示窗口
-                    var exitPrompt = new ExitArchivePrompt(currentUrl, currentTitle);
+                    // 显示退出记录提示窗口
+                    var exitPrompt = new ExitRecordPrompt(currentUrl, currentTitle);
                     exitPrompt.Owner = this;
                     exitPrompt.ShowDialog();
 
                     // 根据用户选择执行相应操作
                     switch (exitPrompt.Result)
                     {
-                    case ExitArchivePrompt.PromptResult.Cancel:
+                    case ExitRecordPrompt.PromptResult.Cancel:
                         // 取消退出，不做任何操作
                         e.Cancel = true;
                         return;
 
-                    case ExitArchivePrompt.PromptResult.OpenArchiveManager:
-                        // 取消退出，打开归档管理窗口
+                    case ExitRecordPrompt.PromptResult.OpenPioneerNotes:
+                        // 取消退出，打开开荒笔记窗口
                         e.Cancel = true;
-                        var archiveWindow = new ArchiveWindow();
-                        archiveWindow.Owner = this;
-                        archiveWindow.ArchiveItemSelected += (s, url) => Navigate(url);
-                        archiveWindow.Show();
+                        var noteWindow = new PioneerNoteWindow();
+                        noteWindow.Owner = this;
+                        noteWindow.NoteItemSelected += (s, url) => Navigate(url);
+                        noteWindow.Show();
                         return;
 
-                    case ExitArchivePrompt.PromptResult.QuickArchive:
-                        // 取消退出，打开归档对话框
+                    case ExitRecordPrompt.PromptResult.QuickRecord:
+                        // 取消退出，打开记录笔记对话框
                         e.Cancel = true;
-                        var archiveDialog = new ArchiveDialog(currentUrl, currentTitle);
-                        archiveDialog.Owner = this;
-                        archiveDialog.ShowDialog();
+                        var recordDialog = new RecordNoteDialog(currentUrl, currentTitle);
+                        recordDialog.Owner = this;
+                        recordDialog.ShowDialog();
                         return;
 
-                    case ExitArchivePrompt.PromptResult.Exit:
+                    case ExitRecordPrompt.PromptResult.Exit:
                     default:
                         // 继续退出
                         break;
                     }
                 }
-                // 如果 URL 已归档，直接退出（不显示提示）
+                // 如果 URL 已记录，直接退出（不显示提示）
             }
         }
 

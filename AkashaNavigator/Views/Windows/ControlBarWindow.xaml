@@ -8,7 +8,7 @@
         ResizeMode="NoResize"
         Topmost="True"
         ShowInTaskbar="False"
-        Height="50"
+        Height="60"
         SourceInitialized="Window_SourceInitialized">
 
     <Window.Resources>
@@ -195,13 +195,13 @@
                         <TextBlock Text="☆" FontSize="14"/>
                     </Button>
 
-                    <!-- 归档按钮 -->
-                    <Button x:Name="BtnArchive"
+                    <!-- 记录笔记按钮 -->
+                    <Button x:Name="BtnRecordNote"
                             Style="{StaticResource NavButtonStyle}"
-                            Click="BtnArchive_Click"
-                            ToolTip="归档"
+                            Click="BtnRecordNote_Click"
+                            ToolTip="记录"
                             Margin="0,0,8,0">
-                        <TextBlock Text="📁" FontSize="14"/>
+                        <TextBlock Text="💾" FontSize="14"/>
                     </Button>
 
                     <!-- 菜单按钮 -->
@@ -215,7 +215,7 @@
                             <ContextMenu x:Name="MainMenu" Style="{StaticResource DarkContextMenuStyle}">
                                 <MenuItem x:Name="MenuHistory" Header="📜 历史记录" Style="{StaticResource DarkMenuItemStyle}" Click="MenuHistory_Click"/>
                                 <MenuItem x:Name="MenuBookmarks" Header="🌟 收藏夹" Style="{StaticResource DarkMenuItemStyle}" Click="MenuBookmarks_Click"/>
-                                <MenuItem x:Name="MenuArchives" Header="📁 归档管理" Style="{StaticResource DarkMenuItemStyle}" Click="MenuArchives_Click"/>
+                                <MenuItem x:Name="MenuPioneerNotes" Header="🖊️ 开荒笔记" Style="{StaticResource DarkMenuItemStyle}" Click="MenuPioneerNotes_Click"/>
                                 <Separator Style="{StaticResource DarkSeparatorStyle}"/>
                                 <MenuItem x:Name="MenuPluginCenter" Header="🔌 插件中心" Style="{StaticResource DarkMenuItemStyle}" Click="MenuPluginCenter_Click"/>
                                 <MenuItem x:Name="MenuSettings" Header="⚙️ 设置" Style="{StaticResource DarkMenuItemStyle}" Click="MenuSettings_Click"/>

@@ -6,10 +6,10 @@ using AkashaNavigator.Views.Windows;
 namespace AkashaNavigator.Views.Dialogs
 {
 /// <summary>
-/// 归档编辑对话框
-/// 用于编辑归档项或目录的名称
+/// 笔记编辑对话框
+/// 用于编辑笔记项或目录的名称
 /// </summary>
-public partial class ArchiveEditDialog : AnimatedWindow
+public partial class NoteEditDialog : AnimatedWindow
 {
 #region Properties
 
@@ -48,8 +48,8 @@ public partial class ArchiveEditDialog : AnimatedWindow
     /// <param name="showUrl">是否显示 URL 输入框</param>
     /// <param name="isConfirmDialog">是否为确认对话框（只显示消息和按钮）</param>
     /// <param name="defaultUrl">默认 URL 值（仅在 showUrl 为 true 时有效）</param>
-    public ArchiveEditDialog(string title, string defaultValue, string prompt = "请输入新名称：", bool showUrl = false,
-                             bool isConfirmDialog = false, string? defaultUrl = null)
+    public NoteEditDialog(string title, string defaultValue, string prompt = "请输入新名称：", bool showUrl = false,
+                          bool isConfirmDialog = false, string? defaultUrl = null)
     {
         InitializeComponent();
 

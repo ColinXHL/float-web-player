@@ -3,15 +3,15 @@ using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using AkashaNavigator.Helpers;
-using AkashaNavigator.Models.Archive;
+using AkashaNavigator.Models.PioneerNote;
 
 namespace AkashaNavigator.Views.Dialogs
 {
 /// <summary>
-/// 归档移动对话框
-/// 用于选择目标目录移动归档项
+/// 笔记移动对话框
+/// 用于选择目标目录移动笔记项
 /// </summary>
-public partial class ArchiveMoveDialog : AnimatedWindow
+public partial class NoteMoveDialog : AnimatedWindow
 {
 #region Properties
 
@@ -34,7 +34,7 @@ public partial class ArchiveMoveDialog : AnimatedWindow
     /// </summary>
     /// <param name="folders">可选的目录列表</param>
     /// <param name="currentFolderId">当前所在目录 ID</param>
-    public ArchiveMoveDialog(List<ArchiveFolder> folders, string? currentFolderId)
+    public NoteMoveDialog(List<NoteFolder> folders, string? currentFolderId)
     {
         InitializeComponent();
 
@@ -66,8 +66,7 @@ public partial class ArchiveMoveDialog : AnimatedWindow
     /// <summary>
     /// 递归添加目录到列表
     /// </summary>
-    private void AddFoldersRecursive(List<FolderItem> items, List<ArchiveFolder> allFolders, string? parentId,
-                                     int indent)
+    private void AddFoldersRecursive(List<FolderItem> items, List<NoteFolder> allFolders, string? parentId, int indent)
     {
         var childFolders = allFolders.Where(f => f.ParentId == parentId).OrderBy(f => f.SortOrder).ToList();
 

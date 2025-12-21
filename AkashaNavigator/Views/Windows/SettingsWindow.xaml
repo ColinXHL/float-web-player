@@ -122,7 +122,7 @@
                         <TextBlock x:Name="SnapThresholdValue" Grid.Column="2" Text="15px"
                                    Style="{StaticResource SettingsLabelStyle}" HorizontalAlignment="Right"/>
                     </Grid>
-                    <CheckBox x:Name="PromptArchiveOnExitCheckBox" Content="退出时提示归档"
+                    <CheckBox x:Name="PromptRecordOnExitCheckBox" Content="退出时提示记录"
                               Style="{StaticResource DarkCheckBoxStyle}" Margin="0,0,0,12"/>
 
                     <!-- 高级设置 -->

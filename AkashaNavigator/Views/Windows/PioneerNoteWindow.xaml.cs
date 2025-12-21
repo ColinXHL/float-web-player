@@ -6,40 +6,40 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using AkashaNavigator.Helpers;
-using AkashaNavigator.Models.Archive;
+using AkashaNavigator.Models.PioneerNote;
 using AkashaNavigator.Services;
 using AkashaNavigator.Views.Dialogs;
 
 namespace AkashaNavigator.Views.Windows
 {
 /// <summary>
-/// 归档管理窗口
-/// 显示归档树，支持搜索、排序、编辑和删除操作
+/// 开荒笔记管理窗口
+/// 显示笔记树，支持搜索、排序、编辑和删除操作
 /// </summary>
-public partial class ArchiveWindow : AnimatedWindow
+public partial class PioneerNoteWindow : AnimatedWindow
 {
 #region Events
 
     /// <summary>
-    /// 选择归档项事件（双击打开 URL）
+    /// 选择笔记项事件（双击打开 URL）
     /// </summary>
-    public event EventHandler<string>? ArchiveItemSelected;
+    public event EventHandler<string>? NoteItemSelected;
 
 #endregion
 
 #region Fields
 
-    private ObservableCollection<ArchiveTreeNode> _treeNodes = new();
+    private ObservableCollection<NoteTreeNode> _treeNodes = new();
     private string _searchKeyword = string.Empty;
 
 #endregion
 
 #region Constructor
 
-    public ArchiveWindow()
+    public PioneerNoteWindow()
     {
         InitializeComponent();
-        LoadArchiveTree();
+        LoadNoteTree();
         UpdateSortButton();
     }
 
@@ -48,14 +48,14 @@ public partial class ArchiveWindow : AnimatedWindow
 #region Private Methods
 
     /// <summary>
-    /// 加载归档树
+    /// 加载笔记树
     /// </summary>
-    private void LoadArchiveTree()
+    private void LoadNoteTree()
     {
         _treeNodes.Clear();
 
-        var archiveData = ArchiveService.Instance.GetArchiveTree();
-        var sortDirection = archiveData.SortOrder;
+        var noteData = PioneerNoteService.Instance.GetNoteTree();
+        var sortDirection = noteData.SortOrder;
 
         // 如果有搜索关键词，显示搜索结果
         if (!string.IsNullOrWhiteSpace(_searchKeyword))
@@ -66,19 +66,19 @@ public partial class ArchiveWindow : AnimatedWindow
 
         // 构建树形结构
         // 先添加根目录下的目录（按时间排序）
-        var rootFolders = archiveData.Folders.Where(f => f.ParentId == null).ToList();
+        var rootFolders = noteData.Folders.Where(f => f.ParentId == null).ToList();
         rootFolders = sortDirection == SortDirection.Ascending
                           ? rootFolders.OrderBy(f => f.CreatedTime).ToList()
                           : rootFolders.OrderByDescending(f => f.CreatedTime).ToList();
 
         foreach (var folder in rootFolders)
         {
-            var folderNode = BuildFolderNode(folder, archiveData, sortDirection);
+            var folderNode = BuildFolderNode(folder, noteData, sortDirection);
             _treeNodes.Add(folderNode);
         }
 
-        // 添加根目录下的归档项
-        var rootItems = archiveData.Items.Where(i => i.FolderId == null).ToList();
+        // 添加根目录下的笔记项
+        var rootItems = noteData.Items.Where(i => i.FolderId == null).ToList();
 
         rootItems = SortItems(rootItems, sortDirection);
 
@@ -88,7 +88,7 @@ public partial class ArchiveWindow : AnimatedWindow
             _treeNodes.Add(itemNode);
         }
 
-        ArchiveTree.ItemsSource = _treeNodes;
+        NoteTree.ItemsSource = _treeNodes;
         SetupTreeItemTemplate();
 
         // 更新空状态提示
@@ -97,13 +97,13 @@ public partial class ArchiveWindow : AnimatedWindow
     }
 
     /// <summary>
-    /// 加载搜索结果（以树形结构展现，只显示匹配的目录和归档项）
+    /// 加载搜索结果（以树形结构展现，只显示匹配的目录和笔记项）
     /// </summary>
     private void LoadSearchResults()
     {
-        var searchResults = ArchiveService.Instance.SearchArchives(_searchKeyword);
-        var archiveData = ArchiveService.Instance.GetArchiveTree();
-        var sortDirection = archiveData.SortOrder;
+        var searchResults = PioneerNoteService.Instance.SearchNotes(_searchKeyword);
+        var noteData = PioneerNoteService.Instance.GetNoteTree();
+        var sortDirection = noteData.SortOrder;
 
         // 收集所有匹配项的目录 ID
         var matchedFolderIds = new HashSet<string>();
@@ -116,29 +116,28 @@ public partial class ArchiveWindow : AnimatedWindow
                 while (!string.IsNullOrEmpty(folderId))
                 {
                     matchedFolderIds.Add(folderId);
-                    var folder = archiveData.Folders.FirstOrDefault(f => f.Id == folderId);
+                    var folder = noteData.Folders.FirstOrDefault(f => f.Id == folderId);
                     folderId = folder?.ParentId;
                 }
             }
         }
 
         // 构建树形结构，只包含匹配的目录（按时间排序）
-        var rootFolders =
-            archiveData.Folders.Where(f => f.ParentId == null && matchedFolderIds.Contains(f.Id)).ToList();
+        var rootFolders = noteData.Folders.Where(f => f.ParentId == null && matchedFolderIds.Contains(f.Id)).ToList();
         rootFolders = sortDirection == SortDirection.Ascending
                           ? rootFolders.OrderBy(f => f.CreatedTime).ToList()
                           : rootFolders.OrderByDescending(f => f.CreatedTime).ToList();
 
         foreach (var folder in rootFolders)
         {
-            var folderNode = BuildSearchFolderNode(folder, archiveData, sortDirection, searchResults, matchedFolderIds);
+            var folderNode = BuildSearchFolderNode(folder, noteData, sortDirection, searchResults, matchedFolderIds);
             if (folderNode.Children?.Count > 0)
             {
                 _treeNodes.Add(folderNode);
             }
         }
 
-        // 添加根目录下的匹配归档项
+        // 添加根目录下的匹配笔记项
         var rootItems = searchResults.Where(i => i.FolderId == null).ToList();
         rootItems = SortItems(rootItems, sortDirection);
 
@@ -148,7 +147,7 @@ public partial class ArchiveWindow : AnimatedWindow
             _treeNodes.Add(itemNode);
         }
 
-        ArchiveTree.ItemsSource = _treeNodes;
+        NoteTree.ItemsSource = _treeNodes;
         SetupTreeItemTemplate();
 
         // 更新空状态提示
@@ -156,31 +155,30 @@ public partial class ArchiveWindow : AnimatedWindow
         EmptyHint.Visibility = hasContent ? Visibility.Collapsed : Visibility.Visible;
         if (!hasContent && !string.IsNullOrWhiteSpace(_searchKeyword))
         {
-            EmptyHint.Text = "未找到匹配的归档";
+            EmptyHint.Text = "未找到匹配的笔记";
         }
         else
         {
-            EmptyHint.Text = "暂无归档内容";
+            EmptyHint.Text = "暂无笔记内容";
         }
     }
 
     /// <summary>
     /// 构建搜索结果的目录节点（只包含匹配的子项）
     /// </summary>
-    private ArchiveTreeNode BuildSearchFolderNode(ArchiveFolder folder, ArchiveData archiveData,
-                                                  SortDirection sortDirection, List<ArchiveItem> searchResults,
-                                                  HashSet<string> matchedFolderIds)
+    private NoteTreeNode BuildSearchFolderNode(NoteFolder folder, PioneerNoteData noteData, SortDirection sortDirection,
+                                               List<NoteItem> searchResults, HashSet<string> matchedFolderIds)
     {
-        var node = new ArchiveTreeNode { Id = folder.Id,
-                                         Title = folder.Name,
-                                         Icon = folder.Icon ?? "📁",
-                                         IsFolder = true,
-                                         ArchivedTime = folder.CreatedTime,
-                                         Children = new ObservableCollection<ArchiveTreeNode>() };
+        var node = new NoteTreeNode { Id = folder.Id,
+                                      Title = folder.Name,
+                                      Icon = folder.Icon ?? "📁",
+                                      IsFolder = true,
+                                      RecordedTime = folder.CreatedTime,
+                                      Children = new ObservableCollection<NoteTreeNode>() };
 
         // 添加匹配的子目录（按时间排序）
         var childFolders =
-            archiveData.Folders.Where(f => f.ParentId == folder.Id && matchedFolderIds.Contains(f.Id)).ToList();
+            noteData.Folders.Where(f => f.ParentId == folder.Id && matchedFolderIds.Contains(f.Id)).ToList();
         childFolders = sortDirection == SortDirection.Ascending
                            ? childFolders.OrderBy(f => f.CreatedTime).ToList()
                            : childFolders.OrderByDescending(f => f.CreatedTime).ToList();
@@ -188,14 +186,14 @@ public partial class ArchiveWindow : AnimatedWindow
         foreach (var childFolder in childFolders)
         {
             var childNode =
-                BuildSearchFolderNode(childFolder, archiveData, sortDirection, searchResults, matchedFolderIds);
+                BuildSearchFolderNode(childFolder, noteData, sortDirection, searchResults, matchedFolderIds);
             if (childNode.Children?.Count > 0)
             {
                 node.Children.Add(childNode);
             }
         }
 
-        // 添加目录下匹配的归档项
+        // 添加目录下匹配的笔记项
         var items = searchResults.Where(i => i.FolderId == folder.Id).ToList();
         items = SortItems(items, sortDirection);
 
@@ -211,29 +209,29 @@ public partial class ArchiveWindow : AnimatedWindow
     /// <summary>
     /// 构建目录节点
     /// </summary>
-    private ArchiveTreeNode BuildFolderNode(ArchiveFolder folder, ArchiveData archiveData, SortDirection sortDirection)
+    private NoteTreeNode BuildFolderNode(NoteFolder folder, PioneerNoteData noteData, SortDirection sortDirection)
     {
-        var node = new ArchiveTreeNode { Id = folder.Id,
-                                         Title = folder.Name,
-                                         Icon = folder.Icon ?? "📁",
-                                         IsFolder = true,
-                                         ArchivedTime = folder.CreatedTime,
-                                         Children = new ObservableCollection<ArchiveTreeNode>() };
+        var node = new NoteTreeNode { Id = folder.Id,
+                                      Title = folder.Name,
+                                      Icon = folder.Icon ?? "📁",
+                                      IsFolder = true,
+                                      RecordedTime = folder.CreatedTime,
+                                      Children = new ObservableCollection<NoteTreeNode>() };
 
         // 添加子目录（按时间排序）
-        var childFolders = archiveData.Folders.Where(f => f.ParentId == folder.Id).ToList();
+        var childFolders = noteData.Folders.Where(f => f.ParentId == folder.Id).ToList();
         childFolders = sortDirection == SortDirection.Ascending
                            ? childFolders.OrderBy(f => f.CreatedTime).ToList()
                            : childFolders.OrderByDescending(f => f.CreatedTime).ToList();
 
         foreach (var childFolder in childFolders)
         {
-            var childNode = BuildFolderNode(childFolder, archiveData, sortDirection);
+            var childNode = BuildFolderNode(childFolder, noteData, sortDirection);
             node.Children.Add(childNode);
         }
 
-        // 添加目录下的归档项
-        var items = archiveData.Items.Where(i => i.FolderId == folder.Id).ToList();
+        // 添加目录下的笔记项
+        var items = noteData.Items.Where(i => i.FolderId == folder.Id).ToList();
 
         items = SortItems(items, sortDirection);
 
@@ -247,26 +245,26 @@ public partial class ArchiveWindow : AnimatedWindow
     }
 
     /// <summary>
-    /// 构建归档项节点
+    /// 构建笔记项节点
     /// </summary>
-    private ArchiveTreeNode BuildItemNode(ArchiveItem item)
+    private NoteTreeNode BuildItemNode(NoteItem item)
     {
-        return new ArchiveTreeNode { Id = item.Id,
-                                     Title = item.Title,
-                                     Url = item.Url,
-                                     Icon = "📄",
-                                     IsFolder = false,
-                                     ArchivedTime = item.ArchivedTime,
-                                     FolderId = item.FolderId };
+        return new NoteTreeNode { Id = item.Id,
+                                  Title = item.Title,
+                                  Url = item.Url,
+                                  Icon = "🔗",
+                                  IsFolder = false,
+                                  RecordedTime = item.RecordedTime,
+                                  FolderId = item.FolderId };
     }
 
     /// <summary>
-    /// 排序归档项
+    /// 排序笔记项
     /// </summary>
-    private List<ArchiveItem> SortItems(List<ArchiveItem> items, SortDirection direction)
+    private List<NoteItem> SortItems(List<NoteItem> items, SortDirection direction)
     {
-        return direction == SortDirection.Ascending ? items.OrderBy(i => i.ArchivedTime).ToList()
-                                                    : items.OrderByDescending(i => i.ArchivedTime).ToList();
+        return direction == SortDirection.Ascending ? items.OrderBy(i => i.RecordedTime).ToList()
+                                                    : items.OrderByDescending(i => i.RecordedTime).ToList();
     }
 
     /// <summary>
@@ -282,33 +280,33 @@ public partial class ArchiveWindow : AnimatedWindow
     /// </summary>
     private void UpdateSortButton()
     {
-        var sortOrder = ArchiveService.Instance.CurrentSortOrder;
+        var sortOrder = PioneerNoteService.Instance.CurrentSortOrder;
         BtnSort.Content = sortOrder == SortDirection.Descending ? "↓ 最新" : "↑ 最早";
     }
 
     /// <summary>
-    /// 刷新归档树
+    /// 刷新笔记树
     /// </summary>
-    private void RefreshArchiveTree()
+    private void RefreshNoteTree()
     {
         // 重新加载树
-        LoadArchiveTree();
+        LoadNoteTree();
 
         // 强制刷新 TreeView 的 ItemsSource
-        var temp = ArchiveTree.ItemsSource;
-        ArchiveTree.ItemsSource = null;
-        ArchiveTree.ItemsSource = temp;
+        var temp = NoteTree.ItemsSource;
+        NoteTree.ItemsSource = null;
+        NoteTree.ItemsSource = temp;
     }
 
     /// <summary>
     /// 显示编辑对话框
     /// </summary>
-    private void ShowEditDialog(ArchiveTreeNode node)
+    private void ShowEditDialog(NoteTreeNode node)
     {
-        // 如果是归档项，显示 URL 输入框
+        // 如果是笔记项，显示 URL 输入框
         var showUrl = !node.IsFolder;
-        var editDialog = new ArchiveEditDialog(node.IsFolder ? "编辑目录" : "编辑归档", node.Title, "请输入新名称：",
-                                               showUrl: showUrl, isConfirmDialog: false, defaultUrl: node.Url);
+        var editDialog = new NoteEditDialog(node.IsFolder ? "编辑目录" : "编辑笔记", node.Title, "请输入新名称：",
+                                            showUrl: showUrl, isConfirmDialog: false, defaultUrl: node.Url);
 
         editDialog.Owner = this;
         editDialog.ShowDialog();
@@ -319,14 +317,14 @@ public partial class ArchiveWindow : AnimatedWindow
             {
                 if (node.IsFolder)
                 {
-                    ArchiveService.Instance.UpdateFolder(node.Id!, editDialog.InputText);
+                    PioneerNoteService.Instance.UpdateFolder(node.Id!, editDialog.InputText);
                 }
                 else
                 {
-                    // 更新归档项，包括 URL
-                    ArchiveService.Instance.UpdateArchive(node.Id!, editDialog.InputText, editDialog.UrlText);
+                    // 更新笔记项，包括 URL
+                    PioneerNoteService.Instance.UpdateNote(node.Id!, editDialog.InputText, editDialog.UrlText);
                 }
-                RefreshArchiveTree();
+                RefreshNoteTree();
             }
             catch (Exception ex)
             {
@@ -338,14 +336,14 @@ public partial class ArchiveWindow : AnimatedWindow
     /// <summary>
     /// 显示删除确认对话框
     /// </summary>
-    private void ShowDeleteConfirmDialog(ArchiveTreeNode node)
+    private void ShowDeleteConfirmDialog(NoteTreeNode node)
     {
         var message = node.IsFolder ? $"确定要删除目录 \"{node.Title}\" 及其所有内容吗？此操作不可撤销。"
-                                    : $"确定要删除归档 \"{node.Title}\" 吗？此操作不可撤销。";
+                                    : $"确定要删除笔记 \"{node.Title}\" 吗？此操作不可撤销。";
 
         // 使用自定义对话框而不是系统 MessageBox
         // 参数顺序: title, defaultValue, prompt, showUrl, isConfirmDialog
-        var confirmDialog = new ArchiveEditDialog("确认删除", "", message, false, true);
+        var confirmDialog = new NoteEditDialog("确认删除", "", message, false, true);
         confirmDialog.Owner = this;
         confirmDialog.ShowDialog();
 
@@ -355,17 +353,17 @@ public partial class ArchiveWindow : AnimatedWindow
             {
                 if (node.IsFolder)
                 {
-                    ArchiveService.Instance.DeleteFolder(node.Id!, true);
+                    PioneerNoteService.Instance.DeleteFolder(node.Id!, true);
                 }
                 else
                 {
-                    ArchiveService.Instance.DeleteArchive(node.Id!);
+                    PioneerNoteService.Instance.DeleteNote(node.Id!);
                 }
-                RefreshArchiveTree();
+                RefreshNoteTree();
             }
             catch (Exception ex)
             {
-                var errorDialog = new ArchiveEditDialog("错误", "", $"删除失败: {ex.Message}", false, true);
+                var errorDialog = new NoteEditDialog("错误", "", $"删除失败: {ex.Message}", false, true);
                 errorDialog.Owner = this;
                 errorDialog.ShowDialog();
             }
@@ -377,7 +375,7 @@ public partial class ArchiveWindow : AnimatedWindow
     /// </summary>
     private void ShowNewFolderDialog(string? parentId = null)
     {
-        var editDialog = new ArchiveEditDialog("新建目录", "", "请输入目录名称：");
+        var editDialog = new NoteEditDialog("新建目录", "", "请输入目录名称：");
 
         editDialog.Owner = this;
         editDialog.ShowDialog();
@@ -386,8 +384,8 @@ public partial class ArchiveWindow : AnimatedWindow
         {
             try
             {
-                ArchiveService.Instance.CreateFolder(editDialog.InputText, parentId);
-                RefreshArchiveTree();
+                PioneerNoteService.Instance.CreateFolder(editDialog.InputText, parentId);
+                RefreshNoteTree();
             }
             catch (Exception ex)
             {
@@ -399,17 +397,17 @@ public partial class ArchiveWindow : AnimatedWindow
     /// <summary>
     /// 显示移动对话框
     /// </summary>
-    private void ShowMoveDialog(ArchiveTreeNode node)
+    private void ShowMoveDialog(NoteTreeNode node)
     {
         if (node.IsFolder)
             return;
 
         // 获取所有目录用于选择
-        var archiveData = ArchiveService.Instance.GetArchiveTree();
-        var folders = archiveData.Folders;
+        var noteData = PioneerNoteService.Instance.GetNoteTree();
+        var folders = noteData.Folders;
 
         // 创建目录选择对话框
-        var moveDialog = new ArchiveMoveDialog(folders, node.FolderId);
+        var moveDialog = new NoteMoveDialog(folders, node.FolderId);
         moveDialog.Owner = this;
         moveDialog.ShowDialog();
 
@@ -417,8 +415,8 @@ public partial class ArchiveWindow : AnimatedWindow
         {
             try
             {
-                ArchiveService.Instance.MoveArchive(node.Id!, moveDialog.SelectedFolderId);
-                RefreshArchiveTree();
+                PioneerNoteService.Instance.MoveNote(node.Id!, moveDialog.SelectedFolderId);
+                RefreshNoteTree();
             }
             catch (Exception ex)
             {
@@ -437,7 +435,7 @@ public partial class ArchiveWindow : AnimatedWindow
     private void SearchBox_TextChanged(object sender, TextChangedEventArgs e)
     {
         _searchKeyword = SearchBox.Text.Trim();
-        LoadArchiveTree();
+        LoadNoteTree();
     }
 
     /// <summary>
@@ -447,7 +445,7 @@ public partial class ArchiveWindow : AnimatedWindow
     {
         // 获取当前选中的目录作为父目录
         string? parentId = null;
-        if (ArchiveTree.SelectedItem is ArchiveTreeNode selectedNode && selectedNode.IsFolder)
+        if (NoteTree.SelectedItem is NoteTreeNode selectedNode && selectedNode.IsFolder)
         {
             parentId = selectedNode.Id;
         }
@@ -455,27 +453,27 @@ public partial class ArchiveWindow : AnimatedWindow
     }
 
     /// <summary>
-    /// 创建归档按钮点击
+    /// 记录笔记按钮点击
     /// </summary>
-    private void BtnCreateArchive_Click(object sender, RoutedEventArgs e)
+    private void BtnRecordNote_Click(object sender, RoutedEventArgs e)
     {
-        ShowCreateArchiveDialog();
+        ShowRecordNoteDialog();
     }
 
     /// <summary>
-    /// 显示创建归档对话框
+    /// 显示记录笔记对话框
     /// </summary>
-    private void ShowCreateArchiveDialog()
+    private void ShowRecordNoteDialog()
     {
-        // 使用完整的归档对话框，支持选择目录
-        var archiveDialog = new ArchiveDialog("", "");
-        archiveDialog.Owner = this;
-        archiveDialog.ShowDialog();
+        // 使用完整的笔记对话框，支持选择目录
+        var noteDialog = new RecordNoteDialog("", "");
+        noteDialog.Owner = this;
+        noteDialog.ShowDialog();
 
-        if (archiveDialog.Result && archiveDialog.CreatedArchive != null)
+        if (noteDialog.Result && noteDialog.CreatedNote != null)
         {
-            // 归档已创建，刷新树
-            RefreshArchiveTree();
+            // 笔记已创建，刷新树
+            RefreshNoteTree();
         }
     }
 
@@ -484,9 +482,9 @@ public partial class ArchiveWindow : AnimatedWindow
     /// </summary>
     private void BtnSort_Click(object sender, RoutedEventArgs e)
     {
-        ArchiveService.Instance.ToggleSortOrder();
+        PioneerNoteService.Instance.ToggleSortOrder();
         UpdateSortButton();
-        RefreshArchiveTree();
+        RefreshNoteTree();
     }
 
     /// <summary>
@@ -509,7 +507,7 @@ public partial class ArchiveWindow : AnimatedWindow
     /// <summary>
     /// 根据 ID 查找节点
     /// </summary>
-    private ArchiveTreeNode? FindNodeById(string id, IEnumerable<ArchiveTreeNode> nodes)
+    private NoteTreeNode? FindNodeById(string id, IEnumerable<NoteTreeNode> nodes)
     {
         foreach (var node in nodes)
         {
@@ -527,23 +525,23 @@ public partial class ArchiveWindow : AnimatedWindow
     }
 
     /// <summary>
-    /// 归档树双击事件
+    /// 笔记树双击事件
     /// </summary>
-    private void ArchiveTree_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+    private void NoteTree_MouseDoubleClick(object sender, MouseButtonEventArgs e)
     {
-        if (ArchiveTree.SelectedItem is ArchiveTreeNode node && !node.IsFolder && !string.IsNullOrEmpty(node.Url))
+        if (NoteTree.SelectedItem is NoteTreeNode node && !node.IsFolder && !string.IsNullOrEmpty(node.Url))
         {
-            CloseWithAnimation(() => ArchiveItemSelected?.Invoke(this, node.Url));
+            CloseWithAnimation(() => NoteItemSelected?.Invoke(this, node.Url));
         }
     }
 
     /// <summary>
-    /// 归档树选择变化事件
+    /// 笔记树选择变化事件
     /// </summary>
-    private void ArchiveTree_SelectedItemChanged(object sender, RoutedPropertyChangedEventArgs<object> e)
+    private void NoteTree_SelectedItemChanged(object sender, RoutedPropertyChangedEventArgs<object> e)
     {
         // 设置右键菜单
-        if (e.NewValue is ArchiveTreeNode node)
+        if (e.NewValue is NoteTreeNode node)
         {
             SetupContextMenu(node);
         }
@@ -552,7 +550,7 @@ public partial class ArchiveWindow : AnimatedWindow
     /// <summary>
     /// 设置右键菜单
     /// </summary>
-    private void SetupContextMenu(ArchiveTreeNode node)
+    private void SetupContextMenu(NoteTreeNode node)
     {
         var contextMenu = new ContextMenu { Style = FindResource("DarkContextMenuStyle") as Style };
 
@@ -561,7 +559,7 @@ public partial class ArchiveWindow : AnimatedWindow
         editItem.Click += (s, e) => ShowEditDialog(node);
         contextMenu.Items.Add(editItem);
 
-        // 移动菜单项（仅归档项可移动）
+        // 移动菜单项（仅笔记项可移动）
         if (!node.IsFolder)
         {
             var moveItem = new MenuItem { Header = "📂 移动到...", Style = FindResource("DarkMenuItemStyle") as Style };
@@ -586,7 +584,7 @@ public partial class ArchiveWindow : AnimatedWindow
             contextMenu.Items.Add(newFolderItem);
         }
 
-        // 如果是归档项，添加打开选项
+        // 如果是笔记项，添加打开选项
         if (!node.IsFolder && !string.IsNullOrEmpty(node.Url))
         {
             contextMenu.Items.Insert(0, new Separator { Background = new System.Windows.Media.SolidColorBrush(
@@ -594,11 +592,11 @@ public partial class ArchiveWindow : AnimatedWindow
 
             var openItem = new MenuItem { Header = "🔗 打开", Style = FindResource("DarkMenuItemStyle") as Style };
             openItem.Click += (s, e) =>
-            { CloseWithAnimation(() => ArchiveItemSelected?.Invoke(this, node.Url)); };
+            { CloseWithAnimation(() => NoteItemSelected?.Invoke(this, node.Url)); };
             contextMenu.Items.Insert(0, openItem);
         }
 
-        ArchiveTree.ContextMenu = contextMenu;
+        NoteTree.ContextMenu = contextMenu;
     }
 
     /// <summary>
@@ -649,7 +647,7 @@ public partial class ArchiveWindow : AnimatedWindow
         if (SearchBox.IsFocused)
         {
             // 将焦点移到其他元素
-            ArchiveTree.Focus();
+            NoteTree.Focus();
         }
     }
 
@@ -679,10 +677,10 @@ public partial class ArchiveWindow : AnimatedWindow
     /// </summary>
     private void ClearTreeViewSelection()
     {
-        if (ArchiveTree.SelectedItem != null)
+        if (NoteTree.SelectedItem != null)
         {
             // 遍历所有 TreeViewItem 并取消选中
-            ClearTreeViewItemSelection(ArchiveTree);
+            ClearTreeViewItemSelection(NoteTree);
         }
     }
 
@@ -734,7 +732,7 @@ public partial class ArchiveWindow : AnimatedWindow
             treeViewItem.Focus();
 
             // 设置右键菜单
-            if (treeViewItem.DataContext is ArchiveTreeNode node)
+            if (treeViewItem.DataContext is NoteTreeNode node)
             {
                 SetupContextMenu(node);
             }
@@ -747,9 +745,9 @@ public partial class ArchiveWindow : AnimatedWindow
 }
 
 /// <summary>
-/// 归档树节点模型
+/// 笔记树节点模型
 /// </summary>
-public class ArchiveTreeNode
+public class NoteTreeNode
 {
     /// <summary>
     /// 节点 ID
@@ -762,14 +760,14 @@ public class ArchiveTreeNode
     public string Title { get; set; } = string.Empty;
 
     /// <summary>
-    /// URL（仅归档项有）
+    /// URL（仅笔记项有）
     /// </summary>
     public string? Url { get; set; }
 
     /// <summary>
     /// 图标
     /// </summary>
-    public string Icon { get; set; } = "📄";
+    public string Icon { get; set; } = "🔗";
 
     /// <summary>
     /// 是否为目录
@@ -777,9 +775,9 @@ public class ArchiveTreeNode
     public bool IsFolder { get; set; }
 
     /// <summary>
-    /// 归档/创建时间
+    /// 记录/创建时间
     /// </summary>
-    public DateTime ArchivedTime { get; set; }
+    public DateTime RecordedTime { get; set; }
 
     /// <summary>
     /// 所属目录 ID
@@ -789,11 +787,11 @@ public class ArchiveTreeNode
     /// <summary>
     /// 子节点
     /// </summary>
-    public ObservableCollection<ArchiveTreeNode>? Children { get; set; }
+    public ObservableCollection<NoteTreeNode>? Children { get; set; }
 
     /// <summary>
     /// 格式化的时间显示
     /// </summary>
-    public string FormattedTime => ArchivedTime.ToString("MM/dd HH:mm");
+    public string FormattedTime => RecordedTime.ToString("MM/dd HH:mm");
 }
 }

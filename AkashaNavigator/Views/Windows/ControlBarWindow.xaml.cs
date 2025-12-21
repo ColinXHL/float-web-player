@@ -55,14 +55,14 @@ public partial class ControlBarWindow : Window
     public event EventHandler? BookmarkRequested;
 
     /// <summary>
-    /// 归档请求事件
+    /// 记录笔记请求事件
     /// </summary>
-    public event EventHandler? ArchiveRequested;
+    public event EventHandler? RecordNoteRequested;
 
     /// <summary>
-    /// 归档管理请求事件
+    /// 开荒笔记管理请求事件
     /// </summary>
-    public event EventHandler? ArchivesRequested;
+    public event EventHandler? PioneerNotesRequested;
 
     /// <summary>
     /// 菜单请求事件
@@ -386,11 +386,11 @@ public partial class ControlBarWindow : Window
     }
 
     /// <summary>
-    /// 归档按钮点击
+    /// 记录笔记按钮点击
     /// </summary>
-    private void BtnArchive_Click(object sender, RoutedEventArgs e)
+    private void BtnRecordNote_Click(object sender, RoutedEventArgs e)
     {
-        ArchiveRequested?.Invoke(this, EventArgs.Empty);
+        RecordNoteRequested?.Invoke(this, EventArgs.Empty);
     }
 
     /// <summary>
@@ -425,11 +425,11 @@ public partial class ControlBarWindow : Window
     }
 
     /// <summary>
-    /// 归档管理菜单点击
+    /// 开荒笔记菜单点击
     /// </summary>
-    private void MenuArchives_Click(object sender, RoutedEventArgs e)
+    private void MenuPioneerNotes_Click(object sender, RoutedEventArgs e)
     {
-        ArchivesRequested?.Invoke(this, EventArgs.Empty);
+        PioneerNotesRequested?.Invoke(this, EventArgs.Empty);
     }
 
     /// <summary>

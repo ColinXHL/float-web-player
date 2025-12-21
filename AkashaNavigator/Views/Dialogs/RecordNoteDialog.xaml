@@ -1,8 +1,8 @@
-<helpers:AnimatedWindow x:Class="AkashaNavigator.Views.Dialogs.ArchiveDialog"
+<helpers:AnimatedWindow x:Class="AkashaNavigator.Views.Dialogs.RecordNoteDialog"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:helpers="clr-namespace:AkashaNavigator.Helpers"
-        Title="归档"
+        Title="记录笔记"
         Width="420"
         Height="480"
         WindowStartupLocation="CenterScreen"
@@ -13,7 +13,7 @@
 
     <helpers:AnimatedWindow.Resources>
         <!-- TreeViewItem 样式 - 包含 EventSetter，需要本地定义 -->
-        <Style x:Key="ArchiveTreeViewItemStyle" TargetType="TreeViewItem" BasedOn="{StaticResource DarkTreeViewItemStyle}">
+        <Style x:Key="NoteTreeViewItemStyle" TargetType="TreeViewItem" BasedOn="{StaticResource DarkTreeViewItemStyle}">
             <EventSetter Event="PreviewMouseRightButtonDown" Handler="TreeViewItem_PreviewMouseRightButtonDown"/>
         </Style>
     </helpers:AnimatedWindow.Resources>
@@ -46,11 +46,11 @@
                     </Grid.ColumnDefinitions>
 
                     <!-- 图标 -->
-                    <TextBlock Grid.Column="0" Text="📁" FontSize="16"
+                    <TextBlock Grid.Column="0" Text="💾" FontSize="16"
                                VerticalAlignment="Center" Margin="0,0,10,0"/>
 
                     <!-- 标题 -->
-                    <TextBlock Grid.Column="1" Text="归档" FontSize="14" FontWeight="SemiBold"
+                    <TextBlock Grid.Column="1" Text="记录笔记" FontSize="14" FontWeight="SemiBold"
                                Foreground="White" VerticalAlignment="Center"/>
 
                     <!-- 关闭按钮 -->
@@ -71,10 +71,10 @@
 
                 <!-- 标题输入 -->
                 <StackPanel Grid.Row="0" Margin="0,0,0,12">
-                    <TextBlock Text="标题" Foreground="#888" FontSize="12" Margin="0,0,0,6"/>
+                    <TextBlock Text="笔记标题" Foreground="#888" FontSize="12" Margin="0,0,0,6"/>
                     <TextBox x:Name="TxtTitle"
                              Style="{StaticResource DarkTextBoxStyle}"
-                             Tag="输入归档标题..."
+                             Tag="输入笔记标题..."
                              TextChanged="TxtTitle_TextChanged"/>
                     <TextBlock x:Name="TxtError" Foreground="#F87171" FontSize="11"
                                Margin="0,4,0,0" Visibility="Collapsed"/>
@@ -116,7 +116,7 @@
                         MouseLeftButtonDown="FolderTreeContainer_MouseLeftButtonDown">
                     <Grid>
                         <TreeView x:Name="FolderTree" Style="{StaticResource DarkTreeViewStyle}"
-                                  ItemContainerStyle="{StaticResource ArchiveTreeViewItemStyle}"
+                                  ItemContainerStyle="{StaticResource NoteTreeViewItemStyle}"
                                   SelectedItemChanged="FolderTree_SelectedItemChanged"
                                   Background="Transparent">
                             <TreeView.ItemTemplate>
@@ -162,11 +162,11 @@
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
                     
-                    <!-- 左侧：归档管理按钮 -->
-                    <Button Grid.Column="0" Content="📂 归档管理" 
+                    <!-- 左侧：开荒笔记按钮 -->
+                    <Button Grid.Column="0" Content="📂 开荒笔记" 
                             Style="{StaticResource SecondaryButtonStyle}"
                             HorizontalAlignment="Left"
-                            Click="BtnArchiveManager_Click"/>
+                            Click="BtnPioneerNotes_Click"/>
                     
                     <!-- 右侧：确定和取消按钮 -->
                     <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right">
