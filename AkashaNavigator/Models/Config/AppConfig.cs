@@ -76,6 +76,15 @@ public class AppConfig
 
 #endregion
 
+#region Logging
+
+    /// <summary>
+    /// 是否启用调试日志（默认关闭，仅输出 Information 及以上级别）
+    /// </summary>
+    public bool EnableDebugLog { get; set; } = false;
+
+#endregion
+
 #region Window Behavior
 
     /// <summary>

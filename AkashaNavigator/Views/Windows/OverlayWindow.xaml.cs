@@ -457,8 +457,8 @@ public partial class OverlayWindow : Window
                 marker.Source = _markerImageSource;
             }
 
-            Services.LogService.Instance.Info("OverlayWindow", "SetMarkerImage: Loaded image from {ImagePath}",
-                                              imagePath);
+            Services.LogService.Instance.Debug("OverlayWindow", "SetMarkerImage: loaded image from {ImagePath}",
+                                               imagePath);
             return true;
         }
         catch (Exception ex)

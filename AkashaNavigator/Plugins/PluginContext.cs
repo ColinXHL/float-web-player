@@ -153,8 +153,8 @@ public class PluginContext : IDisposable
         PluginEngine.InitializeEngine(_jsEngine, PluginDirectory, ConfigDirectory, libraryPaths, _config!, Manifest,
                                       _engineOptions);
 
-        Log("引擎初始化完成 (library paths: {LibraryPathCount}, http_allowed_urls: {HttpAllowedUrlCount})",
-            libraryPaths?.Length ?? 0, Manifest.HttpAllowedUrls?.Count ?? 0);
+        LogInfo("引擎初始化完成 (library paths: {LibraryPathCount}, http_allowed_urls: {HttpAllowedUrlCount})",
+                libraryPaths?.Length ?? 0, Manifest.HttpAllowedUrls?.Count ?? 0);
     }
 
 #endregion
@@ -338,7 +338,7 @@ public class PluginContext : IDisposable
         try
         {
             _jsEngine.CollectGarbage(true);
-            Log("已触发 V8 垃圾回收");
+            LogInfo("已触发 V8 垃圾回收");
         }
         catch (Exception ex)
         {
@@ -405,8 +405,17 @@ public class PluginContext : IDisposable
 
     /// <summary>
     /// 记录日志（参数化模板）
+    /// 用于插件内部的技术日志，使用 Debug 级别
     /// </summary>
     private void Log(string template, params object[] args)
+    {
+        Services.LogService.Instance.Debug($"Plugin:{PluginId}", template, args);
+    }
+
+    /// <summary>
+    /// 记录用户可见的信息日志
+    /// </summary>
+    private void LogInfo(string template, params object[] args)
     {
         Services.LogService.Instance.Info($"Plugin:{PluginId}", template, args);
     }

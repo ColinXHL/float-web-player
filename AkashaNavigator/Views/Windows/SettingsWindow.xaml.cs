@@ -60,6 +60,9 @@ public partial class SettingsWindow : AnimatedWindow
         SnapThresholdValue.Text = $"{_config.SnapThreshold}px";
         PromptArchiveOnExitCheckBox.IsChecked = _config.PromptArchiveOnExit;
 
+        // 高级设置
+        EnableDebugLogCheckBox.IsChecked = _config.EnableDebugLog;
+
         // 快捷键
         LoadHotkey(HotkeySeekBackward, _config.HotkeySeekBackward, _config.HotkeySeekBackwardMod);
         LoadHotkey(HotkeySeekForward, _config.HotkeySeekForward, _config.HotkeySeekForwardMod);
@@ -96,6 +99,9 @@ public partial class SettingsWindow : AnimatedWindow
         _config.EnableEdgeSnap = EdgeSnapCheckBox.IsChecked ?? true;
         _config.SnapThreshold = (int)SnapThresholdSlider.Value;
         _config.PromptArchiveOnExit = PromptArchiveOnExitCheckBox.IsChecked ?? false;
+
+        // 高级设置
+        _config.EnableDebugLog = EnableDebugLogCheckBox.IsChecked ?? false;
 
         // 快捷键
         SaveHotkey(HotkeySeekBackward, v => _config.HotkeySeekBackward = v, m => _config.HotkeySeekBackwardMod = m);
@@ -210,6 +216,9 @@ public partial class SettingsWindow : AnimatedWindow
         SnapThresholdSlider.Value = AppConstants.SnapThreshold;
         SnapThresholdValue.Text = $"{AppConstants.SnapThreshold}px";
         PromptArchiveOnExitCheckBox.IsChecked = false;
+
+        // 重置高级设置
+        EnableDebugLogCheckBox.IsChecked = false;
 
         // 重置快捷键
         var defaultConfig = new AppConfig();

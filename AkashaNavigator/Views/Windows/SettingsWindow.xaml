@@ -125,6 +125,13 @@
                     <CheckBox x:Name="PromptArchiveOnExitCheckBox" Content="退出时提示归档"
                               Style="{StaticResource DarkCheckBoxStyle}" Margin="0,0,0,12"/>
 
+                    <!-- 高级设置 -->
+                    <TextBlock Text="高级设置" Style="{StaticResource SettingsGroupHeaderStyle}"/>
+                    <CheckBox x:Name="EnableDebugLogCheckBox" Content="启用调试日志"
+                              Style="{StaticResource DarkCheckBoxStyle}" Margin="0,0,0,4"/>
+                    <TextBlock Text="开启后日志文件将包含详细的调试信息，用于排查问题" 
+                               Foreground="#666" FontSize="11" Margin="0,0,0,12"/>
+
                     <!-- 快捷键设置 -->
                     <TextBlock Text="快捷键设置" Style="{StaticResource SettingsGroupHeaderStyle}"/>
                     <TextBlock Text="点击输入框后按下新快捷键即可修改" Foreground="#666" FontSize="11" Margin="0,0,0,8"/>

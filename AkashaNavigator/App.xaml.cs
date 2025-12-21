@@ -7,6 +7,8 @@ using AkashaNavigator.Services;
 using AkashaNavigator.Views.Windows;
 using AkashaNavigator.Views.Dialogs;
 using Serilog;
+using Serilog.Core;
+using Serilog.Events;
 
 namespace AkashaNavigator
 {
@@ -22,6 +24,11 @@ public partial class App : System.Windows.Application
     private HotkeyService? _hotkeyService;
     private OsdWindow? _osdWindow;
     private AppConfig _config = null!;
+
+    /// <summary>
+    /// 日志级别开关，用于运行时动态切换日志级别
+    /// </summary>
+    private static readonly LoggingLevelSwitch _logLevelSwitch = new(LogEventLevel.Information);
 
 #endregion
 
@@ -44,6 +51,9 @@ public partial class App : System.Windows.Application
 
         // 加载配置
         _config = ConfigService.Instance.Config;
+
+        // 根据配置更新日志级别
+        UpdateLogLevel();
 
         // 首次启动显示欢迎弹窗
         if (_config.IsFirstLaunch)
@@ -299,6 +309,9 @@ public partial class App : System.Windows.Application
     /// </summary>
     private void ApplySettings()
     {
+        // 更新日志级别
+        UpdateLogLevel();
+
         // 更新 PlayerWindow 配置
         _playerWindow?.UpdateConfig(_config);
 
@@ -319,7 +332,7 @@ public partial class App : System.Windows.Application
 
         Log.Logger =
             new LoggerConfiguration()
-                .MinimumLevel.Debug()
+                .MinimumLevel.ControlledBy(_logLevelSwitch)
                 .WriteTo
                 .File(logFile,
                       outputTemplate: ("[{Timestamp:yyyy-MM-dd HH:mm:ss.fff}] [{Level:u3}] " +
@@ -330,6 +343,19 @@ public partial class App : System.Windows.Application
                 .CreateLogger();
 
         Log.Information("Serilog 日志系统已初始化");
+    }
+
+    /// <summary>
+    /// 根据配置更新日志级别
+    /// </summary>
+    private void UpdateLogLevel()
+    {
+        var newLevel = _config.EnableDebugLog ? LogEventLevel.Debug : LogEventLevel.Information;
+        if (_logLevelSwitch.MinimumLevel != newLevel)
+        {
+            _logLevelSwitch.MinimumLevel = newLevel;
+            Log.Information("日志级别已切换为 {Level}", newLevel);
+        }
     }
 
     /// <summary>
