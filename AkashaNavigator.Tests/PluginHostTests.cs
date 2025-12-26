@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text.Json;
 using AkashaNavigator.Models.Common;
 using AkashaNavigator.Models.Plugin;
-using AkashaNavigator.Plugins;
+using AkashaNavigator.Plugins.Core;
 using AkashaNavigator.Services;
 using FsCheck;
 using FsCheck.Xunit;

@@ -8,7 +8,7 @@ using AkashaNavigator.Plugins.Utils;
 using AkashaNavigator.Plugins.Apis.Core;
 using AkashaNavigator.Plugins.Apis;
 
-namespace AkashaNavigator.Plugins
+namespace AkashaNavigator.Plugins.Core
 {
 /// <summary>
 /// 插件 API 总入口

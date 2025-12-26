@@ -2,8 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using AkashaNavigator.Models.Plugin;
-using AkashaNavigator.Plugins;
 using AkashaNavigator.Plugins.Apis;
+using AkashaNavigator.Plugins.Core;
 using Xunit;
 
 namespace AkashaNavigator.Tests

@@ -1,5 +1,7 @@
 using AkashaNavigator.Views.Windows;
+using AkashaNavigator.Plugins.Core;
 using AkashaNavigator.Plugins.Utils;
+using Microsoft.ClearScript;
 
 namespace AkashaNavigator.Plugins.Apis
 {
@@ -14,27 +16,32 @@ public class WindowApi
 
     public WindowApi(PluginContext context, Func<Views.Windows.PlayerWindow?>? getPlayerWindow)
     {
-        _context = context;
+        _context = context ?? throw new ArgumentNullException(nameof(context));
         _getPlayerWindow = getPlayerWindow;
     }
 
     public void SetEventManager(EventManager eventManager) => _eventManager = eventManager;
 
-    public double Opacity => _getPlayerWindow?.Invoke()?.Opacity ?? 1.0;
-    public bool ClickThrough => _getPlayerWindow?.Invoke()?.IsClickThrough ?? false;
-    public bool Topmost => _getPlayerWindow?.Invoke()?.Topmost ?? true;
+    [ScriptMember("getOpacity")]
+    public double GetOpacity() => _getPlayerWindow?.Invoke()?.Opacity ?? 1.0;
 
-    public object Bounds
+    [ScriptMember("isClickThrough")]
+    public bool IsClickThrough() => _getPlayerWindow?.Invoke()?.IsClickThrough ?? false;
+
+    [ScriptMember("isTopmost")]
+    public bool IsTopmost() => _getPlayerWindow?.Invoke()?.Topmost ?? true;
+
+    [ScriptMember("getBounds")]
+    public object GetBounds()
     {
-        get {
-            var window = _getPlayerWindow?.Invoke();
-            if (window == null)
-                return new { x = 0, y = 0, width = 0, height = 0 };
-            return new { x = (int)window.Left, y = (int)window.Top, width = (int)window.Width,
-                         height = (int)window.Height };
-        }
+        var window = _getPlayerWindow?.Invoke();
+        if (window == null)
+            return new { x = 0.0, y = 0.0, width = 0.0, height = 0.0 };
+        return new { x = (double)window.Left, y = (double)window.Top, width = (double)window.Width,
+                     height = (double)window.Height };
     }
 
+    [ScriptMember("setOpacity")]
     public void SetOpacity(double opacity)
     {
         var window = _getPlayerWindow?.Invoke();
@@ -42,6 +49,7 @@ public class WindowApi
             System.Windows.Application.Current?.Dispatcher.Invoke(() => window.Opacity = opacity);
     }
 
+    [ScriptMember("setClickThrough")]
     public void SetClickThrough(bool enabled)
     {
         var window = _getPlayerWindow?.Invoke();
@@ -49,6 +57,7 @@ public class WindowApi
             System.Windows.Application.Current?.Dispatcher.Invoke(() => window.ToggleClickThrough());
     }
 
+    [ScriptMember("setTopmost")]
     public void SetTopmost(bool enabled)
     {
         var window = _getPlayerWindow?.Invoke();
@@ -56,11 +65,13 @@ public class WindowApi
             System.Windows.Application.Current?.Dispatcher.Invoke(() => window.Topmost = enabled);
     }
 
+    [ScriptMember("on")]
     public int on(string eventName, object callback)
     {
         return _eventManager?.On($"window.{eventName}", callback) ?? -1;
     }
 
+    [ScriptMember("off")]
     public void off(string eventName, int? id = null)
     {
         if (id.HasValue)

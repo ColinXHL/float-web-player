@@ -2,6 +2,8 @@ using System;
 using System.IO;
 using System.Linq;
 using AkashaNavigator.Services;
+using AkashaNavigator.Plugins.Core;
+using Microsoft.ClearScript;
 
 namespace AkashaNavigator.Plugins.Apis
 {
@@ -21,6 +23,7 @@ public class StorageApi
             Directory.CreateDirectory(_storagePath);
     }
 
+    [ScriptMember("save")]
     public bool Save(string key, object data)
     {
         if (!IsValidKey(key))
@@ -68,6 +71,7 @@ public class StorageApi
         return true;
     }
 
+    [ScriptMember("load")]
     public object? Load(string key)
     {
         if (!IsValidKey(key))
@@ -88,6 +92,7 @@ public class StorageApi
         }
     }
 
+    [ScriptMember("delete")]
     public bool Delete(string key)
     {
         if (!IsValidKey(key))
@@ -109,6 +114,7 @@ public class StorageApi
         }
     }
 
+    [ScriptMember("exists")]
     public bool Exists(string key)
     {
         if (!IsValidKey(key))
@@ -116,6 +122,7 @@ public class StorageApi
         return File.Exists(GetFilePath(key));
     }
 
+    [ScriptMember("list")]
     public string[] List()
     {
         if (!Directory.Exists(_storagePath))

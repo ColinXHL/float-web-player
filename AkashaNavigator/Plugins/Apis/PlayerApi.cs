@@ -1,6 +1,7 @@
 using System;
 using System.Threading.Tasks;
 using AkashaNavigator.Views.Windows;
+using AkashaNavigator.Plugins.Core;
 using AkashaNavigator.Plugins.Utils;
 
 namespace AkashaNavigator.Plugins.Apis
@@ -16,7 +17,7 @@ public class PlayerApi
 
     public PlayerApi(PluginContext context, Func<Views.Windows.PlayerWindow?>? getPlayerWindow)
     {
-        _context = context;
+        _context = context ?? throw new ArgumentNullException(nameof(context));
         _getPlayerWindow = getPlayerWindow;
     }
 
@@ -60,12 +61,20 @@ public class PlayerApi
     /// <summary>
     /// 开始播放
     /// </summary>
-    public void play() => _getPlayerWindow?.Invoke()?.TogglePlayAsync();
+    public void play()
+    {
+        _getPlayerWindow?.Invoke()?.TogglePlayAsync();
+        _eventManager?.Emit(EventManager.PlayStateChanged, new { playing = true });
+    }
 
     /// <summary>
     /// 暂停播放
     /// </summary>
-    public void pause() => _getPlayerWindow?.Invoke()?.TogglePlayAsync();
+    public void pause()
+    {
+        _getPlayerWindow?.Invoke()?.TogglePlayAsync();
+        _eventManager?.Emit(EventManager.PlayStateChanged, new { playing = false });
+    }
 
     /// <summary>
     /// 跳转到指定时间

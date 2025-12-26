@@ -2,7 +2,7 @@ using System;
 using System.IO;
 using System.Windows;
 using AkashaNavigator.Models.Config;
-using AkashaNavigator.Plugins;
+using AkashaNavigator.Plugins.Core;
 using AkashaNavigator.Services;
 using AkashaNavigator.Views.Windows;
 using AkashaNavigator.Views.Dialogs;

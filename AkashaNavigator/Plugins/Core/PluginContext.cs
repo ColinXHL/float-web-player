@@ -5,7 +5,7 @@ using AkashaNavigator.Plugins.Utils;
 using Microsoft.ClearScript;
 using Microsoft.ClearScript.V8;
 
-namespace AkashaNavigator.Plugins
+namespace AkashaNavigator.Plugins.Core
 {
 /// <summary>
 /// 插件上下文

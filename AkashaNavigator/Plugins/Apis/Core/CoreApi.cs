@@ -1,4 +1,5 @@
 using System;
+using AkashaNavigator.Plugins.Core;
 using AkashaNavigator.Plugins.Utils;
 using Microsoft.ClearScript;
 

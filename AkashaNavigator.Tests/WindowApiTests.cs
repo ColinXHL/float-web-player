@@ -2,8 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using AkashaNavigator.Models.Plugin;
-using AkashaNavigator.Plugins;
 using AkashaNavigator.Plugins.Apis;
+using AkashaNavigator.Plugins.Core;
 using AkashaNavigator.Plugins.Utils;
 using FsCheck;
 using FsCheck.Xunit;
@@ -68,7 +68,7 @@ public class WindowApiTests : IDisposable
         windowApi.SetOpacity(opacity);
 
         // 获取透明度（无窗口时应该返回默认值 1.0）
-        var result = windowApi.Opacity;
+        var result = windowApi.GetOpacity();
 
         return (result == 1.0).Label($"Opacity: {opacity}, Result: {result}");
     }
@@ -110,7 +110,7 @@ public class WindowApiTests : IDisposable
         windowApi.SetClickThrough(enabled);
 
         // 获取穿透模式（无窗口时应该返回默认值 false）
-        var result = windowApi.ClickThrough;
+        var result = windowApi.IsClickThrough();
 
         return (result == false).Label($"Enabled: {enabled}, Result: {result}");
     }
@@ -181,7 +181,7 @@ public class WindowApiTests : IDisposable
     public void GetOpacity_NoWindow_ReturnsDefault()
     {
         var windowApi = new WindowApi(_context, null);
-        var result = windowApi.Opacity;
+        var result = windowApi.GetOpacity();
         Assert.Equal(1.0, result);
     }
 
@@ -192,7 +192,7 @@ public class WindowApiTests : IDisposable
     public void IsClickThrough_NoWindow_ReturnsFalse()
     {
         var windowApi = new WindowApi(_context, null);
-        var result = windowApi.ClickThrough;
+        var result = windowApi.IsClickThrough();
         Assert.False(result);
     }
 
@@ -203,7 +203,7 @@ public class WindowApiTests : IDisposable
     public void IsTopmost_NoWindow_ReturnsTrue()
     {
         var windowApi = new WindowApi(_context, null);
-        var result = windowApi.Topmost;
+        var result = windowApi.IsTopmost();
         Assert.True(result);
     }
 
@@ -214,7 +214,7 @@ public class WindowApiTests : IDisposable
     public void GetBounds_NoWindow_ReturnsDefault()
     {
         var windowApi = new WindowApi(_context, null);
-        var result = windowApi.Bounds;
+        var result = windowApi.GetBounds();
 
         Assert.NotNull(result);
 
@@ -227,8 +227,8 @@ public class WindowApiTests : IDisposable
 
         Assert.Equal(0.0, x);
         Assert.Equal(0.0, y);
-        Assert.Equal(800.0, width);
-        Assert.Equal(600.0, height);
+        Assert.Equal(0.0, width);
+        Assert.Equal(0.0, height);
     }
 
     /// <summary>
@@ -271,16 +271,7 @@ public class WindowApiTests : IDisposable
     }
 
     /// <summary>
-    /// 构造函数应该接受 null 窗口获取器
-    /// </summary>
-    [Fact]
-    public void Constructor_WithNullWindowGetter_ShouldThrow()
-    {
-        Assert.Throws<ArgumentNullException>(() => new WindowApi(_context, null!));
-    }
-
-    /// <summary>
-    /// 构造函数应该接受 null 上下文
+    /// 构造函数应该拒绝 null 上下文
     /// </summary>
     [Fact]
     public void Constructor_WithNullContext_ShouldThrow()

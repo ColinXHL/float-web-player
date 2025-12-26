@@ -2,8 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using AkashaNavigator.Models.Plugin;
-using AkashaNavigator.Plugins;
 using AkashaNavigator.Plugins.Apis;
+using AkashaNavigator.Plugins.Core;
 using AkashaNavigator.Plugins.Utils;
 using Xunit;
 
@@ -340,15 +340,6 @@ public class PlayerApiTests : IDisposable
     public void Constructor_NullContext_ShouldThrow()
     {
         Assert.Throws<ArgumentNullException>(() => new PlayerApi(null!, () => null));
-    }
-
-    /// <summary>
-    /// 带窗口获取器的构造函数应该拒绝 null 参数
-    /// </summary>
-    [Fact]
-    public void Constructor_NullWindowGetter_ShouldThrow()
-    {
-        Assert.Throws<ArgumentNullException>(() => new PlayerApi(_context, null!));
     }
 
 #endregion

@@ -8,7 +8,6 @@ using AkashaNavigator.Models.Config;
 using AkashaNavigator.Models.Profile;
 using AkashaNavigator.Models.Plugin;
 using AkashaNavigator.Models.Common;
-using AkashaNavigator.Plugins;
 using AkashaNavigator.Plugins.Utils;
 
 namespace AkashaNavigator.Services

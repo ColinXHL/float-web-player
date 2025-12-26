@@ -223,7 +223,7 @@ public static class ScriptMemberValidator
         var assembly = typeof(ScriptMemberValidator).Assembly;
         var apiNamespaces = new[]
         {
-            "AkashaNavigator.Plugins",
+            "AkashaNavigator.Plugins.Core",
             "AkashaNavigator.Plugins.Apis",
             "AkashaNavigator.Plugins.Apis.Core"
         };

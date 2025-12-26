@@ -1,6 +1,6 @@
 using System;
 
-namespace AkashaNavigator.Plugins
+namespace AkashaNavigator.Plugins.Core
 {
 /// <summary>
 /// 插件引擎初始化选项

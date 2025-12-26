@@ -15,7 +15,7 @@ using AkashaNavigator.Plugins.Apis;
 using Microsoft.ClearScript;
 using Microsoft.ClearScript.V8;
 
-namespace AkashaNavigator.Plugins
+namespace AkashaNavigator.Plugins.Core
 {
 /// <summary>
 /// 插件引擎初始化器

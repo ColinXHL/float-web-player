@@ -5,6 +5,7 @@ using System.Net.Http;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using AkashaNavigator.Plugins.Core;
 using AkashaNavigator.Plugins.Utils;
 using Microsoft.ClearScript;
 

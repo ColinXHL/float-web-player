@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using AkashaNavigator.Models.Data;
 using AkashaNavigator.Services;
+using AkashaNavigator.Plugins.Core;
 using AkashaNavigator.Plugins.Utils;
 using Microsoft.ClearScript.V8;
 

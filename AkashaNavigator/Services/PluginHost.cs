@@ -5,7 +5,7 @@ using System.Linq;
 using AkashaNavigator.Helpers;
 using AkashaNavigator.Models.Plugin;
 using AkashaNavigator.Models.Common;
-using AkashaNavigator.Plugins;
+using AkashaNavigator.Plugins.Core;
 using AkashaNavigator.Plugins.Utils;
 
 namespace AkashaNavigator.Services
