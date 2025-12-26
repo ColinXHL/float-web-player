@@ -4,7 +4,7 @@ using Microsoft.ClearScript;
 using AkashaNavigator.Models.Plugin;
 using AkashaNavigator.Plugins.Utils;
 
-namespace AkashaNavigator.Plugins
+namespace AkashaNavigator.Plugins.Apis.Core
 {
 /// <summary>
 /// 配置 API

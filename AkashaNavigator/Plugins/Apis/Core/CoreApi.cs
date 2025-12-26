@@ -2,7 +2,7 @@ using System;
 using AkashaNavigator.Plugins.Utils;
 using Microsoft.ClearScript;
 
-namespace AkashaNavigator.Plugins
+namespace AkashaNavigator.Plugins.Apis.Core
 {
 /// <summary>
 /// 核心 API

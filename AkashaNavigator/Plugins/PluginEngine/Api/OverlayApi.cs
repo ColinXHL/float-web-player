@@ -4,6 +4,7 @@ using System.IO;
 using AkashaNavigator.Services;
 using AkashaNavigator.Views.Windows;
 using AkashaNavigator.Plugins.Utils;
+using AkashaNavigator.Plugins.Apis.Core;
 using Microsoft.ClearScript;
 
 namespace AkashaNavigator.Plugins

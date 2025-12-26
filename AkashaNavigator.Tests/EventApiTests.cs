@@ -4,6 +4,7 @@ using System.IO;
 using AkashaNavigator.Models.Plugin;
 using AkashaNavigator.Plugins;
 using AkashaNavigator.Plugins.Utils;
+using AkashaNavigator.Plugins.Apis.Core;
 using FsCheck;
 using FsCheck.Xunit;
 using Xunit;

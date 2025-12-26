@@ -10,6 +10,7 @@ using AkashaNavigator.Models.Plugin;
 using AkashaNavigator.Services;
 using AkashaNavigator.Views.Windows;
 using AkashaNavigator.Plugins.Utils;
+using AkashaNavigator.Plugins.Apis.Core;
 using Microsoft.ClearScript;
 using Microsoft.ClearScript.V8;
 

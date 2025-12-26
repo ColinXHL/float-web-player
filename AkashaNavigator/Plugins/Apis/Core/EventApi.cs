@@ -1,6 +1,6 @@
 using AkashaNavigator.Plugins.Utils;
 
-namespace AkashaNavigator.Plugins
+namespace AkashaNavigator.Plugins.Apis.Core
 {
 /// <summary>
 /// Event API

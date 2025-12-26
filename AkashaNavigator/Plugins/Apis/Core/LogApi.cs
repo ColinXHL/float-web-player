@@ -1,6 +1,6 @@
 using AkashaNavigator.Services;
 
-namespace AkashaNavigator.Plugins
+namespace AkashaNavigator.Plugins.Apis.Core
 {
 /// <summary>
 /// 日志 API

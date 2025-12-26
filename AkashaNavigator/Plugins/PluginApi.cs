@@ -5,6 +5,7 @@ using Microsoft.ClearScript;
 using AkashaNavigator.Models.Plugin;
 using AkashaNavigator.Views.Windows;
 using AkashaNavigator.Plugins.Utils;
+using AkashaNavigator.Plugins.Apis.Core;
 
 namespace AkashaNavigator.Plugins
 {
