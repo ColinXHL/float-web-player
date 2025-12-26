@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 using AkashaNavigator.Plugins.Utils;
 using Microsoft.ClearScript;
 
-namespace AkashaNavigator.Plugins
+namespace AkashaNavigator.Plugins.Apis
 {
 /// <summary>
 /// HTTP 网络请求 API

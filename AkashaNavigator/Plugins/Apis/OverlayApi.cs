@@ -7,7 +7,7 @@ using AkashaNavigator.Plugins.Utils;
 using AkashaNavigator.Plugins.Apis.Core;
 using Microsoft.ClearScript;
 
-namespace AkashaNavigator.Plugins
+namespace AkashaNavigator.Plugins.Apis
 {
 /// <summary>
 /// Overlay API

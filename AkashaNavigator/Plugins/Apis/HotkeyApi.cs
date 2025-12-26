@@ -4,7 +4,7 @@ using System.Text.RegularExpressions;
 using AkashaNavigator.Models.Config;
 using AkashaNavigator.Services;
 
-namespace AkashaNavigator.Plugins
+namespace AkashaNavigator.Plugins.Apis
 {
 /// <summary>
 /// 热键 API

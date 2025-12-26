@@ -3,7 +3,7 @@ using System.IO;
 using System.Linq;
 using AkashaNavigator.Services;
 
-namespace AkashaNavigator.Plugins
+namespace AkashaNavigator.Plugins.Apis
 {
 /// <summary>
 /// Storage API

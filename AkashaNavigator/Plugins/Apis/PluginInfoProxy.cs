@@ -1,7 +1,7 @@
 using System;
 using AkashaNavigator.Models.Plugin;
 
-namespace AkashaNavigator.Plugins
+namespace AkashaNavigator.Plugins.Apis
 {
 /// <summary>
 /// 插件信息代理（只读）

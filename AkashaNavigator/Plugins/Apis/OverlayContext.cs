@@ -3,7 +3,7 @@ using System.Linq;
 using AkashaNavigator.Services;
 using AkashaNavigator.Views.Windows;
 
-namespace AkashaNavigator.Plugins
+namespace AkashaNavigator.Plugins.Apis
 {
 /// <summary>
 /// Overlay 绘图上下文

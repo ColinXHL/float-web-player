@@ -5,7 +5,7 @@ using AkashaNavigator.Services;
 using AkashaNavigator.Plugins.Utils;
 using Microsoft.ClearScript.V8;
 
-namespace AkashaNavigator.Plugins
+namespace AkashaNavigator.Plugins.Apis
 {
 /// <summary>
 /// Subtitle API

@@ -1,5 +1,6 @@
 using Xunit;
 using AkashaNavigator.Plugins;
+using AkashaNavigator.Plugins.Apis;
 using AkashaNavigator.Plugins.Utils;
 using AkashaNavigator.Plugins.Apis.Core;
 using System.Linq;

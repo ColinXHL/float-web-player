@@ -219,10 +219,17 @@ public static class ScriptMemberValidator
     /// <returns>API 类型列表</returns>
     public static IEnumerable<Type> GetApiTypes()
     {
-        // 获取 AkashaNavigator.Plugins 命名空间下的所有 API 类
+        // 获取所有插件 API 命名空间下的 API 类
         var assembly = typeof(ScriptMemberValidator).Assembly;
+        var apiNamespaces = new[]
+        {
+            "AkashaNavigator.Plugins",
+            "AkashaNavigator.Plugins.Apis",
+            "AkashaNavigator.Plugins.Apis.Core"
+        };
+
         var apiTypes = assembly.GetTypes()
-                           .Where(t => t.Namespace == "AkashaNavigator.Plugins" && t.IsClass && !t.IsAbstract &&
+                           .Where(t => apiNamespaces.Contains(t.Namespace) && t.IsClass && !t.IsAbstract &&
                                        t.Name.EndsWith("Api"))
                            .ToList();
 

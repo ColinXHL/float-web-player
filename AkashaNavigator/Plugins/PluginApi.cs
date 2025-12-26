@@ -6,6 +6,7 @@ using AkashaNavigator.Models.Plugin;
 using AkashaNavigator.Views.Windows;
 using AkashaNavigator.Plugins.Utils;
 using AkashaNavigator.Plugins.Apis.Core;
+using AkashaNavigator.Plugins.Apis;
 
 namespace AkashaNavigator.Plugins
 {

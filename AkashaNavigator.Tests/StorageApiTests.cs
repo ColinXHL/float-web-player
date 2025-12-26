@@ -4,6 +4,7 @@ using System.IO;
 using System.Text.Json;
 using AkashaNavigator.Models.Plugin;
 using AkashaNavigator.Plugins;
+using AkashaNavigator.Plugins.Apis;
 using FsCheck;
 using FsCheck.Xunit;
 using Xunit;

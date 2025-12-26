@@ -3,7 +3,7 @@ using System.Threading.Tasks;
 using AkashaNavigator.Views.Windows;
 using AkashaNavigator.Plugins.Utils;
 
-namespace AkashaNavigator.Plugins
+namespace AkashaNavigator.Plugins.Apis
 {
 /// <summary>
 /// Player API
