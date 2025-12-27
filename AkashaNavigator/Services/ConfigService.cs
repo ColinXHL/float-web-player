@@ -6,8 +6,7 @@ using AkashaNavigator.Core.Interfaces;
 namespace AkashaNavigator.Services
 {
 /// <summary>
-/// 配置管理服务（单例）
-/// 负责全局配置的加载、保存、访问
+/// 配置管理服务
 /// </summary>
 public class ConfigService : IConfigService
 {
@@ -16,11 +15,18 @@ public class ConfigService : IConfigService
     private static IConfigService? _instance;
 
     /// <summary>
-    /// 向后兼容的单例属性（临时保留，步骤7将移除）
+    /// 单例实例（插件系统使用）
     /// </summary>
     public static IConfigService Instance
     {
-        get => _instance ?? throw new InvalidOperationException("ConfigService not initialized. Use DI container.");
+        get
+        {
+            if (_instance == null)
+            {
+                _instance = new ConfigService(LogService.Instance);
+            }
+            return _instance;
+        }
         set => _instance = value;
     }
 
@@ -57,27 +63,10 @@ public class ConfigService : IConfigService
 
 #region Constructor
 
-    // 构造函数改为internal，允许DI容器创建实例
-    private ConfigService()
-    {
-        _logService = _logService;
-        // 配置文件路径：User/Data/config.json
-        ConfigFilePath = AppPaths.ConfigFilePath;
-
-        // 加载配置
-        Config = Load();
-    }
-
-    /// <summary>
-    /// DI容器使用的构造函数
-    /// </summary>
     public ConfigService(ILogService logService)
     {
         _logService = logService ?? throw new ArgumentNullException(nameof(logService));
-        // 配置文件路径：User/Data/config.json
         ConfigFilePath = AppPaths.ConfigFilePath;
-
-        // 加载配置
         Config = Load();
     }
 
@@ -86,7 +75,7 @@ public class ConfigService : IConfigService
 #region Public Methods
 
     /// <summary>
-    /// 加载配置
+    /// 加载配置文件
     /// </summary>
     public AppConfig Load()
     {
@@ -107,7 +96,7 @@ public class ConfigService : IConfigService
     }
 
     /// <summary>
-    /// 保存配置
+    /// 保存配置到文件
     /// </summary>
     public void Save()
     {

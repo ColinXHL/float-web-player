@@ -20,11 +20,18 @@ public class PioneerNoteService : IPioneerNoteService
     private static IPioneerNoteService? _instance;
 
     /// <summary>
-    /// 获取单例实例（向后兼容）
+    /// 获取单例实例（插件系统使用）
     /// </summary>
     public static IPioneerNoteService Instance
     {
-        get => _instance ?? throw new InvalidOperationException("PioneerNoteService not initialized");
+        get
+        {
+            if (_instance == null)
+            {
+                _instance = new PioneerNoteService(LogService.Instance, ProfileManager.Instance);
+            }
+            return _instance;
+        }
         set => _instance = value;
     }
 

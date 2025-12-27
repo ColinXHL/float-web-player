@@ -37,11 +37,18 @@ public class SubtitleService : ISubtitleService
     private static ISubtitleService? _instance;
 
     /// <summary>
-    /// 获取单例实例（向后兼容）
+    /// 获取单例实例（插件系统使用）
     /// </summary>
     public static ISubtitleService Instance
     {
-        get => _instance ?? throw new InvalidOperationException("SubtitleService not initialized");
+        get
+        {
+            if (_instance == null)
+            {
+                _instance = new SubtitleService(LogService.Instance);
+            }
+            return _instance;
+        }
         set => _instance = value;
     }
 

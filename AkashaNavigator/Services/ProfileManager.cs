@@ -89,11 +89,32 @@ public class ProfileManager : IProfileManager
     private static readonly object _lock = new();
 
     /// <summary>
-    /// 向后兼容的单例属性（临时，用于步骤4过渡）
+    /// 获取单例实例（插件系统使用）
     /// </summary>
     public static ProfileManager Instance
     {
-        get => _instance ?? throw new InvalidOperationException("ProfileManager not initialized. Use DI container.");
+        get
+        {
+            if (_instance == null)
+            {
+                lock (_lock)
+                {
+                    if (_instance == null)
+                    {
+                        _instance = new ProfileManager(
+                            ConfigService.Instance,
+                            LogService.Instance,
+                            PluginHost.Instance,
+                            PluginAssociationManager.Instance,
+                            SubscriptionManager.Instance,
+                            PluginLibrary.Instance,
+                            ProfileRegistry.Instance
+                        );
+                    }
+                }
+            }
+            return _instance;
+        }
         internal set => _instance = value;
     }
 

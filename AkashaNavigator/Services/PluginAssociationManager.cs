@@ -104,11 +104,18 @@ public class PluginAssociationManager : IPluginAssociationManager
     private static IPluginAssociationManager? _instance;
 
     /// <summary>
-    /// 获取单例实例（向后兼容）
+    /// 获取单例实例（插件系统使用）
     /// </summary>
     public static IPluginAssociationManager Instance
     {
-        get => _instance ?? throw new InvalidOperationException("PluginAssociationManager not initialized");
+        get
+        {
+            if (_instance == null)
+            {
+                _instance = new PluginAssociationManager(LogService.Instance, PluginLibrary.Instance);
+            }
+            return _instance;
+        }
         set => _instance = value;
     }
 

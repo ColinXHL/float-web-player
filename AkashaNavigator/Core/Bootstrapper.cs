@@ -187,11 +187,6 @@ namespace AkashaNavigator.Core
                 var recordDialog = recordDialogFactory(url, title);
                 recordDialog.Owner = _playerWindow;
                 recordDialog.ShowDialog();
-                // TODO: OSD提示需要在App层处理，暂时注释
-                // if (recordDialog.Result)
-                // {
-                //     ShowOsd("已记录", "💾");
-                // }
             };
 
             // 开荒笔记菜单事件
@@ -221,8 +216,6 @@ namespace AkashaNavigator.Core
                 var dataService = _serviceProvider.GetRequiredService<IDataService>();
                 var isBookmarked = dataService.ToggleBookmark(url, title);
                 _controlBarWindow.UpdateBookmarkState(isBookmarked);
-                // TODO: OSD提示需要在App层处理，暂时注释
-                // ShowOsd(isBookmarked ? "已添加收藏" : "已取消收藏", "⭐");
             };
         }
 

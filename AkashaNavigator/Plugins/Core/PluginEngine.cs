@@ -159,8 +159,6 @@ public static class PluginEngine
                                             PluginConfig config, PluginManifest manifest, EventManager eventManager,
                                             PluginEngineOptions options)
     {
-        // 创建临时的 PluginContext 用于 API 初始化
-        // 注意：这里创建的是一个轻量级的上下文，仅用于 API 初始化
         var tempContext = new PluginContext(pluginId, pluginDir, configDir, manifest);
 
         // 1. 暴露 log 全局对象

@@ -23,11 +23,28 @@ public class PluginHost : IPluginHost, IDisposable
     private static readonly object _lock = new();
 
     /// <summary>
-    /// 向后兼容的单例属性（临时，用于步骤4过渡）
+    /// 获取单例实例（插件系统使用）
     /// </summary>
     public static PluginHost Instance
     {
-        get => _instance ?? throw new InvalidOperationException("PluginHost not initialized. Use DI container.");
+        get
+        {
+            if (_instance == null)
+            {
+                lock (_lock)
+                {
+                    if (_instance == null)
+                    {
+                        _instance = new PluginHost(
+                            LogService.Instance,
+                            PluginAssociationManager.Instance,
+                            PluginLibrary.Instance
+                        );
+                    }
+                }
+            }
+            return _instance;
+        }
         internal set => _instance = value;
     }
 

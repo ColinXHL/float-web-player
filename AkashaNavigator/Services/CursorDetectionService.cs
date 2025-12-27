@@ -16,11 +16,18 @@ namespace AkashaNavigator.Services
         private static ICursorDetectionService? _instance;
 
         /// <summary>
-        /// 获取单例实例（向后兼容）
+        /// 获取单例实例（插件系统使用）
         /// </summary>
         public static ICursorDetectionService Instance
         {
-            get => _instance ?? throw new InvalidOperationException("CursorDetectionService not initialized");
+            get
+            {
+                if (_instance == null)
+                {
+                    _instance = new CursorDetectionService();
+                }
+                return _instance;
+            }
             set => _instance = value;
         }
 

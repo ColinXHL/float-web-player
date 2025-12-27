@@ -17,11 +17,18 @@ public class WindowStateService : IWindowStateService
     private static IWindowStateService? _instance;
 
     /// <summary>
-    /// 获取单例实例（向后兼容）
+    /// 获取单例实例（插件系统使用）
     /// </summary>
     public static IWindowStateService Instance
     {
-        get => _instance ?? throw new InvalidOperationException("WindowStateService not initialized");
+        get
+        {
+            if (_instance == null)
+            {
+                _instance = new WindowStateService(LogService.Instance, ProfileManager.Instance);
+            }
+            return _instance;
+        }
         set => _instance = value;
     }
 
@@ -36,10 +43,6 @@ public class WindowStateService : IWindowStateService
 #endregion
 
 #region Constructor
-
-    private WindowStateService()
-    {
-    }
 
     /// <summary>
     /// DI 容器使用的构造函数

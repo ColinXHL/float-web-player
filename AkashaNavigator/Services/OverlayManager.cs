@@ -8,7 +8,6 @@ namespace AkashaNavigator.Services
 {
 /// <summary>
 /// 覆盖层窗口管理服务
-/// 管理插件创建的覆盖层窗口实例
 /// </summary>
 public class OverlayManager : IOverlayManager
 {
@@ -16,9 +15,6 @@ public class OverlayManager : IOverlayManager
 
     private static readonly Lazy<OverlayManager> _instance = new(() => new OverlayManager());
 
-    /// <summary>
-    /// 向后兼容的单例属性（临时，用于步骤4过渡）
-    /// </summary>
     public static OverlayManager Instance => _instance.Value;
 
     private OverlayManager()
@@ -29,26 +25,13 @@ public class OverlayManager : IOverlayManager
 
 #region Fields
 
-    /// <summary>
-    /// 插件 ID 到覆盖层窗口的映射
-    /// </summary>
     private readonly Dictionary<string, OverlayWindow> _overlays = new();
-
-    /// <summary>
-    /// 同步锁
-    /// </summary>
     private readonly object _lock = new();
 
 #endregion
 
 #region Public Methods
 
-    /// <summary>
-    /// 为插件创建覆盖层窗口
-    /// </summary>
-    /// <param name="pluginId">插件 ID</param>
-    /// <param name="options">覆盖层选项（可选）</param>
-    /// <returns>创建的覆盖层窗口</returns>
     public OverlayWindow CreateOverlay(string pluginId, OverlayOptions? options = null)
     {
         lock (_lock)

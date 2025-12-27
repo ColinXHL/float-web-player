@@ -29,7 +29,6 @@ public class WindowBehaviorHelper
     private bool _isCursorInWindowWhileClickThrough;
     private DispatcherTimer? _clickThroughTimer;
 
-    // 最大化时临时禁用穿透模式
     private bool _clickThroughSuspendedByMaximize;
 
 #endregion
@@ -195,9 +194,6 @@ public class WindowBehaviorHelper
         _isCursorInWindowWhileClickThrough = false;
     }
 
-    /// <summary>
-    /// 最大化时临时禁用穿透模式
-    /// </summary>
     public void SuspendClickThroughForMaximize()
     {
         if (!_isClickThrough)

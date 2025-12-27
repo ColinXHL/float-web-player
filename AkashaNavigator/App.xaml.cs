@@ -62,17 +62,17 @@ public partial class App : System.Windows.Application
         // 配置 Serilog 日志系统
         ConfigureSerilog();
 
-        // 步骤1：使用 Bootstrapper 初始化 DI 容器和服务（必须在数据迁移之前）
+        // 初始化 DI 容器和服务
         _bootstrapper = new Bootstrapper();
         var serviceProvider = _bootstrapper.GetServiceProvider();
 
-        // ✅ 保存ServiceProvider供全局访问
+        // 保存ServiceProvider供全局访问
         Services = serviceProvider;
 
-        // 步骤2：显式请求 LogService 以触发其初始化（必须在 ExecuteDataMigration 之前）
+        // 触发 LogService 初始化
         var logService = serviceProvider.GetRequiredService<ILogService>();
 
-        // 步骤3：执行数据迁移（现在 LogService.Instance 已经可用了）
+        // 执行数据迁移
         ExecuteDataMigration();
 
         // 从 DI 容器获取配置服务

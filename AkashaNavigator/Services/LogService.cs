@@ -7,19 +7,14 @@ using AkashaNavigator.Core.Interfaces;
 namespace AkashaNavigator.Services
 {
 /// <summary>
-/// 日志服务
-/// 作为 Serilog 的 Facade，提供简化的日志 API
+/// 日志服务（Serilog Facade）
 /// </summary>
 public class LogService : ILogService
 {
-
-#region Singleton (插件系统使用)
+#region Singleton
 
     private static LogService? _instance;
 
-    /// <summary>
-    /// 获取日志服务单例实例（插件系统使用）
-    /// </summary>
     public static LogService Instance
     {
         get
@@ -34,26 +29,17 @@ public class LogService : ILogService
 
 #region Properties
 
-    /// <summary>
-    /// 日志目录路径
-    /// </summary>
     public string LogDirectory { get; }
 
 #endregion
 
 #region Constructor
 
-    /// <summary>
-    /// DI容器使用的构造函数
-    /// </summary>
     public LogService()
     {
         LogDirectory = GetLogDirectory();
     }
 
-    /// <summary>
-    /// 测试用构造函数
-    /// </summary>
     public LogService(string logDirectory)
     {
         LogDirectory = logDirectory;

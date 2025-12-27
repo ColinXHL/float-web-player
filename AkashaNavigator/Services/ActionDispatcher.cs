@@ -155,8 +155,6 @@ namespace AkashaNavigator.Services
         /// <returns>是否成功执行</returns>
         private bool DispatchScript(string scriptName)
         {
-            // TODO: 后续实现自定义脚本执行
-            // 可以支持 Lua、JavaScript 等脚本引擎
             System.Diagnostics.Debug.WriteLine($"Script action not implemented: {scriptName}");
             return false;
         }

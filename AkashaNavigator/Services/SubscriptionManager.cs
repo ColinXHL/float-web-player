@@ -19,11 +19,22 @@ public class SubscriptionManager : ISubscriptionManager
     private static ISubscriptionManager? _instance;
 
     /// <summary>
-    /// 获取单例实例（向后兼容）
+    /// 获取单例实例（插件系统使用）
     /// </summary>
     public static ISubscriptionManager Instance
     {
-        get => _instance ?? throw new InvalidOperationException("SubscriptionManager not initialized");
+        get
+        {
+            if (_instance == null)
+            {
+                _instance = new SubscriptionManager(
+                    LogService.Instance,
+                    ProfileRegistry.Instance,
+                    PluginRegistry.Instance
+                );
+            }
+            return _instance;
+        }
         set => _instance = value;
     }
 

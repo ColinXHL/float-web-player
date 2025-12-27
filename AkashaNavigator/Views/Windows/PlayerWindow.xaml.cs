@@ -419,7 +419,6 @@ public partial class PlayerWindow : Window
     {
         if (!_isMaximized)
         {
-            // 最大化前临时禁用穿透模式
             _windowBehavior.SuspendClickThroughForMaximize();
 
             _restoreBounds = new Rect(Left, Top, Width, Height);

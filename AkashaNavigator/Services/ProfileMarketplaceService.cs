@@ -180,15 +180,33 @@ public class ProfileMarketplaceService
 {
 #region Singleton
 
+    private static ProfileMarketplaceService? _instance;
+
     /// <summary>
-    /// 获取单例实例（通过 DI 容器）
+    /// 获取单例实例（插件系统使用）
     /// </summary>
-    public static ProfileMarketplaceService Instance => App.Services.GetRequiredService<ProfileMarketplaceService>();
+    public static ProfileMarketplaceService Instance
+    {
+        get
+        {
+            if (_instance == null)
+            {
+                // 使用各个服务的 Instance 获取依赖（插件系统专用）
+                _instance = new ProfileMarketplaceService(
+                    LogService.Instance,
+                    ProfileManager.Instance,
+                    PluginAssociationManager.Instance,
+                    PluginLibrary.Instance
+                );
+            }
+            return _instance;
+        }
+    }
 
     /// <summary>
     /// 重置单例实例（仅用于测试）
     /// </summary>
-    internal static void ResetInstance() { }
+    internal static void ResetInstance() => _instance = null;
 
 #endregion
 

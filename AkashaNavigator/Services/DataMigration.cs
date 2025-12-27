@@ -32,10 +32,19 @@ public enum MigrationResultStatus
 /// </summary>
 public class MigrationResult
 {
+    /// <summary>迁移状态</summary>
     public MigrationResultStatus Status { get; private set; }
+
+    /// <summary>错误消息</summary>
     public string? ErrorMessage { get; private set; }
+
+    /// <summary>迁移的插件数量</summary>
     public int MigratedPluginCount { get; private set; }
+
+    /// <summary>迁移的 Profile 数量</summary>
     public int MigratedProfileCount { get; private set; }
+
+    /// <summary>警告列表</summary>
     public List<string> Warnings { get; private set; } = new();
 
     private MigrationResult()
@@ -81,10 +90,23 @@ public class DataMigration
 {
 #region Singleton
 
+    private static DataMigration? _instance;
+
     /// <summary>
-    /// 获取单例实例（通过 DI 容器）
+    /// 获取单例实例（插件系统使用）
     /// </summary>
-    public static DataMigration Instance => App.Services.GetRequiredService<DataMigration>();
+    public static DataMigration Instance
+    {
+        get
+        {
+            if (_instance == null)
+            {
+                // 使用 LogService.Instance 获取日志服务（插件系统专用）
+                _instance = new DataMigration(LogService.Instance);
+            }
+            return _instance;
+        }
+    }
 
 #endregion
 

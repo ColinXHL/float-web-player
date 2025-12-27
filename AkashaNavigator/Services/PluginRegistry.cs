@@ -85,11 +85,18 @@ public class PluginRegistry : IPluginRegistry
     private static IPluginRegistry? _instance;
 
     /// <summary>
-    /// 获取单例实例（向后兼容）
+    /// 获取单例实例（插件系统使用）
     /// </summary>
     public static IPluginRegistry Instance
     {
-        get => _instance ?? throw new InvalidOperationException("PluginRegistry not initialized");
+        get
+        {
+            if (_instance == null)
+            {
+                _instance = new PluginRegistry(LogService.Instance);
+            }
+            return _instance;
+        }
         set => _instance = value;
     }
 

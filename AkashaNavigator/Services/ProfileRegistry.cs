@@ -68,11 +68,18 @@ public class ProfileRegistry : IProfileRegistry
     private static IProfileRegistry? _instance;
 
     /// <summary>
-    /// 获取单例实例（向后兼容）
+    /// 获取单例实例（插件系统使用）
     /// </summary>
     public static IProfileRegistry Instance
     {
-        get => _instance ?? throw new InvalidOperationException("ProfileRegistry not initialized");
+        get
+        {
+            if (_instance == null)
+            {
+                _instance = new ProfileRegistry(LogService.Instance);
+            }
+            return _instance;
+        }
         set => _instance = value;
     }
 

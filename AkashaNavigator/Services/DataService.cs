@@ -19,11 +19,18 @@ public class DataService : IDataService
     private static IDataService? _instance;
 
     /// <summary>
-    /// 向后兼容的单例属性（临时保留，步骤7将移除）
+    /// 获取单例实例（插件系统使用）
     /// </summary>
     public static IDataService Instance
     {
-        get => _instance ?? throw new InvalidOperationException("DataService not initialized. Use DI container.");
+        get
+        {
+            if (_instance == null)
+            {
+                _instance = new DataService(LogService.Instance, ProfileManager.Instance);
+            }
+            return _instance;
+        }
         set => _instance = value;
     }
 
@@ -41,22 +48,6 @@ public class DataService : IDataService
 #endregion
 
 #region Constructor
-
-    // 构造函数改为internal，允许DI容器创建实例
-    private DataService()
-    {
-        _logService = _logService;
-        _profileManager = _profileManager;
-
-        // 监听 Profile 切换，清除缓存
-        _profileManager.ProfileChanged += (s, e) =>
-        {
-            _historyCacheLoaded = false;
-            _bookmarkCacheLoaded = false;
-            _historyCache.Clear();
-            _bookmarkCache.Clear();
-        };
-    }
 
     /// <summary>
     /// DI容器使用的构造函数
