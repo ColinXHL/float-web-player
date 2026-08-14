@@ -55,6 +55,8 @@ public class WindowStateService : IWindowStateService
         if (result.IsSuccess)
         {
             _cachedState = result.Value;
+            // 校验窗口位置是否在可见工作区内，越界自动拉回
+            EnsureWindowVisible(_cachedState);
         }
         else
         {
@@ -114,6 +116,35 @@ public class WindowStateService : IWindowStateService
     private string GetFilePath()
     {
         return Path.Combine(_profileManager.GetCurrentProfileDirectory(), AppConstants.WindowStateFileName);
+    }
+
+    /// <summary>
+    /// 校验窗口位置是否与可见工作区有交集，完全越界时拉回工作区左上角。
+    /// 防止显示器分辨率变化/配置损坏导致窗口持久化到屏幕外（用户无法找回，
+    /// 因为播放器窗口带 WS_EX_NOACTIVATE + WS_EX_TOOLWINDOW，点击/Alt+Tab 均不可达）。
+    /// </summary>
+    private void EnsureWindowVisible(WindowState state)
+    {
+        var monitor = !string.IsNullOrEmpty(state.MonitorDeviceName)
+            ? _monitorLayoutService.FindMonitorByDeviceName(state.MonitorDeviceName)
+            : null;
+        monitor ??= _monitorLayoutService.GetPrimaryMonitor();
+
+        var workArea = monitor.GetWorkAreaAsWpfRect(1.0);
+
+        // 窗口与工作区有可见交集才算可见（完全在屏幕外时无交集）
+        bool visible = state.Left < workArea.Right &&
+                       state.Top < workArea.Bottom &&
+                       state.Left + state.Width > workArea.Left &&
+                       state.Top + state.Height > workArea.Top;
+
+        if (!visible)
+        {
+            _logService.Warn(nameof(WindowStateService),
+                "窗口位置越界（Left={Left}, Top={Top}），已重置到工作区左上角", state.Left, state.Top);
+            state.Left = workArea.Left;
+            state.Top = workArea.Top;
+        }
     }
 
     private WindowState CreateDefaultState()
