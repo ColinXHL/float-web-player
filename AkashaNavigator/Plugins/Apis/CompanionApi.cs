@@ -14,13 +14,13 @@ public sealed class CompanionApi
         "worker.echo",
         "worker.getStatus",
         "worker.shutdown",
-        "features.autoPick.getOptions",
-        "features.autoPick.setOptions",
-        "features.autoPick.setEnabled",
-        "features.autoDialogue.getOptions",
-        "features.autoDialogue.setOptions",
-        "features.autoDialogue.setEnabled",
         "automation.emergencyStop"
+    };
+    private static readonly HashSet<string> AllowedFeatureOperations = new(StringComparer.Ordinal)
+    {
+        "getOptions",
+        "setOptions",
+        "setEnabled"
     };
 
     private readonly PluginContext _context;
@@ -62,7 +62,7 @@ public sealed class CompanionApi
     [ScriptMember("invoke")]
     public async Task<object> Invoke(string method, object? payload = null)
     {
-        if (!AllowedMethods.Contains(method))
+        if (!IsAllowedMethod(method))
         {
             return new { success = false, error = $"Companion method '{method}' is not allowed." };
         }
@@ -85,6 +85,30 @@ public sealed class CompanionApi
             return new { success = false, error = ex.Message };
         }
     }
+
+    private static bool IsAllowedMethod(string? method)
+    {
+        if (string.IsNullOrWhiteSpace(method))
+        {
+            return false;
+        }
+
+        if (AllowedMethods.Contains(method))
+        {
+            return true;
+        }
+
+        var segments = method.Split('.');
+        return segments.Length == 3 &&
+               string.Equals(segments[0], "features", StringComparison.Ordinal) &&
+               IsSafeFeatureId(segments[1]) &&
+               AllowedFeatureOperations.Contains(segments[2]);
+    }
+
+    private static bool IsSafeFeatureId(string value) =>
+        value.Length is > 0 and <= 64 &&
+        char.IsAsciiLetter(value[0]) &&
+        value.All(character => char.IsAsciiLetterOrDigit(character) || character is '_' or '-');
 
     [ScriptMember("getStatus")]
     public object GetStatus()
