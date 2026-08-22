@@ -64,6 +64,10 @@ public sealed class PluginHostCompanionLifecycleTests
             "companion.start(); " +
             "companion.invoke('features.autoPick.setEnabled', { enabled: true }); " +
             "companion.invoke('features.autoDialogue.setEnabled', { enabled: true }); " +
+            "companion.invoke('features.quickTeleport.setOptions', { enabled: true }); " +
+            "companion.invoke('features.quickTeleport.deleteEverything'); " +
+            "companion.invoke('features.9quickTeleport.setOptions'); " +
+            "companion.invoke('features.quick/Teleport.setOptions'); " +
             "companion.invoke('automation.emergencyStop'); " +
             "}");
         File.WriteAllText(
@@ -101,6 +105,10 @@ public sealed class PluginHostCompanionLifecycleTests
             "The companion allowlist rejected automation.emergencyStop.");
         Assert.Contains("features.autoPick.setEnabled", manager.InvokedMethods);
         Assert.Contains("features.autoDialogue.setEnabled", manager.InvokedMethods);
+        Assert.Contains("features.quickTeleport.setOptions", manager.InvokedMethods);
+        Assert.DoesNotContain("features.quickTeleport.deleteEverything", manager.InvokedMethods);
+        Assert.DoesNotContain("features.9quickTeleport.setOptions", manager.InvokedMethods);
+        Assert.DoesNotContain("features.quick/Teleport.setOptions", manager.InvokedMethods);
         Assert.Single(host.LoadedPlugins);
         Assert.Equal(new[] { PluginPermissionConsentOperation.FirstEnable }, consent.Operations);
     }
