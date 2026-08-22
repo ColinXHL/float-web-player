@@ -175,6 +175,7 @@ public sealed class PluginRepositoryServiceTests : IDisposable
         Assert.False(persisted.AutoUpdateRepository);
         Assert.True(persisted.AutoUpdateSubscribedPlugins);
         Assert.False(persisted.AutoUpdatePluginResources);
+        Assert.False(service.Settings.AutoUpdatePluginResources);
 
         settings.SelectedChannel = PluginRepositoryChannel.GitHub;
         var returnedSettings = service.Settings;
