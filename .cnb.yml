@@ -25,3 +25,16 @@ main:
             pip install -r requirements.txt
             python github_download_and_cnb_upload.py --cnb-token $CNB_TOKEN --github-token $GITHUB_TOKEN --run-id $RUN_ID
             echo api done!
+  api_trigger_release:
+    - docker:
+        image: python:3.11
+      imports:
+        - https://cnb.cool/AkashaNavigator/secret/-/blob/main/env.yml
+      stages:
+        - name: 镜像公开 GitHub Release
+          script: |
+            echo version: $VERSION
+            cd .github/workflows
+            pip install -r requirements.txt
+            python github_download_and_cnb_upload.py --cnb-token $CNB_TOKEN --version $VERSION
+            echo release mirror done!
