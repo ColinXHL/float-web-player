@@ -14,6 +14,7 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
@@ -39,8 +40,29 @@
             <TextBlock x:Name="PluginCountText" Text="{Binding PluginCountText}" Foreground="#888" FontSize="12"/>
         </StackPanel>
 
+        <Border Grid.Row="2"
+                Margin="0,0,0,16"
+                Padding="12,10"
+                Background="{StaticResource InfoBackgroundBrush}"
+                CornerRadius="5"
+                Visibility="{Binding IsPluginUpdateBusy, Converter={StaticResource BoolToVisibilityConverter}}">
+            <StackPanel>
+                <ProgressBar Height="5"
+                             Minimum="0"
+                             Maximum="100"
+                             Value="{Binding PluginUpdateProgress}"
+                             IsIndeterminate="{Binding IsPluginUpdateProgressIndeterminate}"
+                             Foreground="{StaticResource InfoBrush}"
+                             Background="{StaticResource SurfaceDarkerBrush}"/>
+                <TextBlock Text="{Binding PluginUpdateStatusText}"
+                           Margin="0,5,0,0"
+                           Foreground="{StaticResource InfoLightBrush}"
+                           FontSize="11"/>
+            </StackPanel>
+        </Border>
+
         <!-- 插件列表 -->
-        <ScrollViewer Grid.Row="2" Style="{StaticResource DarkScrollViewer}" 
+        <ScrollViewer Grid.Row="3" Style="{StaticResource DarkScrollViewer}"
                       VerticalScrollBarVisibility="Auto">
             <StackPanel>
                 <!-- 无插件提示 -->

@@ -349,10 +349,10 @@
                                                     Command="{Binding DataContext.InstallCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                     CommandParameter="{Binding}"
                                                     Visibility="{Binding UpdateButtonVisibility}"/>
-                                            <Button Content="取消下载"
+                                            <Button Content="取消安装"
                                                     Style="{StaticResource ActionButtonStyle}"
                                                     Margin="8,0,0,0"
-                                                    Command="{Binding DataContext.CancelDownloadCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                    Command="{Binding DataContext.CancelInstallCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                     CommandParameter="{Binding}"
                                                     Visibility="{Binding CancelButtonVisibility}"/>
                                             <Button Content="订阅"
@@ -376,17 +376,18 @@
                                         </StackPanel>
                                     </Grid>
 
-                                    <!-- 下载进度 -->
+                                    <!-- 安装进度 -->
                                     <StackPanel Grid.Row="2"
                                                 Margin="38,12,0,0"
-                                                Visibility="{Binding DownloadVisibility}">
+                                                Visibility="{Binding InstallationVisibility}">
                                         <ProgressBar Height="5"
                                                      Minimum="0"
                                                      Maximum="100"
-                                                     Value="{Binding DownloadProgress}"
+                                                     Value="{Binding InstallProgress}"
+                                                     IsIndeterminate="{Binding IsInstallProgressIndeterminate}"
                                                      Foreground="{StaticResource InfoBrush}"
                                                      Background="{StaticResource SurfaceDarkerBrush}"/>
-                                        <TextBlock Text="{Binding DownloadStatus}"
+                                        <TextBlock Text="{Binding InstallStatus}"
                                                    Foreground="{StaticResource TextSecondaryBrush}"
                                                    FontSize="11"
                                                    Margin="0,5,0,0"/>

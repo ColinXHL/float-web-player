@@ -120,8 +120,10 @@ public class WindowStateService : IWindowStateService
     {
         // 使用 MonitorLayoutService 获取主显示器工作区
         var primaryMonitor = _monitorLayoutService.GetPrimaryMonitor();
-        var workAreaWpf = primaryMonitor.GetWorkAreaAsWpfRect(1.0);
-        var monitorRectWpf = primaryMonitor.GetMonitorRectAsWpfRect(1.0);
+        var dpiScale = double.IsFinite(primaryMonitor.DpiScale) && primaryMonitor.DpiScale > 0
+            ? primaryMonitor.DpiScale
+            : 1.0;
+        var workAreaWpf = primaryMonitor.GetWorkAreaAsWpfRect(dpiScale);
 
         // 计算默认大小：宽度为工作区宽度的 1/4，高度按 16:9 比例计算
         double defaultWidth = Math.Max(workAreaWpf.Width / 4, AppConstants.MinWindowWidth);
@@ -135,7 +137,7 @@ public class WindowStateService : IWindowStateService
 
         // 定位到主显示器底部
         double left = workAreaWpf.Left;
-        double top = monitorRectWpf.Bottom - defaultHeight;
+        double top = workAreaWpf.Bottom - defaultHeight;
 
         return new WindowState { Left = left,
                                 Top = top,
@@ -144,9 +146,12 @@ public class WindowStateService : IWindowStateService
                                 Opacity = AppConstants.MaxOpacity,
                                 IsMaximized = false,
                                 LastUrl = AppConstants.DefaultHomeUrl,
-                                IsMuted = false,
-                                MonitorDeviceName = primaryMonitor.DeviceName,
-                                ControlBarCenterAnchorRatio = 0.5,
+                                 IsMuted = false,
+                                 MonitorDeviceName = primaryMonitor.DeviceName,
+                                 PlayerWindowPlacementVersion = AppConstants.PlayerWindowPlacementVersion,
+                                 PlayerWindowHorizontalAnchorRatio = 0.0,
+                                 PlayerWindowVerticalAnchorRatio = 1.0,
+                                 ControlBarCenterAnchorRatio = 0.5,
                                 ControlBarPositionVersion = AppConstants.ControlBarPositionVersion,
                                 ControlBarMonitorDeviceName = primaryMonitor.DeviceName };
     }

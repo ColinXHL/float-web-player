@@ -54,6 +54,21 @@ public class WindowState
     public string? MonitorDeviceName { get; set; }
 
     /// <summary>
+    /// 播放器窗口位置算法版本。0 表示旧版全局 WPF 坐标。
+    /// </summary>
+    public int PlayerWindowPlacementVersion { get; set; }
+
+    /// <summary>
+    /// 窗口左边在目标显示器可移动横向范围中的比例（0-1）。
+    /// </summary>
+    public double PlayerWindowHorizontalAnchorRatio { get; set; } = 0.5;
+
+    /// <summary>
+    /// 窗口顶部在目标显示器可移动纵向范围中的比例（0-1）。
+    /// </summary>
+    public double PlayerWindowVerticalAnchorRatio { get; set; } = 0.5;
+
+    /// <summary>
     /// 控制栏中心点在显示器工作区中的横向比例（0-1）
     /// 0.5 表示居中；用于跨显示器和跨会话恢复控制栏位置
     /// </summary>

@@ -12,6 +12,7 @@ using AkashaNavigator.Models.Common;
 using AkashaNavigator.Models.Config;
 using AkashaNavigator.Models.Plugin;
 using AkashaNavigator.Models.PluginRepository;
+using AkashaNavigator.Models.Update;
 
 namespace AkashaNavigator.ViewModels.Pages
 {
@@ -26,7 +27,7 @@ public partial class InstalledPluginsPageViewModel : ObservableObject, IDisposab
     private readonly INotificationService _notificationService;
     private readonly IEventBus _eventBus;
     private readonly IPluginSubscriptionService _pluginSubscriptionService;
-    private readonly IPluginInstaller _pluginInstaller;
+    private readonly IPluginAcquisitionService _pluginAcquisitionService;
 
     /// <summary>
     /// 插件列表
@@ -51,6 +52,19 @@ public partial class InstalledPluginsPageViewModel : ObservableObject, IDisposab
     [ObservableProperty]
     private bool _isEmpty;
 
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(UpdatePluginCommand))]
+    private bool _isPluginUpdateBusy;
+
+    [ObservableProperty]
+    private double _pluginUpdateProgress;
+
+    [ObservableProperty]
+    private bool _isPluginUpdateProgressIndeterminate;
+
+    [ObservableProperty]
+    private string _pluginUpdateStatusText = string.Empty;
+
     /// <summary>
     /// 检查更新结果缓存
     /// </summary>
@@ -64,7 +78,7 @@ public partial class InstalledPluginsPageViewModel : ObservableObject, IDisposab
                                          INotificationService notificationService,
                                          IEventBus eventBus,
                                          IPluginSubscriptionService pluginSubscriptionService,
-                                         IPluginInstaller pluginInstaller)
+                                         IPluginAcquisitionService pluginAcquisitionService)
     {
         _pluginLibrary = pluginLibrary ?? throw new ArgumentNullException(nameof(pluginLibrary));
         _pluginAssociationManager =
@@ -74,8 +88,9 @@ public partial class InstalledPluginsPageViewModel : ObservableObject, IDisposab
         _pluginSubscriptionService =
             pluginSubscriptionService ??
             throw new ArgumentNullException(nameof(pluginSubscriptionService));
-        _pluginInstaller =
-            pluginInstaller ?? throw new ArgumentNullException(nameof(pluginInstaller));
+        _pluginAcquisitionService =
+            pluginAcquisitionService ??
+            throw new ArgumentNullException(nameof(pluginAcquisitionService));
 
         // 订阅插件列表变化事件
         _eventBus.Subscribe<PluginListChangedEvent>(OnPluginListChanged);
@@ -244,18 +259,44 @@ public partial class InstalledPluginsPageViewModel : ObservableObject, IDisposab
     /// <summary>
     /// 更新插件命令（自动生成 UpdatePluginCommand）
     /// </summary>
-    [RelayCommand]
+    [RelayCommand(CanExecute = nameof(CanUpdatePlugin))]
     private async Task UpdatePluginAsync(string? pluginId)
     {
-        if (string.IsNullOrWhiteSpace(pluginId))
+        if (string.IsNullOrWhiteSpace(pluginId) || IsPluginUpdateBusy)
             return;
 
         var pluginInfo = _pluginLibrary.GetInstalledPluginInfo(pluginId);
         var pluginName = pluginInfo?.Name ?? pluginId;
 
-        var result =
-            await _pluginInstaller.InstallOrUpdateRepositoryPluginAsync(
-                pluginId);
+        IsPluginUpdateBusy = true;
+        PluginUpdateProgress = 0;
+        IsPluginUpdateProgressIndeterminate = true;
+        PluginUpdateStatusText = $"正在更新 {pluginName}…";
+        Result<InstalledPluginInfo> result;
+        try
+        {
+            var progress = new Progress<PluginDownloadProgress>(
+                value =>
+                {
+                    PluginUpdateProgress = Math.Clamp(value.Percentage, 0, 100);
+                    IsPluginUpdateProgressIndeterminate =
+                        value.TotalBytes <= 0 || value.Percentage >= 100;
+                    PluginUpdateStatusText = value.TotalBytes <= 0
+                        ? $"正在更新 {pluginName}，正在下载…"
+                        : value.Percentage >= 100
+                            ? $"正在更新 {pluginName}，下载完成，正在写入…"
+                            : $"正在更新 {pluginName}，{FormatBytes(value.BytesReceived)} / {FormatBytes(value.TotalBytes)}";
+                });
+            result = await _pluginAcquisitionService.InstallOrUpdateAsync(
+                pluginId,
+                progress);
+        }
+        finally
+        {
+            IsPluginUpdateBusy = false;
+            IsPluginUpdateProgressIndeterminate = false;
+            PluginUpdateStatusText = string.Empty;
+        }
 
         if (result.IsSuccess)
         {
@@ -270,6 +311,29 @@ public partial class InstalledPluginsPageViewModel : ObservableObject, IDisposab
                 $"更新 {pluginName} 失败: {result.Error?.Message}",
                 NotificationType.Error);
         }
+    }
+
+    private bool CanUpdatePlugin(string? pluginId) =>
+        !string.IsNullOrWhiteSpace(pluginId) && !IsPluginUpdateBusy;
+
+    private static string FormatBytes(long bytes)
+    {
+        if (bytes >= 1024L * 1024 * 1024)
+        {
+            return $"{bytes / (1024d * 1024 * 1024):0.##} GB";
+        }
+
+        if (bytes >= 1024L * 1024)
+        {
+            return $"{bytes / (1024d * 1024):0.##} MB";
+        }
+
+        if (bytes >= 1024)
+        {
+            return $"{bytes / 1024d:0.##} KB";
+        }
+
+        return $"{bytes} B";
     }
 
     /// <summary>

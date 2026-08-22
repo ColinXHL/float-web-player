@@ -56,9 +56,9 @@ public partial class MyProfilesPage : UserControl, IDisposable
         _viewModel.OpenPluginSettingsRequested += OnOpenPluginSettingsRequested;
     }
 
-    private void MyProfilesPage_Loaded(object sender, RoutedEventArgs e)
+    private async void MyProfilesPage_Loaded(object sender, RoutedEventArgs e)
     {
-        _viewModel.RefreshProfileList();
+        await _viewModel.InitializeAsync();
     }
 
     /// <summary>

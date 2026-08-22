@@ -32,10 +32,11 @@ public partial class AvailablePluginsPageViewModel : ObservableObject
     private readonly IPluginRepositoryService _pluginRepositoryService;
     private readonly IPluginSubscriptionService _pluginSubscriptionService;
     private readonly IPluginInstaller _pluginInstaller;
+    private readonly IPluginAcquisitionService _pluginAcquisitionService;
     private readonly IConfigService _configService;
-    private readonly Dictionary<string, CancellationTokenSource> _downloads =
+    private readonly Dictionary<string, CancellationTokenSource> _installations =
         new(StringComparer.OrdinalIgnoreCase);
-    private readonly Dictionary<string, AvailablePluginItemModel> _downloadItems =
+    private readonly Dictionary<string, AvailablePluginItemModel> _installationItems =
         new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
@@ -80,6 +81,11 @@ public partial class AvailablePluginsPageViewModel : ObservableObject
     private bool _isRepositoryBusy;
 
     [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(InstallCommand))]
+    [NotifyCanExecuteChangedFor(nameof(UpdateAllSubscribedCommand))]
+    private bool _isPluginInstallBusy;
+
+    [ObservableProperty]
     private string _repositoryStatusText = "尚未加载插件仓库";
 
     public bool IsCustomRepositoryChannel =>
@@ -95,6 +101,7 @@ public partial class AvailablePluginsPageViewModel : ObservableObject
         IPluginRepositoryService pluginRepositoryService,
         IPluginSubscriptionService pluginSubscriptionService,
         IPluginInstaller pluginInstaller,
+        IPluginAcquisitionService pluginAcquisitionService,
         IConfigService configService)
     {
         _pluginLibrary = pluginLibrary ?? throw new ArgumentNullException(nameof(pluginLibrary));
@@ -106,6 +113,8 @@ public partial class AvailablePluginsPageViewModel : ObservableObject
             pluginSubscriptionService ?? throw new ArgumentNullException(nameof(pluginSubscriptionService));
         _pluginInstaller =
             pluginInstaller ?? throw new ArgumentNullException(nameof(pluginInstaller));
+        _pluginAcquisitionService =
+            pluginAcquisitionService ?? throw new ArgumentNullException(nameof(pluginAcquisitionService));
         _configService = configService ?? throw new ArgumentNullException(nameof(configService));
 
         LoadRepositorySettings();
@@ -175,8 +184,8 @@ public partial class AvailablePluginsPageViewModel : ObservableObject
         foreach (var plugin in allPlugins)
         {
             Plugins.Add(
-                _downloadItems.TryGetValue(plugin.Id, out var activeDownload)
-                    ? activeDownload
+                _installationItems.TryGetValue(plugin.Id, out var activeInstallation)
+                    ? activeInstallation
                     : plugin);
         }
 
@@ -276,7 +285,7 @@ public partial class AvailablePluginsPageViewModel : ObservableObject
         }
     }
 
-    [RelayCommand]
+    [RelayCommand(CanExecute = nameof(CanStartPluginInstall))]
     private async Task UpdateAllSubscribedAsync()
     {
         var updates = _pluginSubscriptionService.GetAvailableUpdates();
@@ -288,22 +297,82 @@ public partial class AvailablePluginsPageViewModel : ObservableObject
             return;
         }
 
+        IsPluginInstallBusy = true;
         var succeeded = 0;
         var failures = new List<string>();
-        foreach (var update in updates)
+        try
         {
-            var result =
-                await _pluginInstaller.InstallOrUpdateRepositoryPluginAsync(
-                    update.PluginId);
-            if (result.IsSuccess)
+            for (var index = 0; index < updates.Count; index++)
             {
-                succeeded++;
+                var update = updates[index];
+                var itemNumber = index + 1;
+                var plugin = Plugins.FirstOrDefault(
+                    item => string.Equals(
+                        item.Id,
+                        update.PluginId,
+                        StringComparison.OrdinalIgnoreCase));
+                using var cancellation = new CancellationTokenSource();
+                if (plugin != null)
+                {
+                    _installations[plugin.Id] = cancellation;
+                    _installationItems[plugin.Id] = plugin;
+                    plugin.IsInstalling = true;
+                    plugin.InstallProgress = 0;
+                    plugin.IsInstallProgressIndeterminate = true;
+                    plugin.InstallStatus =
+                        $"正在更新订阅插件（{itemNumber}/{updates.Count}）…";
+                }
+
+                try
+                {
+                    var progress = plugin == null
+                        ? null
+                        : new Progress<PluginDownloadProgress>(
+                            value =>
+                            {
+                                plugin.SelectedSourceText =
+                                    $"下载源：{GetSourceDisplayName(value.SourceId)}";
+                                plugin.InstallProgress =
+                                    Math.Clamp(value.Percentage, 0, 100);
+                                plugin.IsInstallProgressIndeterminate =
+                                    value.TotalBytes <= 0 || value.Percentage >= 100;
+                                plugin.InstallStatus = value.TotalBytes <= 0
+                                    ? $"正在更新订阅插件（{itemNumber}/{updates.Count}），正在下载…"
+                                    : value.Percentage >= 100
+                                        ? $"正在更新订阅插件（{itemNumber}/{updates.Count}），下载完成，正在安装…"
+                                        : $"正在更新订阅插件（{itemNumber}/{updates.Count}）：{FormatBytes(value.BytesReceived)} / {FormatBytes(value.TotalBytes)}";
+                            });
+                    var result =
+                        await _pluginAcquisitionService.InstallOrUpdateAsync(
+                            update.PluginId,
+                            progress,
+                            cancellation.Token);
+                    if (result.IsSuccess)
+                    {
+                        succeeded++;
+                    }
+                    else
+                    {
+                        failures.Add(
+                            $"{update.PluginId}: {result.Error?.Message ?? "未知错误"}");
+                    }
+                }
+                finally
+                {
+                    if (plugin != null)
+                    {
+                        plugin.IsInstalling = false;
+                        plugin.InstallStatus = string.Empty;
+                        plugin.IsInstallProgressIndeterminate = false;
+                        _installations.Remove(plugin.Id);
+                        _installationItems.Remove(plugin.Id);
+                    }
+                }
             }
-            else
-            {
-                failures.Add(
-                    $"{update.PluginId}: {result.Error?.Message ?? "未知错误"}");
-            }
+        }
+        finally
+        {
+            IsPluginInstallBusy = false;
         }
 
         RefreshPluginList();
@@ -324,7 +393,7 @@ public partial class AvailablePluginsPageViewModel : ObservableObject
     /// <summary>
     /// 安装插件命令（自动生成 InstallCommand）
     /// </summary>
-    [RelayCommand]
+    [RelayCommand(CanExecute = nameof(CanInstallPlugin))]
     private async Task InstallAsync(AvailablePluginItemModel? plugin)
     {
         if (plugin == null)
@@ -342,9 +411,9 @@ public partial class AvailablePluginsPageViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private void CancelDownload(AvailablePluginItemModel? plugin)
+    private void CancelInstall(AvailablePluginItemModel? plugin)
     {
-        if (plugin != null && _downloads.TryGetValue(plugin.Id, out var cancellation))
+        if (plugin != null && _installations.TryGetValue(plugin.Id, out var cancellation))
         {
             cancellation.Cancel();
         }
@@ -454,14 +523,14 @@ public partial class AvailablePluginsPageViewModel : ObservableObject
 
     public void Dispose()
     {
-        foreach (var cancellation in _downloads.Values)
+        foreach (var cancellation in _installations.Values)
         {
             cancellation.Cancel();
             cancellation.Dispose();
         }
 
-        _downloads.Clear();
-        _downloadItems.Clear();
+        _installations.Clear();
+        _installationItems.Clear();
         _eventBus.Unsubscribe<PluginListChangedEvent>(OnPluginListChanged);
     }
 
@@ -626,35 +695,42 @@ public partial class AvailablePluginsPageViewModel : ObservableObject
     private async Task InstallCatalogPluginAsync(
         AvailablePluginItemModel plugin)
     {
-        if (_downloads.ContainsKey(plugin.Id))
+        if (_installations.ContainsKey(plugin.Id) || IsPluginInstallBusy)
         {
             return;
         }
 
         var cancellation = new CancellationTokenSource();
-        _downloads[plugin.Id] = cancellation;
-        _downloadItems[plugin.Id] = plugin;
+        _installations[plugin.Id] = cancellation;
+        _installationItems[plugin.Id] = plugin;
+        IsPluginInstallBusy = true;
         var wasInstalled = plugin.IsInstalled;
         var isRelease =
             plugin.DistributionType == AppConstants.PluginDistributionRelease;
-        plugin.IsDownloading = isRelease;
-        plugin.DownloadProgress = 0;
-        plugin.DownloadStatus = isRelease ? "正在选择下载源…" : string.Empty;
+        plugin.IsInstalling = true;
+        plugin.InstallProgress = 0;
+        plugin.IsInstallProgressIndeterminate = true;
+        plugin.InstallStatus = isRelease ? "正在准备下载…" : "正在安装插件，请稍候…";
         var progress = new Progress<PluginDownloadProgress>(
             value =>
             {
                 plugin.SelectedSourceText =
                     $"下载源：{GetSourceDisplayName(value.SourceId)}";
-                plugin.DownloadProgress =
+                plugin.InstallProgress =
                     Math.Clamp(value.Percentage, 0, 100);
-                plugin.DownloadStatus =
-                    $"{FormatBytes(value.BytesReceived)} / {FormatBytes(value.TotalBytes)}";
+                plugin.IsInstallProgressIndeterminate =
+                    value.TotalBytes <= 0 || value.Percentage >= 100;
+                plugin.InstallStatus = value.TotalBytes <= 0
+                    ? "正在下载插件…"
+                    : value.Percentage >= 100
+                        ? "下载完成，正在安装…"
+                        : $"正在下载：{FormatBytes(value.BytesReceived)} / {FormatBytes(value.TotalBytes)}";
             });
 
         try
         {
             var result =
-                await _pluginInstaller.InstallOrUpdateRepositoryPluginAsync(
+                await _pluginAcquisitionService.InstallOrUpdateAsync(
                     plugin.Id,
                     isRelease ? progress : null,
                     cancellation.Token);
@@ -664,7 +740,7 @@ public partial class AvailablePluginsPageViewModel : ObservableObject
                     PluginErrorCodes.RemoteDownloadCanceled)
                 {
                     _notificationService.Show(
-                        "插件下载已取消",
+                        "插件安装已取消",
                         NotificationType.Info);
                 }
                 else
@@ -691,18 +767,29 @@ public partial class AvailablePluginsPageViewModel : ObservableObject
         catch (OperationCanceledException)
         {
             _notificationService.Show(
-                "插件下载已取消",
+                "插件安装已取消",
                 NotificationType.Info);
         }
         finally
         {
-            plugin.IsDownloading = false;
-            plugin.DownloadStatus = string.Empty;
-            _downloads.Remove(plugin.Id);
-            _downloadItems.Remove(plugin.Id);
+            plugin.IsInstalling = false;
+            plugin.InstallStatus = string.Empty;
+            plugin.IsInstallProgressIndeterminate = false;
+            _installations.Remove(plugin.Id);
+            _installationItems.Remove(plugin.Id);
+            IsPluginInstallBusy = false;
             cancellation.Dispose();
         }
     }
+
+    private bool CanInstallPlugin(AvailablePluginItemModel? plugin)
+    {
+        return plugin != null &&
+               plugin.IsRepositoryAvailable &&
+               !IsPluginInstallBusy;
+    }
+
+    private bool CanStartPluginInstall() => !IsPluginInstallBusy;
 
     private PluginRepositoryEntry? FindRepositoryEntry(string pluginId)
     {

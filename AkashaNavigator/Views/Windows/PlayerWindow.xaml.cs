@@ -66,7 +66,7 @@ public partial class PlayerWindow : Window
     /// <summary>
     /// 最大化前的窗口边界
     /// </summary>
-    private Rect _restoreBounds;
+    private Win32Helper.RECT _restoreBoundsPhysical;
 
     /// <summary>
     /// 当前窗口所在显示器的设备名称
@@ -183,7 +183,6 @@ public PlayerWindow(PlayerViewModel viewModel, IConfigService configService, IPr
 
         InitializeComponent();
         _config = _configService.Config;
-        InitializeWindowPosition();
         InitializeWindowBehavior();
         _shutdownCoordinator.RegisterStage(
             nameof(DisposeWebViewForShutdown), 600, DisposeWebViewForShutdown);
@@ -207,6 +206,7 @@ public PlayerWindow(PlayerViewModel viewModel, IConfigService configService, IPr
 
         // 订阅透明度相关事件
         SubscribeToOpacityEvents();
+        _eventBus.Subscribe<DisplayTopologyChangedEvent>(OnDisplayTopologyChanged);
     }
 
     /// <summary>
@@ -288,100 +288,94 @@ public PlayerWindow(PlayerViewModel viewModel, IConfigService configService, IPr
     /// 从 WindowStateService 加载上次保存的状态，并在可用时恢复到同一显示器
     /// 如果保存的显示器不可用，自动回退到可见区域
     /// </summary>
-    private void InitializeWindowPosition()
+    private void RestoreWindowPlacement()
     {
-        var state = _windowStateService.Load();
-
-        // 应用保存的位置和大小
-        Left = state.Left;
-        Top = state.Top;
-        Width = Math.Max(state.Width, AppConstants.MinWindowWidth);
-        Height = Math.Max(state.Height, AppConstants.MinWindowHeight);
-
-        // 尝试恢复到保存的显示器
-        if (!string.IsNullOrEmpty(state.MonitorDeviceName))
-        {
-            var monitor = _monitorLayoutService.FindMonitorByDeviceName(state.MonitorDeviceName);
-            if (monitor != null)
-            {
-                // 保存的显示器可用，确保窗口在该显示器的可见范围内
-                var source = PresentationSource.FromVisual(this);
-                double dpiScale = source?.CompositionTarget?.TransformToDevice.M11 ?? 1.0;
-                var workArea = monitor.GetWorkAreaAsWpfRect(dpiScale);
-
-                // 确保窗口在工作区内
-                if (Left < workArea.Left)
-                    Left = workArea.Left;
-                if (Top < workArea.Top)
-                    Top = workArea.Top;
-                if (Left + Width > workArea.Right)
-                    Left = workArea.Right - Width;
-                if (Top + Height > workArea.Bottom)
-                    Top = workArea.Bottom - Height;
-
-                // 记录当前显示器
-                _currentMonitorDeviceName = monitor.DeviceName;
-            }
-            else
-            {
-                // 保存的显示器不可用，使用当前显示器回退
-                EnsureWindowVisibleOnAnyMonitor();
-            }
-        }
-        else
-        {
-            // 没有保存的显示器信息，使用 SystemParameters 回退（向后兼容）
-            EnsureWindowVisibleOnPrimary();
-        }
-    }
-
-    /// <summary>
-    /// 确保窗口在主显示器可见区域内（向后兼容旧配置）
-    /// </summary>
-    private void EnsureWindowVisibleOnPrimary()
-    {
-        var workArea = SystemParameters.WorkArea;
-        if (Left < workArea.Left)
-            Left = workArea.Left;
-        if (Top < workArea.Top)
-            Top = workArea.Top;
-        if (Left + Width > workArea.Right)
-            Left = workArea.Right - Width;
-        if (Top + Height > workArea.Top + workArea.Height)
-            Top = workArea.Top + workArea.Height - Height;
-    }
-
-    /// <summary>
-    /// 确保窗口在任意可用显示器上可见
-    /// 使用当前窗口位置查找最近显示器，并确保窗口在其可见范围内
-    /// </summary>
-    private void EnsureWindowVisibleOnAnyMonitor()
-    {
-        // 窗口句柄可能尚未创建，延迟到 SourceInitialized 后处理
         var hwnd = new WindowInteropHelper(this).Handle;
+        var monitors = Win32Helper.EnumerateMonitors();
         if (hwnd == IntPtr.Zero)
         {
-            // 窗口句柄还未创建，回退到主显示器
-            EnsureWindowVisibleOnPrimary();
             return;
         }
 
-        var source = PresentationSource.FromVisual(this);
-        double dpiScale = source?.CompositionTarget?.TransformToDevice.M11 ?? 1.0;
+        if (monitors.Count == 0)
+        {
+            monitors.Add(_monitorLayoutService.GetPrimaryMonitor());
+        }
 
-        var monitor = _monitorLayoutService.GetMonitorFromWindowOrDefault(hwnd);
-        var workArea = monitor.GetWorkAreaAsWpfRect(dpiScale);
+        var state = _windowStateService.Load();
+        var placement = PlayerWindowPlacementCalculator.Calculate(
+            state,
+            monitors,
+            AppConstants.MinWindowWidth,
+            AppConstants.MinWindowHeight);
+        if (!ApplyPhysicalBounds(hwnd, placement.Bounds))
+        {
+            _logService.Warn(nameof(PlayerWindow), "恢复播放器窗口位置失败");
+            return;
+        }
+        _currentMonitorDeviceName = placement.Monitor.DeviceName;
 
-        if (Left < workArea.Left)
-            Left = workArea.Left;
-        if (Top < workArea.Top)
-            Top = workArea.Top;
-        if (Left + Width > workArea.Right)
-            Left = workArea.Right - Width;
-        if (Top + Height > workArea.Bottom)
-            Top = workArea.Bottom - Height;
+        if (placement.Recovered ||
+            state.PlayerWindowPlacementVersion < AppConstants.PlayerWindowPlacementVersion)
+        {
+            UpdatePlacementState(state, placement.Bounds, placement.Monitor);
+            _windowStateService.Save(state);
+        }
+    }
 
-        _currentMonitorDeviceName = monitor.DeviceName;
+    private void EnsureWindowVisibleAfterTopologyChange()
+    {
+        var hwnd = new WindowInteropHelper(this).Handle;
+        var monitors = Win32Helper.EnumerateMonitors();
+        if (hwnd == IntPtr.Zero || monitors.Count == 0 ||
+            !Win32Helper.GetWindowRectangle(hwnd, out var bounds))
+        {
+            return;
+        }
+
+        var target = _monitorLayoutService.GetMonitorFromWindowOrDefault(hwnd);
+        var visibleBounds = _isMaximized
+            ? target.WorkAreaRect
+            : PlayerWindowPlacementCalculator.EnsureVisible(
+                bounds,
+                target,
+                monitors,
+                AppConstants.MinimumVisibleWindowDip);
+        if (!ApplyPhysicalBounds(hwnd, visibleBounds))
+        {
+            _logService.Warn(nameof(PlayerWindow), "修正播放器窗口可见位置失败");
+            return;
+        }
+        UpdateCurrentMonitor();
+    }
+
+    private static bool ApplyPhysicalBounds(IntPtr hwnd, Win32Helper.RECT bounds)
+    {
+        return Win32Helper.SetWindowRectangle(
+            hwnd,
+            bounds.Left,
+            bounds.Top,
+            Math.Max(1, bounds.Right - bounds.Left),
+            Math.Max(1, bounds.Bottom - bounds.Top));
+    }
+
+    private static void UpdatePlacementState(
+        AkashaNavigator.Models.Config.WindowState state,
+        Win32Helper.RECT bounds,
+        MonitorInfo monitor)
+    {
+        var dpiScale = double.IsFinite(monitor.DpiScale) && monitor.DpiScale > 0
+            ? monitor.DpiScale
+            : 1.0;
+        var anchors = PlayerWindowPlacementCalculator.CalculateAnchorRatios(bounds, monitor);
+        state.Left = bounds.Left / dpiScale;
+        state.Top = bounds.Top / dpiScale;
+        state.Width = (bounds.Right - bounds.Left) / dpiScale;
+        state.Height = (bounds.Bottom - bounds.Top) / dpiScale;
+        state.MonitorDeviceName = monitor.DeviceName;
+        state.PlayerWindowPlacementVersion = AppConstants.PlayerWindowPlacementVersion;
+        state.PlayerWindowHorizontalAnchorRatio = anchors.Horizontal;
+        state.PlayerWindowVerticalAnchorRatio = anchors.Vertical;
     }
 
     /// <summary>
@@ -399,31 +393,25 @@ public PlayerWindow(PlayerViewModel viewModel, IConfigService configService, IPr
     private void SaveWindowState()
     {
         var state = _windowStateService.Load();
-        if (_isMaximized && _restoreBounds.Width > 0 && _restoreBounds.Height > 0)
+        var hwnd = new WindowInteropHelper(this).Handle;
+        var bounds = _isMaximized && IsValidPhysicalBounds(_restoreBoundsPhysical)
+            ? _restoreBoundsPhysical
+            : default;
+        if (!IsValidPhysicalBounds(bounds) && hwnd != IntPtr.Zero)
         {
-            state.Left = _restoreBounds.Left;
-            state.Top = _restoreBounds.Top;
-            state.Width = _restoreBounds.Width;
-            state.Height = _restoreBounds.Height;
-        }
-        else
-        {
-            state.Left = Left;
-            state.Top = Top;
-            state.Width = Width;
-            state.Height = Height;
+            Win32Helper.GetWindowRectangle(hwnd, out bounds);
         }
 
-        // 保存当前显示器信息
-        var hwnd = new WindowInteropHelper(this).Handle;
-        if (hwnd != IntPtr.Zero)
+        if (IsValidPhysicalBounds(bounds))
         {
-            var currentMonitor = _monitorLayoutService.GetMonitorFromWindow(hwnd);
-            state.MonitorDeviceName = currentMonitor?.DeviceName ?? _currentMonitorDeviceName;
-        }
-        else
-        {
-            state.MonitorDeviceName = _currentMonitorDeviceName;
+            var monitor = hwnd != IntPtr.Zero
+                ? _monitorLayoutService.GetMonitorFromWindow(hwnd)
+                : null;
+            monitor ??= !string.IsNullOrEmpty(_currentMonitorDeviceName)
+                ? _monitorLayoutService.FindMonitorByDeviceName(_currentMonitorDeviceName)
+                : null;
+            monitor ??= _monitorLayoutService.GetPrimaryMonitor();
+            UpdatePlacementState(state, bounds, monitor);
         }
 
         state.Opacity = _windowBehavior.WindowOpacity;
@@ -432,6 +420,9 @@ public PlayerWindow(PlayerViewModel viewModel, IConfigService configService, IPr
         state.IsMuted = WebView.CoreWebView2?.IsMuted ?? false;
         _windowStateService.Save(state);
     }
+
+    private static bool IsValidPhysicalBounds(Win32Helper.RECT bounds) =>
+        bounds.Right > bounds.Left && bounds.Bottom > bounds.Top;
 
 #endregion
 
@@ -782,20 +773,13 @@ public PlayerWindow(PlayerViewModel viewModel, IConfigService configService, IPr
             // 暂停鼠标检测（全屏时不需要降低透明度）
             _cursorDetectionService.Suspend();
 
-            // 保存当前窗口边界用于还原
-            _restoreBounds = new Rect(Left, Top, Width, Height);
+            // 保存当前窗口物理像素边界用于跨 DPI 精确还原
+            var hwnd = new WindowInteropHelper(this).Handle;
+            Win32Helper.GetWindowRectangle(hwnd, out _restoreBoundsPhysical);
 
             // 使用当前显示器的工作区域进行最大化
-            var hwnd = new WindowInteropHelper(this).Handle;
             var monitor = _monitorLayoutService.GetMonitorFromWindowOrDefault(hwnd);
-            var source = PresentationSource.FromVisual(this);
-            double dpiScale = source?.CompositionTarget?.TransformToDevice.M11 ?? 1.0;
-            var workArea = monitor.GetWorkAreaAsWpfRect(dpiScale);
-
-            Left = workArea.Left;
-            Top = workArea.Top;
-            Width = workArea.Width;
-            Height = workArea.Height;
+            ApplyPhysicalBounds(hwnd, monitor.WorkAreaRect);
             _isMaximized = true;
 
             // 最大化时穿透已暂停，通知控制栏恢复自动显示
@@ -809,11 +793,12 @@ public PlayerWindow(PlayerViewModel viewModel, IConfigService configService, IPr
         }
         else
         {
-            Left = _restoreBounds.Left;
-            Top = _restoreBounds.Top;
-            Width = _restoreBounds.Width;
-            Height = _restoreBounds.Height;
             _isMaximized = false;
+            if (IsValidPhysicalBounds(_restoreBoundsPhysical))
+            {
+                ApplyPhysicalBounds(new WindowInteropHelper(this).Handle, _restoreBoundsPhysical);
+                EnsureWindowVisibleAfterTopologyChange();
+            }
 
             // 还原后恢复穿透模式
             _windowBehavior.ResumeClickThroughAfterRestore();
@@ -1371,12 +1356,28 @@ private void BroadcastClickThroughChanged(string source)
     /// </summary>
     private void Window_SourceInitialized(object sender, EventArgs e)
     {
+        RestoreWindowPlacement();
+        Dispatcher.BeginInvoke(
+            DispatcherPriority.Loaded,
+            new Action(EnsureWindowVisibleAfterTopologyChange));
+
         // 注册窗口消息钩子用于边缘吸附
         var hwndSource = HwndSource.FromHwnd(new WindowInteropHelper(this).Handle);
         hwndSource?.AddHook(WndProc);
 
         // 设置窗口不激活样式，防止热键操作时抢夺游戏焦点
         Win32Helper.SetNoActivateStyle(this, true);
+    }
+
+    private void OnDisplayTopologyChanged(DisplayTopologyChangedEvent e)
+    {
+        if (!Dispatcher.CheckAccess())
+        {
+            Dispatcher.BeginInvoke(() => OnDisplayTopologyChanged(e));
+            return;
+        }
+
+        EnsureWindowVisibleAfterTopologyChange();
     }
 
     /// <summary>
@@ -1791,6 +1792,7 @@ if (_config.EnableOsd)
         _eventBus.Unsubscribe<NavigationControlEvent>(OnNavigationControl);
         _eventBus.Unsubscribe<OpacityQueryEvent>(OnOpacityQuery);
         _eventBus.Unsubscribe<OpacityChangedEvent>(OnOpacityChangedFromSettings);
+        _eventBus.Unsubscribe<DisplayTopologyChangedEvent>(OnDisplayTopologyChanged);
 
         var coreWebView2 = WebView.CoreWebView2;
         if (coreWebView2 != null)

@@ -93,22 +93,28 @@ namespace AkashaNavigator.Models.Plugin
         private bool _hasUpdate;
 
         /// <summary>
-        /// 是否正在下载远程插件。
+        /// 是否正在安装或更新插件。
         /// </summary>
         [ObservableProperty]
-        private bool _isDownloading;
+        private bool _isInstalling;
 
         /// <summary>
-        /// 下载进度百分比。
+        /// 安装过程中的下载进度百分比。
         /// </summary>
         [ObservableProperty]
-        private double _downloadProgress;
+        private double _installProgress;
 
         /// <summary>
-        /// 下载状态文本。
+        /// 安装状态文本。
         /// </summary>
         [ObservableProperty]
-        private string _downloadStatus = string.Empty;
+        private string _installStatus = string.Empty;
+
+        /// <summary>
+        /// 当前阶段没有可量化进度时显示循环进度。
+        /// </summary>
+        [ObservableProperty]
+        private bool _isInstallProgressIndeterminate;
 
         /// <summary>
         /// 当前下载源文本。
@@ -136,17 +142,17 @@ namespace AkashaNavigator.Models.Plugin
             !IsCatalogDistribution || IsRepositoryAvailable;
 
         public Visibility AvailableTagVisibility =>
-            CanUseCatalogEntry && !IsInstalled && !IsDownloading
+            CanUseCatalogEntry && !IsInstalled && !IsInstalling
                 ? Visibility.Visible
                 : Visibility.Collapsed;
 
         public Visibility InstalledTagVisibility =>
-            CanUseCatalogEntry && IsInstalled && !HasUpdate && !IsDownloading
+            CanUseCatalogEntry && IsInstalled && !HasUpdate && !IsInstalling
                 ? Visibility.Visible
                 : Visibility.Collapsed;
 
         public Visibility UpdateTagVisibility =>
-            CanUseCatalogEntry && IsInstalled && HasUpdate && !IsDownloading
+            CanUseCatalogEntry && IsInstalled && HasUpdate && !IsInstalling
                 ? Visibility.Visible
                 : Visibility.Collapsed;
 
@@ -158,35 +164,35 @@ namespace AkashaNavigator.Models.Plugin
         public Visibility RemoteInfoVisibility =>
             IsRemote ? Visibility.Visible : Visibility.Collapsed;
 
-        public Visibility DownloadVisibility =>
-            IsDownloading ? Visibility.Visible : Visibility.Collapsed;
+        public Visibility InstallationVisibility =>
+            IsInstalling ? Visibility.Visible : Visibility.Collapsed;
 
         public Visibility InstallButtonVisibility =>
-            IsRepositoryAvailable && !IsInstalled && !IsDownloading
+            IsRepositoryAvailable && !IsInstalled && !IsInstalling
                 ? Visibility.Visible
                 : Visibility.Collapsed;
 
         public Visibility UpdateButtonVisibility =>
-            IsRepositoryAvailable && IsInstalled && HasUpdate && !IsDownloading
+            IsRepositoryAvailable && IsInstalled && HasUpdate && !IsInstalling
                 ? Visibility.Visible
                 : Visibility.Collapsed;
 
         public Visibility UninstallButtonVisibility =>
-            IsInstalled && !HasUpdate && !IsDownloading ? Visibility.Visible : Visibility.Collapsed;
+            IsInstalled && !HasUpdate && !IsInstalling ? Visibility.Visible : Visibility.Collapsed;
 
         public Visibility CancelButtonVisibility =>
-            IsDownloading ? Visibility.Visible : Visibility.Collapsed;
+            IsInstalling && IsRemote ? Visibility.Visible : Visibility.Collapsed;
 
         public Visibility SubscribeButtonVisibility =>
             IsCatalogDistribution &&
             IsRepositoryAvailable &&
             !IsSubscribed &&
-            !IsDownloading
+            !IsInstalling
                 ? Visibility.Visible
                 : Visibility.Collapsed;
 
         public Visibility UnsubscribeButtonVisibility =>
-            IsCatalogDistribution && IsSubscribed && !IsDownloading
+            IsCatalogDistribution && IsSubscribed && !IsInstalling
                 ? Visibility.Visible
                 : Visibility.Collapsed;
 
@@ -205,7 +211,7 @@ namespace AkashaNavigator.Models.Plugin
             NotifyStateVisibilities();
         }
 
-        partial void OnIsDownloadingChanged(bool value)
+        partial void OnIsInstallingChanged(bool value)
         {
             NotifyStateVisibilities();
         }
@@ -220,7 +226,7 @@ namespace AkashaNavigator.Models.Plugin
             OnPropertyChanged(nameof(AvailableTagVisibility));
             OnPropertyChanged(nameof(InstalledTagVisibility));
             OnPropertyChanged(nameof(UpdateTagVisibility));
-            OnPropertyChanged(nameof(DownloadVisibility));
+            OnPropertyChanged(nameof(InstallationVisibility));
             OnPropertyChanged(nameof(InstallButtonVisibility));
             OnPropertyChanged(nameof(UpdateButtonVisibility));
             OnPropertyChanged(nameof(UninstallButtonVisibility));

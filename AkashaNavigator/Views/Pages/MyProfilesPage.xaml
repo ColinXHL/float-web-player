@@ -95,19 +95,40 @@
                 <Border Style="{StaticResource WarningTagStyle}"
                         Visibility="{Binding MissingWarningVisibility}" Margin="0,0,0,16">
                     <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
-                        <StackPanel Grid.Column="0" Orientation="Horizontal">
+                        <StackPanel Grid.Row="0" Grid.Column="0" Orientation="Horizontal">
                             <TextBlock Text="⚠" Foreground="#FBBF24" FontSize="14"
                                        VerticalAlignment="Center" Margin="0,0,8,0"/>
                             <TextBlock Text="{Binding MissingWarningText}" Foreground="#FBBF24" FontSize="13"
                                        VerticalAlignment="Center"/>
                         </StackPanel>
-                        <Button Grid.Column="1" Content="一键安装缺失插件"
+                        <Button Grid.Row="0" Grid.Column="1"
+                                Content="{Binding InstallMissingButtonText}"
                                 Style="{StaticResource WarningActionButtonStyle}"
                                 Command="{Binding InstallMissingCommand}"/>
+                        <StackPanel Grid.Row="1"
+                                    Grid.ColumnSpan="2"
+                                    Margin="22,10,0,0"
+                                    Visibility="{Binding IsPluginInstallBusy, Converter={StaticResource BoolToVisibilityConverter}}">
+                            <ProgressBar Height="5"
+                                         Minimum="0"
+                                         Maximum="100"
+                                         Value="{Binding PluginInstallProgress}"
+                                         IsIndeterminate="{Binding IsPluginInstallProgressIndeterminate}"
+                                         Foreground="{StaticResource WarningBrush}"
+                                         Background="{StaticResource SurfaceDarkerBrush}"/>
+                            <TextBlock Text="{Binding PluginInstallStatusText}"
+                                       Margin="0,5,0,0"
+                                       Foreground="#FBBF24"
+                                       FontSize="11"/>
+                        </StackPanel>
                     </Grid>
                 </Border>
 
