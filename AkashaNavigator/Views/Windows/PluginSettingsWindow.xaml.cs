@@ -17,6 +17,7 @@ public partial class PluginSettingsWindow : AnimatedWindow
     private readonly IPluginSettingsEditSessionCoordinator _editSessionCoordinator;
     private readonly IOverlayManager _overlayManager;
     private readonly ILogService _logService;
+    private readonly IPluginResourceUpdateService _pluginResourceUpdateService;
 
     private SettingsUiRenderer? _renderer;
 
@@ -24,12 +25,16 @@ public partial class PluginSettingsWindow : AnimatedWindow
         PluginSettingsViewModel viewModel,
         IPluginSettingsEditSessionCoordinator editSessionCoordinator,
         IOverlayManager overlayManager,
-        ILogService logService)
+        ILogService logService,
+        IPluginResourceUpdateService pluginResourceUpdateService)
     {
         _viewModel = viewModel ?? throw new ArgumentNullException(nameof(viewModel));
         _editSessionCoordinator = editSessionCoordinator ?? throw new ArgumentNullException(nameof(editSessionCoordinator));
         _overlayManager = overlayManager ?? throw new ArgumentNullException(nameof(overlayManager));
         _logService = logService ?? throw new ArgumentNullException(nameof(logService));
+        _pluginResourceUpdateService =
+            pluginResourceUpdateService ??
+            throw new ArgumentNullException(nameof(pluginResourceUpdateService));
 
         InitializeComponent();
 
@@ -94,9 +99,55 @@ public partial class PluginSettingsWindow : AnimatedWindow
                 OpenPluginFolder(relativePath);
                 break;
 
+            case SettingsButtonActions.UpdatePluginResources:
+                UpdatePluginResources();
+                break;
+
             default:
                 _viewModel.NotifyAction(action);
                 break;
+        }
+    }
+
+    private async void UpdatePluginResources()
+    {
+        try
+        {
+            var result = await _pluginResourceUpdateService.UpdatePluginResourcesAsync(
+                _viewModel.PluginId,
+                refreshRepository: true);
+            if (result.IsFailure)
+            {
+                _viewModel.ShowError(
+                    $"检查插件数据更新失败：{result.Error?.Message ?? "未知错误"}");
+                return;
+            }
+
+            var outcomes = result.Value!;
+            var failed = outcomes.Where(item => !item.Succeeded).ToArray();
+            if (failed.Length > 0)
+            {
+                _viewModel.ShowWarning(
+                    $"插件数据更新未完成，将在下次启动重试：{failed[0].ErrorMessage ?? "未知错误"}");
+                return;
+            }
+
+            var updated = outcomes.Count(item => item.Updated);
+            var sourceVersion = outcomes
+                .FirstOrDefault(item => item.Updated)?.SourceVersion;
+            _viewModel.ShowSuccess(
+                outcomes.Count == 0
+                    ? "此插件没有独立数据资源"
+                    : updated == 0
+                        ? "插件数据已经是最新版本"
+                        : string.IsNullOrWhiteSpace(sourceVersion)
+                            ? $"已更新 {updated} 个插件数据资源"
+                            : $"已更新 {updated} 个插件数据资源（来源版本 {sourceVersion}）");
+        }
+        catch (Exception ex)
+        {
+            _logService.Error(nameof(PluginSettingsWindow), ex, "手动更新插件资源失败");
+            _viewModel.ShowError("更新插件数据失败，请查看日志");
         }
     }
 

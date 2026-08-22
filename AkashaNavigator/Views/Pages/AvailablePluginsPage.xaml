@@ -148,6 +148,7 @@
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
 
@@ -168,7 +169,16 @@
                               IsChecked="{Binding AutoUpdateSubscribedPlugins}"
                               ToolTip="仓库刷新后自动安装允许自动更新的订阅插件"/>
 
-                    <TextBlock Grid.Column="2"
+                    <CheckBox Grid.Column="2"
+                              Content="自动更新插件数据"
+                              Style="{StaticResource DarkCheckBoxStyle}"
+                              Margin="24,0,0,0"
+                              FontSize="12"
+                              Foreground="{StaticResource TextMutedBrush}"
+                              IsChecked="{Binding AutoUpdatePluginResources}"
+                              ToolTip="启动时仅更新已订阅插件声明的可选数据资源；失败不影响插件运行"/>
+
+                    <TextBlock Grid.Column="3"
                                Text="仓库刷新与插件安装相互独立"
                                HorizontalAlignment="Right"
                                VerticalAlignment="Center"

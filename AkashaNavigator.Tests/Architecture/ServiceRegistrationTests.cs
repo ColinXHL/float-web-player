@@ -152,10 +152,14 @@ public class ServiceRegistrationTests
             service => service.ServiceType == typeof(IDownloadSourceSelector));
         var packages = services.Single(
             service => service.ServiceType == typeof(IPluginPackageService));
+        var resources = services.Single(
+            service => service.ServiceType == typeof(IPluginResourceUpdateService));
 
         Assert.Equal(ServiceLifetime.Singleton, selector.Lifetime);
         Assert.Equal(typeof(DownloadSourceSelector), selector.ImplementationType);
         Assert.Equal(ServiceLifetime.Singleton, packages.Lifetime);
         Assert.Equal(typeof(PluginPackageService), packages.ImplementationType);
+        Assert.Equal(ServiceLifetime.Singleton, resources.Lifetime);
+        Assert.Equal(typeof(PluginResourceUpdateService), resources.ImplementationType);
     }
 }

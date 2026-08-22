@@ -279,6 +279,8 @@ public static class AppConstants
 
     public const string PluginRepositoryManifestFileName = "manifest.json";
 
+    public const string PluginRepositoryResourcesFileName = "resources.json";
+
     /// <summary>
     /// 插件配置文件名
     /// </summary>

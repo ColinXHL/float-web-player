@@ -158,4 +158,14 @@ public class PluginSettingsViewModel
     {
         _notificationService.Warning(message);
     }
+
+    public void ShowSuccess(string message)
+    {
+        _notificationService.Success(message);
+    }
+
+    public void ShowError(string message)
+    {
+        _notificationService.Error(message);
+    }
 }

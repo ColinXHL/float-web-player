@@ -253,6 +253,7 @@ public class SettingsUiDefinitionTests
         Assert.True(SettingsButtonActions.IsBuiltInAction("enterEditMode"));
         Assert.True(SettingsButtonActions.IsBuiltInAction("resetConfig"));
         Assert.True(SettingsButtonActions.IsBuiltInAction("openPluginFolder"));
+        Assert.True(SettingsButtonActions.IsBuiltInAction("updatePluginResources"));
         Assert.False(SettingsButtonActions.IsBuiltInAction("customAction"));
         Assert.False(SettingsButtonActions.IsBuiltInAction(null));
         Assert.False(SettingsButtonActions.IsBuiltInAction(""));

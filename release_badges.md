@@ -1,19 +1,20 @@
-## v1.4.1 🎉 Release Notes
+## v1.4.2 🎉 Release Notes
 
-**AkashaNavigator 1.4.1 正式版发布！** 本次更新扩展了 Companion 自动化功能的安全调用规则，为快速传送等新功能提供宿主兼容性。
+**AkashaNavigator 1.4.2 正式版发布！** 本次更新为 Companion 插件加入独立资源更新能力，插件可在不重新发布安装包的情况下同步黑名单等数据文件。
 
-### 🧩 插件兼容性
+### 🔄 插件资源更新
 
-- Companion 功能调用改为受约束的通用 `features.<功能>.getOptions/setOptions/setEnabled` 协议
-- 新增功能无需再为每个名称修改 Navigator 主程序
-- 功能标识和操作名仍经过严格校验，未授权操作继续被拒绝
-- 支持 Akasha 原神自动化 0.5.0 的快速传送功能
+- 已订阅并安装的插件可在程序启动时自动检查资源更新
+- 支持从 GitHub 或 CNB 下载，并校验文件大小与 SHA-256
+- 资源采用内容寻址存储和原子状态切换，下载失败时继续使用上一个有效版本
+- 插件设置页新增手动检查资源更新入口
+- 新增“启动时自动更新插件资源”选项，默认开启
 
 ### 📥 下载
 
 | 类型 | 下载 |
 |------|------|
-| 安装版 | <a href="https://github.com/ColinXHL/akasha-navigator/releases/download/v1.4.1/AkashaNavigator.Install.1.4.1.exe" title="Windows x64 安装版"><img src="https://custom-icon-badges.demolab.com/badge/.exe-0078D6?logo=windows11&logoColor=white"/></a> |
-| 便携版 | <a href="https://github.com/ColinXHL/akasha-navigator/releases/download/v1.4.1/AkashaNavigator_v1.4.1.7z" title="Portable 便携版"><img src="https://custom-icon-badges.demolab.com/badge/.7z-4CAF50?logo=7zip&logoColor=white"/></a> |
+| 安装版 | <a href="https://github.com/ColinXHL/akasha-navigator/releases/download/v1.4.2/AkashaNavigator.Install.1.4.2.exe" title="Windows x64 安装版"><img src="https://custom-icon-badges.demolab.com/badge/.exe-0078D6?logo=windows11&logoColor=white"/></a> |
+| 便携版 | <a href="https://github.com/ColinXHL/akasha-navigator/releases/download/v1.4.2/AkashaNavigator_v1.4.2.7z" title="Portable 便携版"><img src="https://custom-icon-badges.demolab.com/badge/.7z-4CAF50?logo=7zip&logoColor=white"/></a> |
 
-> 升级到 1.4.1 后即可安装 Akasha 原神自动化 0.5.0；插件更新会继续保留用户配置。
+> 升级到 1.4.2 后，Akasha 原神自动化插件可以独立同步 BetterGI 黑名单；资源更新失败不会影响插件继续运行。

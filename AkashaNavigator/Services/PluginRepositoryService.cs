@@ -381,7 +381,8 @@ public sealed class PluginRepositoryService : IPluginRepositoryService
             CustomUrl = settings.CustomUrl ?? string.Empty,
             Branch = settings.Branch ?? string.Empty,
             AutoUpdateRepository = settings.AutoUpdateRepository,
-            AutoUpdateSubscribedPlugins = settings.AutoUpdateSubscribedPlugins
+            AutoUpdateSubscribedPlugins = settings.AutoUpdateSubscribedPlugins,
+            AutoUpdatePluginResources = settings.AutoUpdatePluginResources
         };
     }
 }

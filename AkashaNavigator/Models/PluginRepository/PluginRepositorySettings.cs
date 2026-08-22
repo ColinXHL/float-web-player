@@ -18,6 +18,8 @@ public sealed class PluginRepositorySettings
 
     public bool AutoUpdateSubscribedPlugins { get; set; }
 
+    public bool AutoUpdatePluginResources { get; set; } = true;
+
     public string GetSelectedUrl()
     {
         return SelectedChannel switch {

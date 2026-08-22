@@ -161,7 +161,8 @@ public sealed class PluginRepositoryServiceTests : IDisposable
         var settings = new PluginRepositorySettings {
             SelectedChannel = PluginRepositoryChannel.Cnb,
             AutoUpdateRepository = false,
-            AutoUpdateSubscribedPlugins = true
+            AutoUpdateSubscribedPlugins = true,
+            AutoUpdatePluginResources = false
         };
         var saveResult = service.SaveSettings(settings);
 
@@ -173,6 +174,8 @@ public sealed class PluginRepositoryServiceTests : IDisposable
         Assert.Equal(PluginRepositoryChannel.Cnb, persisted!.SelectedChannel);
         Assert.False(persisted.AutoUpdateRepository);
         Assert.True(persisted.AutoUpdateSubscribedPlugins);
+        Assert.False(persisted.AutoUpdatePluginResources);
+        Assert.False(service.Settings.AutoUpdatePluginResources);
 
         settings.SelectedChannel = PluginRepositoryChannel.GitHub;
         var returnedSettings = service.Settings;

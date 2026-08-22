@@ -74,6 +74,9 @@ public partial class AvailablePluginsPageViewModel : ObservableObject
     private bool _autoUpdateSubscribedPlugins;
 
     [ObservableProperty]
+    private bool _autoUpdatePluginResources;
+
+    [ObservableProperty]
     private bool _isRepositoryBusy;
 
     [ObservableProperty]
@@ -529,6 +532,7 @@ public partial class AvailablePluginsPageViewModel : ObservableObject
         CustomRepositoryUrl = settings.CustomUrl;
         AutoUpdateRepository = settings.AutoUpdateRepository;
         AutoUpdateSubscribedPlugins = settings.AutoUpdateSubscribedPlugins;
+        AutoUpdatePluginResources = settings.AutoUpdatePluginResources;
     }
 
     private Result TrySaveRepositorySettings()
@@ -539,7 +543,8 @@ public partial class AvailablePluginsPageViewModel : ObservableObject
                 CustomUrl = CustomRepositoryUrl.Trim(),
                 Branch = AppConstants.OfficialPluginRepositoryBranch,
                 AutoUpdateRepository = AutoUpdateRepository,
-                AutoUpdateSubscribedPlugins = AutoUpdateSubscribedPlugins
+                AutoUpdateSubscribedPlugins = AutoUpdateSubscribedPlugins,
+                AutoUpdatePluginResources = AutoUpdatePluginResources
             });
     }
 
