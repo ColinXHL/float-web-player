@@ -58,7 +58,8 @@ class CNBReleaseUploader:
         # 打印请求信息
         print("\n📋 请求头 (Headers):")
         for key, value in self.headers.items():
-            print(f"  {key}: {value}")
+            displayed_value = "Bearer ***" if key.lower() == "authorization" else value
+            print(f"  {key}: {displayed_value}")
 
         try:
             response = requests.post(url, headers=self.headers, json=release_data)
