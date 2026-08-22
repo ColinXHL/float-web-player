@@ -198,6 +198,8 @@ public partial class App : System.Windows.Application
             Services.GetRequiredService<IPluginSubscriptionService>();
         var pluginInstaller =
             Services.GetRequiredService<IPluginInstaller>();
+        var pluginResourceUpdateService =
+            Services.GetRequiredService<IPluginResourceUpdateService>();
         var logService = Services.GetRequiredService<ILogService>();
         _ = RefreshUpdateManifestInBackgroundAsync(
             updateManifestService,
@@ -206,6 +208,7 @@ public partial class App : System.Windows.Application
             pluginRepositoryService,
             pluginSubscriptionService,
             pluginInstaller,
+            pluginResourceUpdateService,
             logService);
     }
 
@@ -213,18 +216,20 @@ public partial class App : System.Windows.Application
         IPluginRepositoryService pluginRepositoryService,
         IPluginSubscriptionService pluginSubscriptionService,
         IPluginInstaller pluginInstaller,
+        IPluginResourceUpdateService pluginResourceUpdateService,
         ILogService logService)
     {
         var settings = pluginRepositoryService.Settings;
         if (!settings.AutoUpdateRepository &&
-            !settings.AutoUpdateSubscribedPlugins)
+            !settings.AutoUpdateSubscribedPlugins &&
+            !settings.AutoUpdatePluginResources)
         {
             return;
         }
 
         var result =
             await pluginSubscriptionService.CheckForUpdatesAsync(
-                settings.AutoUpdateRepository);
+                settings.AutoUpdateRepository || settings.AutoUpdatePluginResources);
         if (result.IsFailure)
         {
             logService.Warn(
@@ -232,32 +237,51 @@ public partial class App : System.Windows.Application
                 "后台更新插件仓库失败: {ErrorMessage}",
                 result.Error?.Message ?? "未知错误");
         }
-        if (result.IsFailure)
+        if (result.IsSuccess && settings.AutoUpdateSubscribedPlugins)
         {
-            return;
-        }
-
-        if (!settings.AutoUpdateSubscribedPlugins)
-        {
-            return;
-        }
-
-        foreach (var update in result.Value!
-                     .Where(item => item.AutoUpdate))
-        {
-            var updateResult =
-                await pluginInstaller.InstallOrUpdateRepositoryPluginAsync(
-                    update.PluginId);
-            if (updateResult.IsFailure)
+            foreach (var update in result.Value!
+                         .Where(item => item.AutoUpdate))
             {
-                logService.Warn(
-                    nameof(App),
-                    "自动更新插件 {PluginId} 失败: {ErrorMessage}",
-                    update.PluginId,
-                    updateResult.Error?.Message ?? "未知错误");
+                var updateResult =
+                    await pluginInstaller.InstallOrUpdateRepositoryPluginAsync(
+                        update.PluginId);
+                if (updateResult.IsFailure)
+                {
+                    logService.Warn(
+                        nameof(App),
+                        "自动更新插件 {PluginId} 失败: {ErrorMessage}",
+                        update.PluginId,
+                        updateResult.Error?.Message ?? "未知错误");
+                }
             }
         }
 
+        if (!settings.AutoUpdatePluginResources)
+        {
+            return;
+        }
+
+        var resourceResult =
+            await pluginResourceUpdateService.UpdateSubscribedResourcesAsync(
+                refreshRepository: false);
+        if (resourceResult.IsFailure)
+        {
+            logService.Warn(
+                nameof(App),
+                "后台更新插件资源失败: {ErrorMessage}",
+                resourceResult.Error?.Message ?? "未知错误");
+            return;
+        }
+
+        foreach (var failed in resourceResult.Value!.Where(item => !item.Succeeded))
+        {
+            logService.Warn(
+                nameof(App),
+                "插件资源更新失败 ({PluginId}/{ResourceId}): {ErrorMessage}",
+                failed.PluginId,
+                failed.ResourceId,
+                failed.ErrorMessage ?? "未知错误");
+        }
     }
 
     private static async Task RefreshUpdateManifestInBackgroundAsync(

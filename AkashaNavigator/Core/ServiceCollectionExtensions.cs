@@ -108,6 +108,9 @@ public static class ServiceCollectionExtensions
         // PluginPackageService（catalog Release 包下载与完整性校验）
         services.AddSingleton<IPluginPackageService, PluginPackageService>();
 
+        // PluginResourceUpdateService（订阅插件的独立、可回退数据资源）
+        services.AddSingleton<IPluginResourceUpdateService, PluginResourceUpdateService>();
+
         // AppUpdateService（依赖 LogService + UpdateManifestService）
         services.AddSingleton<IAppUpdateService, AppUpdateService>();
 
@@ -268,7 +271,13 @@ public static class ServiceCollectionExtensions
                 var coordinator = sp.GetRequiredService<IPluginSettingsEditSessionCoordinator>();
                 var overlayManager = sp.GetRequiredService<IOverlayManager>();
                 var logService = sp.GetRequiredService<ILogService>();
-                return new PluginSettingsWindow(viewModel, coordinator, overlayManager, logService);
+                var resourceUpdateService = sp.GetRequiredService<IPluginResourceUpdateService>();
+                return new PluginSettingsWindow(
+                    viewModel,
+                    coordinator,
+                    overlayManager,
+                    logService,
+                    resourceUpdateService);
             });
 
         services.AddSingleton<IPluginSettingsWindowService, PluginSettingsWindowService>();

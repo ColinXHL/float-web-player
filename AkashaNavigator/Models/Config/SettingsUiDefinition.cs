@@ -229,6 +229,11 @@ public static class SettingsButtonActions
     public const string OpenPluginFolder = "openPluginFolder";
 
     /// <summary>
+    /// 检查并安装 catalog 声明的独立插件数据资源。
+    /// </summary>
+    public const string UpdatePluginResources = "updatePluginResources";
+
+    /// <summary>
     /// 检查是否为内置动作
     /// </summary>
     public static bool IsBuiltInAction(string? action)
@@ -236,7 +241,10 @@ public static class SettingsButtonActions
         if (string.IsNullOrEmpty(action))
             return false;
 
-        return action == EnterEditMode || action == ResetConfig || action == OpenPluginFolder;
+        return action == EnterEditMode ||
+               action == ResetConfig ||
+               action == OpenPluginFolder ||
+               action == UpdatePluginResources;
     }
 }
 }
