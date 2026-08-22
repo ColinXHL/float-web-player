@@ -22,10 +22,6 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
       - name: Validate public GitHub Release and download assets
         shell: bash
         env:
@@ -42,76 +38,27 @@ jobs:
           release_json="$(gh release view "$tag" --json isDraft,isPrerelease,assets)"
           test "$(jq -r .isDraft <<<"$release_json")" = "false"
 
-          installer="AkashaNavigator.Install.$VERSION.exe"
-          portable="AkashaNavigator_v$VERSION.7z"
-          for asset in "$installer" "$portable"; do
+          mkdir -p release
+          for asset in "AkashaNavigator.Install.$VERSION.exe" "AkashaNavigator_v$VERSION.7z"; do
             count="$(jq --arg name "$asset" '[.assets[] | select(.name == $name)] | length' <<<"$release_json")"
             test "$count" = "1"
+            gh release download "$tag" --pattern "$asset" --dir release
+            test -s "release/$asset"
           done
 
-          mkdir -p release
-          gh release download "$tag" --pattern "$installer" --pattern "$portable" --dir release
-          test -s "release/$installer"
-          test -s "release/$portable"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
 
-      - name: Install publisher dependencies
-        run: python -m pip install --disable-pip-version-check -r .github/workflows/requirements.txt
-
-      - name: Publish identical assets to CNB
-        shell: python
+      - name: Trigger CNB public-Release mirror
         env:
           CNB_TOKEN: ${{ secrets.CNB_TOKEN }}
           VERSION: ${{ inputs.version }}
         run: |
-          import os
-          from pathlib import Path
-          import sys
-
-          sys.path.insert(0, str(Path(".github/workflows").resolve()))
-          from cnb_release import CNBReleaseUploader
-
-          version = os.environ["VERSION"]
-          token = os.environ.get("CNB_TOKEN", "")
-          if not token:
-              raise RuntimeError("CNB_TOKEN is empty")
-
-          assets = [
-              Path("release") / f"AkashaNavigator.Install.{version}.exe",
-              Path("release") / f"AkashaNavigator_v{version}.7z",
-          ]
-          for asset in assets:
-              if not asset.is_file() or asset.stat().st_size == 0:
-                  raise RuntimeError(f"release asset is missing: {asset}")
-
-          prerelease = "-" in version
-          uploader = CNBReleaseUploader(token=token)
-          release = uploader.create_release(
-              "AkashaNavigator/akasha-navigator",
-              {
-                  "tag_name": f"v{version}",
-                  "name": f"AkashaNavigator v{version}",
-                  "body": (
-                      f"AkashaNavigator v{version} automated mirror. "
-                      "Assets are identical to the verified GitHub Release."
-                  ),
-                  "draft": False,
-                  "prerelease": prerelease,
-                  "target_commitish": "main",
-                  "make_latest": "false" if prerelease else "true",
-              },
-          )
-          if not release or not release.get("id"):
-              raise RuntimeError("CNB Release creation did not return an id")
-
-          results = uploader.upload_multiple_assets(
-              "AkashaNavigator/akasha-navigator",
-              str(release["id"]),
-              [str(asset) for asset in assets],
-              overwrite=True,
-              show_progress=False,
-          )
-          if not all(results):
-              raise RuntimeError("one or more CNB assets failed to upload or verify")
+          python -m pip install --disable-pip-version-check requests
+          python .github/workflows/cnb_trigger.py "$CNB_TOKEN" \
+            --event api_trigger_release \
+            --version "$VERSION"
 
       - name: Verify CNB public readback matches GitHub assets
         shell: bash
@@ -122,6 +69,9 @@ jobs:
           tag="v$VERSION"
           base="https://cnb.cool/AkashaNavigator/akasha-navigator/-/releases/download/$tag"
           for asset in "AkashaNavigator.Install.$VERSION.exe" "AkashaNavigator_v$VERSION.7z"; do
-            curl --fail --location --retry 6 --retry-delay 5 "$base/$asset" --output "readback-$asset"
-            test "$(sha256sum "release/$asset" | cut -d' ' -f1)" = "$(sha256sum "readback-$asset" | cut -d' ' -f1)"
+            curl --fail --location --retry 30 --retry-delay 10 --retry-all-errors \
+              "$base/$asset" --output "readback-$asset"
+            expected="$(sha256sum "release/$asset" | cut -d' ' -f1)"
+            actual="$(sha256sum "readback-$asset" | cut -d' ' -f1)"
+            test "$expected" = "$actual"
           done
