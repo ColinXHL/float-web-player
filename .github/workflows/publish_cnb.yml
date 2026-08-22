@@ -50,26 +50,44 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Trigger CNB public-Release mirror
+      - name: Install publisher dependencies
+        run: python -m pip install --disable-pip-version-check -r .github/workflows/requirements.txt
+
+      - name: Publish identical assets to CNB
+        id: publish
+        shell: python
         env:
           CNB_TOKEN: ${{ secrets.CNB_TOKEN }}
           VERSION: ${{ inputs.version }}
         run: |
-          python -m pip install --disable-pip-version-check requests
-          python .github/workflows/cnb_trigger.py "$CNB_TOKEN" \
-            --event api_trigger_release \
-            --version "$VERSION"
+          import os
+          from pathlib import Path
+          import sys
+
+          sys.path.insert(0, str(Path(".github/workflows").resolve()))
+          from cnb_release import publish_navigator_release
+
+          version = os.environ["VERSION"]
+          project = publish_navigator_release(
+              os.environ.get("CNB_TOKEN", ""),
+              version,
+              "release",
+          )
+
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
+              output.write(f"project={project}\n")
 
       - name: Verify CNB public readback matches GitHub assets
         shell: bash
         env:
           VERSION: ${{ inputs.version }}
+          PROJECT: ${{ steps.publish.outputs.project }}
         run: |
           set -euo pipefail
           tag="v$VERSION"
-          base="https://cnb.cool/AkashaNavigator/akasha-navigator/-/releases/download/$tag"
+          base="https://cnb.cool/$PROJECT/-/releases/download/$tag"
           for asset in "AkashaNavigator.Install.$VERSION.exe" "AkashaNavigator_v$VERSION.7z"; do
-            curl --fail --location --retry 30 --retry-delay 10 --retry-all-errors \
+            curl --fail --location --retry 6 --retry-delay 5 --retry-all-errors \
               "$base/$asset" --output "readback-$asset"
             expected="$(sha256sum "release/$asset" | cut -d' ' -f1)"
             actual="$(sha256sum "readback-$asset" | cut -d' ' -f1)"

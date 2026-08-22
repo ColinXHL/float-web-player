@@ -17,6 +17,8 @@ import requests
 import time
 import sys
 import argparse
+import re
+from urllib.parse import quote
 from typing import List, Dict, Optional
 from pathlib import Path
 from tqdm import tqdm
@@ -79,6 +81,20 @@ class CNBReleaseUploader:
                 print(f"   状态码: {e.response.status_code}")
                 print(f"   响应内容: {e.response.text}")
             return None
+
+    def get_release_by_tag(self, project_path: str, tag_name: str) -> Optional[Dict]:
+        """Return an existing CNB Release, or None when the tag is unpublished."""
+        encoded_tag = quote(tag_name, safe="")
+        url = f"{self.base_url}/{project_path}/-/releases/tags/{encoded_tag}"
+        response = requests.get(url, headers=self.headers, timeout=(15, 60))
+        if response.status_code == 404:
+            return None
+        response.raise_for_status()
+
+        release = response.json()
+        if not release.get("id"):
+            raise RuntimeError("CNB Release lookup response did not contain an id")
+        return release
 
     def get_asset_upload_url(self, project_path: str, release_id: str, asset_name: str,
                              file_size: int, overwrite: bool = True) -> Optional[Dict]:
@@ -302,6 +318,69 @@ class CNBReleaseUploader:
                 time.sleep(1)
 
         return results
+
+
+def publish_navigator_release(token: str, version: str, asset_directory: str) -> str:
+    """Publish verified Navigator assets and return the selected CNB project."""
+    if not re.fullmatch(
+        r"[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?",
+        version,
+    ):
+        raise ValueError(f"无效的 Release 版本: {version}")
+    if not token:
+        raise ValueError("CNB_TOKEN 为空")
+
+    asset_root = Path(asset_directory)
+    assets = [
+        asset_root / f"AkashaNavigator.Install.{version}.exe",
+        asset_root / f"AkashaNavigator_v{version}.7z",
+    ]
+    for asset in assets:
+        if not asset.is_file() or asset.stat().st_size == 0:
+            raise FileNotFoundError(f"Release 资产不存在或为空: {asset}")
+
+    is_alpha = "-alpha" in version
+    prerelease = "-" in version and not is_alpha
+    project = (
+        "AkashaNavigator/akasha-navigator-alpha"
+        if is_alpha
+        else "AkashaNavigator/akasha-navigator"
+    )
+    uploader = CNBReleaseUploader(token=token)
+    tag_name = f"v{version}"
+    release = uploader.get_release_by_tag(project, tag_name)
+    if release:
+        print(f"复用已有 CNB Release: {tag_name} ({release['id']})")
+    else:
+        release = uploader.create_release(
+            project,
+            {
+                "tag_name": tag_name,
+                "name": f"AkashaNavigator v{version}",
+                "body": (
+                    f"AkashaNavigator v{version} automated mirror. "
+                    "Assets are identical to the verified GitHub build."
+                ),
+                "draft": False,
+                "prerelease": prerelease,
+                "target_commitish": "main",
+                "make_latest": "false" if prerelease else "true",
+            },
+        )
+    if not release or not release.get("id"):
+        raise RuntimeError("CNB Release creation did not return an id")
+
+    results = uploader.upload_multiple_assets(
+        project,
+        str(release["id"]),
+        [str(asset) for asset in assets],
+        overwrite=True,
+        show_progress=False,
+    )
+    if not all(results):
+        raise RuntimeError("one or more CNB assets failed to upload or verify")
+
+    return project
 
 
 def load_config_from_json(json_input: str) -> Dict:

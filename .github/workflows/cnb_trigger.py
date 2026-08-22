@@ -10,7 +10,7 @@ import json
 import sys
 import argparse
 
-def trigger_build(token, branch="main", event="api_trigger_one", runid=None, version=None):
+def trigger_build(token, branch="main", event="api_trigger_one", runid=None):
     """
     触发构建请求
     
@@ -38,13 +38,11 @@ def trigger_build(token, branch="main", event="api_trigger_one", runid=None, ver
         "event": event
     }
     
-    environment = {}
+    # 如果提供了runid，则添加到env中
     if runid:
-        environment["RUN_ID"] = runid
-    if version:
-        environment["VERSION"] = version
-    if environment:
-        data["env"] = environment
+        data["env"] = {
+            "RUN_ID": runid
+        }
     
     try:
         print(f"正在发起构建请求...")
@@ -80,7 +78,6 @@ def main():
     parser.add_argument("--branch", default="main", help="分支名称 (默认: main)")
     parser.add_argument("--event", default="api_trigger_one", help="事件类型 (默认: api_trigger_one)")
     parser.add_argument("--runid", help="运行ID (可选)")
-    parser.add_argument("--version", help="公开 GitHub Release 版本 (可选)")
     
     args = parser.parse_args()
     
@@ -88,7 +85,7 @@ def main():
         print("错误: 必须提供token参数")
         sys.exit(1)
     
-    result = trigger_build(args.token, args.branch, args.event, args.runid, args.version)
+    result = trigger_build(args.token, args.branch, args.event, args.runid)
     
     if result is None:
         sys.exit(1)
