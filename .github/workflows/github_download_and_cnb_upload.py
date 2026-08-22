@@ -243,46 +243,6 @@ def extract_version_from_filename(filename: str) -> Optional[str]:
     return None
 
 
-def download_public_release_assets(version: str, download_dir: str) -> List[str]:
-    """Download the two assets from an already-public GitHub Release."""
-    if not re.fullmatch(
-        r"[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?",
-        version,
-    ):
-        raise ValueError(f"无效的 Release 版本: {version}")
-
-    os.makedirs(download_dir, exist_ok=True)
-    tag = f"v{version}"
-    names = [
-        f"AkashaNavigator.Install.{version}.exe",
-        f"AkashaNavigator_v{version}.7z",
-    ]
-    downloaded = []
-    for name in names:
-        url = (
-            "https://github.com/ColinXHL/akasha-navigator/"
-            f"releases/download/{tag}/{name}"
-        )
-        target = os.path.join(download_dir, name)
-        print(f"📥 下载公开 Release 资产: {name}")
-        response = requests.get(
-            url,
-            headers={"User-Agent": "AkashaNavigator-CNB-Mirror/1.0"},
-            stream=True,
-            timeout=(15, 900),
-        )
-        response.raise_for_status()
-        with open(target, "wb") as stream:
-            for chunk in response.iter_content(chunk_size=1024 * 1024):
-                if chunk:
-                    stream.write(chunk)
-        if os.path.getsize(target) == 0:
-            raise RuntimeError(f"公开 Release 资产为空: {name}")
-        downloaded.append(target)
-
-    return downloaded
-
-
 def create_cnb_config(files: List[str], version: str, token: str) -> Dict:
     """
     创建CNB上传配置
@@ -329,7 +289,6 @@ def main():
     parser.add_argument('--run-id', type=str, help='指定 GitHub Actions 运行 ID，如果提供则不会获取最新运行')
     parser.add_argument('--github-token', type=str, help='GitHub Personal Access Token')
     parser.add_argument('--cnb-token', type=str, required=True, help='CNB API Token (必需)')
-    parser.add_argument('--version', type=str, help='从公开 GitHub Release 镜像指定版本')
     args = parser.parse_args()
     
     print("🚀 AkashaNavigator 构建物下载和上传工具")
@@ -346,10 +305,8 @@ def main():
     if not github_token:
         print("⚠️  警告: 未设置 GITHUB_TOKEN，可能会遇到API限制")
     
-    # 确定工作目录标识；公开 Release 模式不读取 GitHub Actions API。
-    if args.version:
-        run_id = f"release-{args.version}"
-    elif args.run_id:
+    # 确定运行 ID
+    if args.run_id:
         print(f"\n🎯 使用指定的运行 ID: {args.run_id}")
         run_id = args.run_id
     else:
@@ -370,14 +327,10 @@ def main():
     
     # 检查是否已存在解压后的文件
     all_files = []
-    version = args.version
-
-    if args.version:
-        print(f"\n🌐 从公开 GitHub Release 下载版本 {args.version}")
-        all_files = download_public_release_assets(args.version, download_dir)
+    version = None
     
     # 检查解压目录是否已存在且包含文件
-    if not all_files and os.path.exists(extract_dir):
+    if os.path.exists(extract_dir):
         print("🔍 检查已存在的构建物...")
         existing_files = []
         # 预期的构建物名称

@@ -21,6 +21,11 @@ on:
         required: true
         default: false
         type: boolean
+      push_to_cnb:
+        description: "是否同步发布到 CNB"
+        required: true
+        default: true
+        type: boolean
 
 jobs:
   validate:
@@ -287,6 +292,69 @@ jobs:
         with:
           name: AkashaNavigator_Installer
           path: dist/AkashaNavigator.Install.*.exe
+
+  cnb_publish:
+    name: Trigger CNB Build
+    if: github.event.inputs.push_to_cnb == 'true' && github.repository_owner == 'ColinXHL'
+    runs-on: ubuntu-latest
+    needs: [validate, build_dist, build_installer]
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/download-artifact@v7
+        with:
+          name: AkashaNavigator_Installer
+          path: release
+
+      - uses: actions/download-artifact@v7
+        with:
+          name: AkashaNavigator_7z
+          path: release
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install publisher dependencies
+        run: python -m pip install --disable-pip-version-check -r .github/workflows/requirements.txt
+
+      - name: Publish identical assets to CNB
+        id: publish
+        shell: python
+        env:
+          CNB_TOKEN: ${{ secrets.CNB_TOKEN }}
+          VERSION: ${{ needs.validate.outputs.version }}
+        run: |
+          import os
+          from pathlib import Path
+          import sys
+
+          sys.path.insert(0, str(Path(".github/workflows").resolve()))
+          from cnb_release import publish_navigator_release
+
+          project = publish_navigator_release(
+              os.environ.get("CNB_TOKEN", ""),
+              os.environ["VERSION"],
+              "release",
+          )
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
+              output.write(f"project={project}\n")
+
+      - name: Verify CNB public readback
+        shell: bash
+        env:
+          VERSION: ${{ needs.validate.outputs.version }}
+          PROJECT: ${{ steps.publish.outputs.project }}
+        run: |
+          set -euo pipefail
+          base="https://cnb.cool/$PROJECT/-/releases/download/v$VERSION"
+          for asset in "AkashaNavigator.Install.$VERSION.exe" "AkashaNavigator_v$VERSION.7z"; do
+            curl --fail --location --retry 6 --retry-delay 5 --retry-all-errors \
+              "$base/$asset" --output "readback-$asset"
+            expected="$(sha256sum "release/$asset" | cut -d' ' -f1)"
+            actual="$(sha256sum "readback-$asset" | cut -d' ' -f1)"
+            test "$expected" = "$actual"
+          done
 
   create_release:
     name: Create GitHub Release

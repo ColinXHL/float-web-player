@@ -154,7 +154,10 @@ jobs to succeed:
 
 If a job fails, inspect its logs and stop. Do not publish partial artifacts.
 
-The workflow creates a draft GitHub Release. Verify both assets exist:
+The workflow creates a draft GitHub Release and synchronously publishes the same
+two build artifacts to the stable or Alpha CNB repository. The `Trigger CNB Build`
+job must complete its public SHA-256 readback before it succeeds. Verify both GitHub
+assets exist:
 
 - `AkashaNavigator.Install.<VERSION>.exe`
 - `AkashaNavigator_v<VERSION>.7z`
@@ -169,9 +172,10 @@ gh release edit v<VERSION> --draft=false --prerelease
 gh release edit v<VERSION> --draft=false --latest
 ```
 
-Re-read the Release and confirm it is no longer a draft. The CNB job confirms
-that synchronization was triggered; do not claim the downstream CNB release
-completed unless it was independently verified.
+Re-read the Release and confirm it is no longer a draft. A successful
+`Trigger CNB Build` job means the CNB release completed and both public CNB assets
+matched the GitHub Actions artifacts. If recovery is needed after GitHub publication,
+run `publish_cnb.yml` with the same version and require its readback step to pass.
 
 ## Publish the updater manifest
 
