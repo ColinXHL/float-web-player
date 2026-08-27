@@ -1,4 +1,5 @@
 using System;
+using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Interop;
@@ -15,6 +16,8 @@ namespace AkashaNavigator.Controls
 /// </summary>
 public class HotkeyTextBox : System.Windows.Controls.TextBox
 {
+    private static readonly Serilog.ILogger Log = Serilog.Log.ForContext("SourceContext", nameof(HotkeyTextBox));
+
     #region Dependency Properties
 
     /// <summary>
@@ -85,6 +88,20 @@ public class HotkeyTextBox : System.Windows.Controls.TextBox
     private string _originalText = string.Empty;
     private ImeHelper.ImeState _savedImeState;
     private bool _isProcessingKey;
+    private bool _recording;
+    private System.Windows.Threading.DispatcherTimer? _lostFocusTimer;
+
+    // 全局低级键盘钩子（WH_KEYBOARD_LL）：在系统输入流源头捕获 Alt 组合键，
+    // 绕开 WPF 的 AccessKey/系统菜单对 Alt 组合键的拦截
+    private IntPtr _keyboardHook;
+    private static Win32Helper.LowLevelKeyboardProc? _keyboardHookProc; // 防 GC
+
+    // 系统保留 VK 码（Win32Helper 未定义）
+    private const int VK_TAB = 0x09;
+    private const int VK_ESCAPE = 0x1B;
+    private const int VK_F4 = 0x73;
+    private const int VK_F10 = 0x79;
+    private const uint LLKHF_ALTDOWN = 0x20;
 
     #endregion
 
@@ -129,6 +146,14 @@ public class HotkeyTextBox : System.Windows.Controls.TextBox
         _originalText = Text;
         Text = "按下新快捷键...";
 
+        _recording = true;
+        LostFocusTimer.Stop();
+
+        // Alt 组合键会被 WPF 的 AccessKey/系统菜单吞掉，需在系统输入流源头拦截
+        AttachKeyboardHook();
+        // 录键期间移除系统菜单，防止 Alt 激活菜单抢走键盘焦点
+        SetSystemMenuEnabled(false);
+
         // 切换到英文输入模式
         _savedImeState = ImeHelper.SwitchToEnglish(Window.GetWindow(this));
     }
@@ -136,9 +161,120 @@ public class HotkeyTextBox : System.Windows.Controls.TextBox
     private void OnLostFocus(object sender, RoutedEventArgs e)
     {
         UpdateDisplayText();
-
-        // 恢复之前的输入法状态
         ImeHelper.RestoreImeState(_savedImeState);
+
+        // 延迟 1s 结束录键：Alt 按下时系统可能临时转移焦点，给组合键留录入时间
+        LostFocusTimer.Start();
+    }
+
+    /// <summary>
+    /// 录键状态延迟清除计时器（单实例，Tick 只订阅一次）
+    /// </summary>
+    private System.Windows.Threading.DispatcherTimer LostFocusTimer
+    {
+        get
+        {
+            if (_lostFocusTimer == null)
+            {
+                _lostFocusTimer = new System.Windows.Threading.DispatcherTimer
+                {
+                    Interval = TimeSpan.FromSeconds(1)
+                };
+                _lostFocusTimer.Tick += (_, _) =>
+                {
+                    _lostFocusTimer.Stop();
+                    _recording = false;
+                    DetachKeyboardHook();
+                    SetSystemMenuEnabled(true);
+                };
+            }
+            return _lostFocusTimer;
+        }
+    }
+
+    /// <summary>
+    /// 挂全局低级键盘钩子：Alt 组合键在系统输入流源头被捕获并录入
+    /// </summary>
+    private void AttachKeyboardHook()
+    {
+        if (_keyboardHook != IntPtr.Zero)
+            return;
+        _keyboardHookProc = KeyboardHookCallback;
+        _keyboardHook = Win32Helper.SetKeyboardHook(_keyboardHookProc);
+    }
+
+    /// <summary>
+    /// 摘除全局低级键盘钩子
+    /// </summary>
+    private void DetachKeyboardHook()
+    {
+        if (_keyboardHook == IntPtr.Zero)
+            return;
+        Win32Helper.RemoveKeyboardHook(_keyboardHook);
+        _keyboardHook = IntPtr.Zero;
+        _keyboardHookProc = null;
+    }
+
+    /// <summary>
+    /// 全局键盘钩子回调：捕获 Alt 组合键并录入，吞掉按键使 WPF/系统收不到
+    /// </summary>
+    private IntPtr KeyboardHookCallback(int nCode, IntPtr wParam, IntPtr lParam)
+    {
+        if (nCode >= 0 && _recording)
+        {
+            int msg = wParam.ToInt32();
+            if (msg == Win32Helper.WM_KEYDOWN || msg == Win32Helper.WM_SYSKEYDOWN)
+            {
+                var data = Marshal.PtrToStructure<Win32Helper.KBDLLHOOKSTRUCT>(lParam);
+                uint vk = data.vkCode;
+
+                if ((data.flags & LLKHF_ALTDOWN) != 0 && IsRecordableCombo(vk))
+                {
+                    var modifiers = ConfigModifierKeys.Alt;
+                    if (Win32Helper.IsKeyPressed(Win32Helper.VK_CONTROL))
+                        modifiers |= ConfigModifierKeys.Ctrl;
+                    if (Win32Helper.IsKeyPressed(Win32Helper.VK_SHIFT))
+                        modifiers |= ConfigModifierKeys.Shift;
+
+                    _isProcessingKey = true;
+                    try
+                    {
+                        SetHotkey(vk, modifiers, ConfigInputType.Keyboard);
+                    }
+                    finally
+                    {
+                        _isProcessingKey = false;
+                    }
+                    return (IntPtr)1; // 吞掉按键
+                }
+            }
+        }
+        return Win32Helper.CallNextHook(_keyboardHook, nCode, wParam, lParam);
+    }
+
+    /// <summary>
+    /// Alt 组合键中可录入的键（排除修饰键与系统保留组合）
+    /// </summary>
+    private static bool IsRecordableCombo(uint vk) =>
+        vk != Win32Helper.VK_MENU &&
+        vk != VK_TAB && vk != VK_ESCAPE && vk != VK_F4 && vk != VK_F10;
+
+    /// <summary>
+    /// 启用/禁用窗口系统菜单（录键期间禁用，防止 Alt 激活菜单抢焦点）
+    /// </summary>
+    private void SetSystemMenuEnabled(bool enabled)
+    {
+        var window = Window.GetWindow(this);
+        if (window == null)
+            return;
+        var hwnd = new System.Windows.Interop.WindowInteropHelper(window).Handle;
+        if (hwnd == IntPtr.Zero)
+            return;
+
+        var style = Win32Helper.GetWindowStyle(hwnd);
+        var newStyle = enabled ? style | Win32Helper.WS_SYSMENU : style & ~Win32Helper.WS_SYSMENU;
+        if (newStyle != style)
+            Win32Helper.SetWindowStyle(hwnd, newStyle);
     }
 
     private void OnKeyDown(object sender, KeyEventArgs e)
@@ -166,6 +302,10 @@ public class HotkeyTextBox : System.Windows.Controls.TextBox
 
             if (isSystemKey)
             {
+                // Alt 组合键可能以两种形态到达：
+                // 1) 普通键（IsSystem=False，日志实证：真实场景组合键走这里）
+                // 2) 系统键（IsSystem=True，SystemKey=实际键）
+                // 两种都要处理，此处恢复 SystemKey 解析
                 targetKey = e.SystemKey;
 
                 // 排除系统级快捷键（Alt+Tab 等）
@@ -278,15 +418,16 @@ public class HotkeyTextBox : System.Windows.Controls.TextBox
 
     /// <summary>
     /// 获取当前修饰键状态
+    /// （Alt 组合键由全局钩子处理，此处服务于 Ctrl/Shift 组合与鼠标按键）
     /// </summary>
     private static ConfigModifierKeys GetModifierKeys(bool isSystemKey)
     {
         var modifiers = ConfigModifierKeys.None;
-        if (Keyboard.Modifiers.HasFlag(System.Windows.Input.ModifierKeys.Control))
+        if (Win32Helper.IsKeyPressed(Win32Helper.VK_CONTROL))
             modifiers |= ConfigModifierKeys.Ctrl;
-        if (isSystemKey || Keyboard.IsKeyDown(Key.LeftAlt) || Keyboard.IsKeyDown(Key.RightAlt))
+        if (isSystemKey || Win32Helper.IsKeyPressed(Win32Helper.VK_MENU))
             modifiers |= ConfigModifierKeys.Alt;
-        if (Keyboard.Modifiers.HasFlag(System.Windows.Input.ModifierKeys.Shift))
+        if (Win32Helper.IsKeyPressed(Win32Helper.VK_SHIFT))
             modifiers |= ConfigModifierKeys.Shift;
         return modifiers;
     }

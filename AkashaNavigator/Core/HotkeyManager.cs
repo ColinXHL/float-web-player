@@ -60,11 +60,13 @@ public void Initialize(PlayerWindow playerWindow, AppConfig config, Action<strin
         // 配置窥视按键
         _hotkeyService.SetPeekConfig(config.HotkeyPeek, config.HotkeyPeekMod, config.EnableHoldToPeek);
 
-        // 不要替换整个配置，而是合并内置快捷键到现有配置
+        // 不要替换整个配置，而是合并快捷键到现有配置：
+        // 用户配置中出现的 Action 一律以用户配置为准——先移除现有配置中的旧绑定
+        // （用户修改快捷键后，对应的默认快捷键不再残留生效），再添加用户绑定。
+        // 插件绑定（Action 以 "Plugin:" 开头）不在用户配置中，不受影响。
         var currentConfig = _hotkeyService.GetConfig();
         var newConfig = _config.ToHotkeyConfig();
 
-        // 将新配置的绑定添加到当前配置（如果不存在）
         var activeProfile = currentConfig.GetActiveProfile();
         if (activeProfile != null)
         {
@@ -73,16 +75,10 @@ public void Initialize(PlayerWindow playerWindow, AppConfig config, Action<strin
             {
                 foreach (var binding in newProfile.Bindings)
                 {
-                    // 检查是否已存在相同的绑定
-                    var exists = activeProfile.Bindings.Any(b =>
-                        b.Key == binding.Key &&
-                        b.Modifiers == binding.Modifiers &&
-                        b.Action == binding.Action);
+                    activeProfile.Bindings.RemoveAll(existing =>
+                        string.Equals(existing.Action, binding.Action, StringComparison.OrdinalIgnoreCase));
 
-                    if (!exists)
-                    {
-                        activeProfile.Bindings.Add(binding);
-                    }
+                    activeProfile.Bindings.Add(binding);
                 }
             }
         }
