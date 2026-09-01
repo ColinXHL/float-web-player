@@ -491,6 +491,8 @@ public partial class ProfileMarketPageViewModel : ObservableObject, IDisposable
     /// </summary>
     private async Task InstallProfileAsync(MarketplaceProfile profile, bool overwrite)
     {
+        var isNewSubscription = !_profileMarketplaceService.ProfileExists(profile.Id);
+
         // 检测缺失插件
         var missingPlugins = _profileMarketplaceService.GetMissingPlugins(profile);
 
@@ -548,7 +550,11 @@ public partial class ProfileMarketPageViewModel : ObservableObject, IDisposable
             // 刷新列表显示
             FilterProfiles();
 
-            // 通过 EventBus 通知其他页面刷新
+            // 首次订阅后立即切换。更新现有 Profile 时保留用户当前选择。
+            var switchedToInstalledProfile =
+                !isNewSubscription || _profileManager.SwitchProfile(profile.Id);
+
+            // 切换完成后再通知其他页面，确保订阅者读取到新的当前 Profile。
             _eventBus.Publish(new ProfileListChangedEvent());
 
             var successMessage = overwrite
@@ -560,7 +566,26 @@ public partial class ProfileMarketPageViewModel : ObservableObject, IDisposable
                     $"\n\n有 {installResult.MissingPlugins.Count} 个插件缺失，可以在「我的 Profile」页面点击「一键安装缺失插件」进行安装。";
             }
 
-            _notificationService.Success(successMessage, overwrite ? "更新成功" : "安装成功");
+            if (isNewSubscription && switchedToInstalledProfile)
+            {
+                successMessage += $"\n\n已切换到 Profile \"{profile.Name}\"。";
+            }
+
+            if (switchedToInstalledProfile)
+            {
+                _notificationService.Success(successMessage, overwrite ? "更新成功" : "安装成功");
+            }
+            else
+            {
+                _notificationService.Warning(
+                    $"{successMessage}\n\nProfile 已安装，但自动切换失败，请在「我的 Profile」页面手动切换。",
+                    "安装完成");
+            }
+
+            if (isNewSubscription)
+            {
+                NavigateToMyProfilesRequested?.Invoke(this, EventArgs.Empty);
+            }
         }
         else
         {
@@ -573,6 +598,11 @@ public partial class ProfileMarketPageViewModel : ObservableObject, IDisposable
     /// 订阅源管理请求事件（由 Code-behind 订阅以显示对话框）
     /// </summary>
     public event EventHandler? ManageSourcesRequested;
+
+    /// <summary>
+    /// 首次安装市场 Profile 成功后请求打开“我的 Profile”。
+    /// </summary>
+    public event EventHandler? NavigateToMyProfilesRequested;
 
     /// <summary>
     /// 显示 Profile 详情请求事件（由 Code-behind 订阅以显示对话框）

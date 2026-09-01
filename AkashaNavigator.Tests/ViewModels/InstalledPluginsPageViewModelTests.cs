@@ -3,6 +3,7 @@ using AkashaNavigator.Core.Interfaces;
 using AkashaNavigator.Models.Common;
 using AkashaNavigator.Models.Plugin;
 using AkashaNavigator.Models.PluginRepository;
+using AkashaNavigator.Models.Update;
 using AkashaNavigator.ViewModels.Pages;
 using Moq;
 using Xunit;
@@ -98,11 +99,11 @@ public sealed class InstalledPluginsPageViewModelTests
                     Array.Empty<PluginSubscriptionUpdate>()));
         var viewModel = CreateViewModel(
             subscriptions.Object,
-            out var installer);
-        installer
-            .Setup(service => service.InstallOrUpdateRepositoryPluginAsync(
+            out var acquisition);
+        acquisition
+            .Setup(service => service.InstallOrUpdateAsync(
                 "sample-plugin",
-                null,
+                It.IsAny<IProgress<PluginDownloadProgress>?>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(
                 Result<InstalledPluginInfo>.Success(
@@ -114,17 +115,60 @@ public sealed class InstalledPluginsPageViewModelTests
 
         await viewModel.UpdatePluginCommand.ExecuteAsync("sample-plugin");
 
-        installer.Verify(
-            service => service.InstallOrUpdateRepositoryPluginAsync(
+        acquisition.Verify(
+            service => service.InstallOrUpdateAsync(
                 "sample-plugin",
-                null,
+                It.IsAny<IProgress<PluginDownloadProgress>?>(),
                 It.IsAny<CancellationToken>()),
             Times.Once);
     }
 
+    [Fact]
+    public async Task UpdatePluginCommand_ShowsProgressAndDisablesOtherUpdates()
+    {
+        var subscriptions = new Mock<IPluginSubscriptionService>();
+        subscriptions
+            .Setup(service => service.CheckForUpdatesAsync(
+                true,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(
+                Result<IReadOnlyList<PluginSubscriptionUpdate>>.Success(
+                    Array.Empty<PluginSubscriptionUpdate>()));
+        var completion = new TaskCompletionSource<Result<InstalledPluginInfo>>(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        var viewModel = CreateViewModel(
+            subscriptions.Object,
+            out var acquisition);
+        acquisition
+            .Setup(service => service.InstallOrUpdateAsync(
+                "sample-plugin",
+                It.IsAny<IProgress<PluginDownloadProgress>?>(),
+                It.IsAny<CancellationToken>()))
+            .Returns(completion.Task);
+
+        var operation = viewModel.UpdatePluginCommand.ExecuteAsync("sample-plugin");
+
+        Assert.True(viewModel.IsPluginUpdateBusy);
+        Assert.True(viewModel.IsPluginUpdateProgressIndeterminate);
+        Assert.Contains("Sample", viewModel.PluginUpdateStatusText);
+        Assert.False(viewModel.UpdatePluginCommand.CanExecute("other-plugin"));
+
+        completion.SetResult(
+            Result<InstalledPluginInfo>.Success(
+                new InstalledPluginInfo {
+                    Id = "sample-plugin",
+                    Name = "Sample",
+                    Version = "2.0.0"
+                }));
+        await operation;
+
+        Assert.False(viewModel.IsPluginUpdateBusy);
+        Assert.True(viewModel.UpdatePluginCommand.CanExecute("other-plugin"));
+    }
+
     private static InstalledPluginsPageViewModel CreateViewModel(
         IPluginSubscriptionService subscriptions,
-        out Mock<IPluginInstaller> installer,
+        out Mock<IPluginAcquisitionService> acquisition,
         IReadOnlyList<InstalledPluginInfo>? installedPlugins = null)
     {
         var library = new Mock<IPluginLibrary>();
@@ -156,13 +200,13 @@ public sealed class InstalledPluginsPageViewModelTests
             .Setup(service => service.GetProfilesUsingPlugin(
                 It.IsAny<string>()))
             .Returns(new List<string>());
-        installer = new Mock<IPluginInstaller>();
+        acquisition = new Mock<IPluginAcquisitionService>();
         return new InstalledPluginsPageViewModel(
             library.Object,
             associations.Object,
             Mock.Of<INotificationService>(),
             Mock.Of<IEventBus>(),
             subscriptions,
-            installer.Object);
+            acquisition.Object);
     }
 }

@@ -108,6 +108,13 @@ public static class Win32Helper
     [DllImport("user32.dll")]
     private static extern uint GetDpiForWindow(IntPtr hwnd);
 
+    [DllImport("shcore.dll")]
+    private static extern int GetDpiForMonitor(
+        IntPtr hmonitor,
+        int dpiType,
+        out uint dpiX,
+        out uint dpiY);
+
     [DllImport("user32.dll", CharSet = CharSet.Unicode)]
     [return: MarshalAs(UnmanagedType.Bool)]
     private static extern bool GetMonitorInfoW(IntPtr hMonitor, ref MONITORINFOEX lpmi);
@@ -311,6 +318,8 @@ public static class Win32Helper
 
         return new MonitorInfo
         {
+            Handle = hMonitor,
+            DpiScale = GetDpiScaleForMonitor(hMonitor),
             MonitorRect = info.rcMonitor,
             WorkAreaRect = info.rcWork,
             IsPrimary = (info.dwFlags & MONITORINFOF_PRIMARY) != 0,
@@ -721,6 +730,32 @@ public static class Win32Helper
         {
             var dpi = GetDpiForWindow(hwnd);
             return dpi > 0 ? dpi / 96.0 : 1.0;
+        }
+        catch (EntryPointNotFoundException)
+        {
+            return 1.0;
+        }
+    }
+
+    /// <summary>
+    /// 获取指定显示器的有效 DPI 缩放比例。
+    /// </summary>
+    public static double GetDpiScaleForMonitor(IntPtr hmonitor)
+    {
+        if (hmonitor == IntPtr.Zero)
+        {
+            return 1.0;
+        }
+
+        try
+        {
+            const int effectiveDpi = 0;
+            var result = GetDpiForMonitor(hmonitor, effectiveDpi, out var dpiX, out _);
+            return result == 0 && dpiX > 0 ? dpiX / 96.0 : 1.0;
+        }
+        catch (DllNotFoundException)
+        {
+            return 1.0;
         }
         catch (EntryPointNotFoundException)
         {

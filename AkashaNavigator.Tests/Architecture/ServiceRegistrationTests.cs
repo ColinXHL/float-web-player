@@ -121,6 +121,8 @@ public class ServiceRegistrationTests
                 service.ServiceType == typeof(IPluginSubscriptionService));
         var installer = services.Single(
             service => service.ServiceType == typeof(IPluginInstaller));
+        var acquisition = services.Single(
+            service => service.ServiceType == typeof(IPluginAcquisitionService));
         var writeCoordinator = services.Single(
             service => service.ServiceType == typeof(PluginWriteCoordinator));
 
@@ -130,6 +132,8 @@ public class ServiceRegistrationTests
             subscriptions.ImplementationType);
         Assert.Equal(ServiceLifetime.Singleton, installer.Lifetime);
         Assert.Equal(typeof(PluginInstaller), installer.ImplementationType);
+        Assert.Equal(ServiceLifetime.Singleton, acquisition.Lifetime);
+        Assert.Equal(typeof(PluginAcquisitionService), acquisition.ImplementationType);
 
         var distributionResolver = services.Single(
             service =>

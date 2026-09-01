@@ -47,6 +47,16 @@ public static class AppConstants
     public const double MinWindowHeight = 150;
 
     /// <summary>
+    /// Player window placement schema using monitor-relative anchors.
+    /// </summary>
+    public const int PlayerWindowPlacementVersion = 1;
+
+    /// <summary>
+    /// Minimum visible player area used when recovering invalid placements.
+    /// </summary>
+    public const double MinimumVisibleWindowDip = 64;
+
+    /// <summary>
     /// 拖拽边框厚度（像素）
     /// </summary>
     public const int ResizeBorderThickness = 8;

@@ -96,6 +96,9 @@ public static class ServiceCollectionExtensions
         // PluginInstaller（Manifest v2 适配与原子安装事务）
         services.AddSingleton<IPluginInstaller, PluginInstaller>();
 
+        // PluginAcquisitionService（统一 catalog 初始化、安装与更新入口）
+        services.AddSingleton<IPluginAcquisitionService, PluginAcquisitionService>();
+
         // ShutdownCoordinator（依赖 LogService，统一编排幂等关停阶段）
         services.AddSingleton<ShutdownCoordinator>();
 

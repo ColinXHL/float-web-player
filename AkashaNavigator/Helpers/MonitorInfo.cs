@@ -7,6 +7,16 @@ namespace AkashaNavigator.Helpers
 public class MonitorInfo
 {
     /// <summary>
+    /// Win32 HMONITOR handle for querying monitor-specific properties.
+    /// </summary>
+    public IntPtr Handle { get; set; }
+
+    /// <summary>
+    /// Effective DPI scale for this monitor.
+    /// </summary>
+    public double DpiScale { get; set; } = 1.0;
+
+    /// <summary>
     /// 显示器完整区域（物理像素坐标，可能包含任务栏区域）
     /// 坐标可能在多显示器虚拟桌面中为负值
     /// </summary>

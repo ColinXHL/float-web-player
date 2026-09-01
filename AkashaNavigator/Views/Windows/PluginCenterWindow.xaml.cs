@@ -32,6 +32,7 @@ public partial class PluginCenterWindow : AnimatedWindow
         DataContext = _viewModel;
 
         LoadPages();
+        _profileMarketPage.NavigateToMyProfilesRequested += OnNavigateToMyProfilesRequested;
         UpdatePageVisibility(_viewModel.CurrentPage);
 
         // 订阅 ViewModel 的 PropertyChanged 事件，处理页面显示切换
@@ -55,6 +56,11 @@ public partial class PluginCenterWindow : AnimatedWindow
         ContentArea.Children.Add(_profileMarketPage);
         ContentArea.Children.Add(_installedPluginsPage);
         ContentArea.Children.Add(_availablePluginsPage);
+    }
+
+    private void OnNavigateToMyProfilesRequested(object? sender, EventArgs e)
+    {
+        _viewModel.NavigateToMyProfilesCommand.Execute(null);
     }
 
     /// <summary>
@@ -146,6 +152,7 @@ public partial class PluginCenterWindow : AnimatedWindow
 
     private void DisposePages()
     {
+        _profileMarketPage.NavigateToMyProfilesRequested -= OnNavigateToMyProfilesRequested;
         (_myProfilesPage as IDisposable)?.Dispose();
         (_profileMarketPage as IDisposable)?.Dispose();
         (_installedPluginsPage as IDisposable)?.Dispose();

@@ -38,6 +38,7 @@ public partial class ProfileMarketPage : System.Windows.Controls.UserControl, ID
 
         // 订阅 ViewModel 的事件
         _viewModel.ManageSourcesRequested += OnManageSourcesRequested;
+        _viewModel.NavigateToMyProfilesRequested += OnNavigateToMyProfilesRequested;
         _viewModel.ShowProfileDetailsRequested += OnShowProfileDetailsRequested;
         _viewModel.UninstallProfileRequested += OnUninstallProfileRequested;
     }
@@ -54,6 +55,13 @@ public partial class ProfileMarketPage : System.Windows.Controls.UserControl, ID
     public Task RefreshProfilesAsync()
     {
         return _viewModel.LoadProfilesAsync();
+    }
+
+    public event EventHandler? NavigateToMyProfilesRequested;
+
+    private void OnNavigateToMyProfilesRequested(object? sender, EventArgs e)
+    {
+        NavigateToMyProfilesRequested?.Invoke(this, EventArgs.Empty);
     }
 
     /// <summary>
@@ -128,6 +136,7 @@ public partial class ProfileMarketPage : System.Windows.Controls.UserControl, ID
             return;
 
         _viewModel.ManageSourcesRequested -= OnManageSourcesRequested;
+        _viewModel.NavigateToMyProfilesRequested -= OnNavigateToMyProfilesRequested;
         _viewModel.ShowProfileDetailsRequested -= OnShowProfileDetailsRequested;
         _viewModel.UninstallProfileRequested -= OnUninstallProfileRequested;
         _viewModel.Dispose();

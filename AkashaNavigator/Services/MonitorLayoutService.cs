@@ -87,6 +87,7 @@ public class MonitorLayoutService : IMonitorLayoutService, IDisposable
 
         return new MonitorInfo
         {
+            DpiScale = dpiScale,
             MonitorRect = new Win32Helper.RECT
             {
                 Left = 0,

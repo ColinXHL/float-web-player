@@ -157,7 +157,7 @@ public sealed class AvailablePluginsPageViewModelTests
         installer
             .Setup(service => service.InstallOrUpdateRepositoryPluginAsync(
                 "alpha-plugin",
-                null,
+                It.IsAny<IProgress<PluginDownloadProgress>?>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(
                 Result<InstalledPluginInfo>.Success(
@@ -181,7 +181,7 @@ public sealed class AvailablePluginsPageViewModelTests
         installer.Verify(
             service => service.InstallOrUpdateRepositoryPluginAsync(
                 "alpha-plugin",
-                null,
+                It.IsAny<IProgress<PluginDownloadProgress>?>(),
                 It.IsAny<CancellationToken>()),
             Times.Once);
     }
@@ -221,6 +221,50 @@ public sealed class AvailablePluginsPageViewModelTests
                 It.IsAny<IProgress<PluginDownloadProgress>?>(),
                 It.IsAny<CancellationToken>()),
             Times.Once);
+    }
+
+    [Fact]
+    public async Task InstallCommand_ShowsIndeterminateInstallStateAndDisablesOtherInstalls()
+    {
+        var snapshot = CreateSnapshot(usedCache: false);
+        var completion = new TaskCompletionSource<Result<InstalledPluginInfo>>(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        var acquisition = new Mock<IPluginAcquisitionService>();
+        acquisition
+            .Setup(service => service.InstallOrUpdateAsync(
+                "alpha-plugin",
+                null,
+                It.IsAny<CancellationToken>()))
+            .Returns(completion.Task);
+        var viewModel = CreateViewModel(
+            CreateRepositoryService(snapshot).Object,
+            acquisitionService: acquisition.Object);
+        viewModel.RefreshPluginList();
+        var plugin = Assert.Single(
+            viewModel.Plugins.Where(item => item.Id == "alpha-plugin"));
+        var otherPlugin = Assert.Single(
+            viewModel.Plugins.Where(item => item.Id == "beta-plugin"));
+
+        var operation = viewModel.InstallCommand.ExecuteAsync(plugin);
+
+        Assert.True(viewModel.IsPluginInstallBusy);
+        Assert.True(plugin.IsInstalling);
+        Assert.True(plugin.IsInstallProgressIndeterminate);
+        Assert.Contains("正在安装", plugin.InstallStatus);
+        Assert.False(viewModel.InstallCommand.CanExecute(otherPlugin));
+
+        completion.SetResult(
+            Result<InstalledPluginInfo>.Success(
+                new InstalledPluginInfo {
+                    Id = "alpha-plugin",
+                    Name = "Alpha",
+                    Version = "2.0.0"
+                }));
+        await operation;
+
+        Assert.False(viewModel.IsPluginInstallBusy);
+        Assert.False(plugin.IsInstalling);
+        Assert.True(viewModel.InstallCommand.CanExecute(otherPlugin));
     }
 
     [Fact]
@@ -292,7 +336,7 @@ public sealed class AvailablePluginsPageViewModelTests
         installer
             .Setup(service => service.InstallOrUpdateRepositoryPluginAsync(
                 "alpha-plugin",
-                null,
+                It.IsAny<IProgress<PluginDownloadProgress>?>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(
                 Result<InstalledPluginInfo>.Success(
@@ -311,7 +355,7 @@ public sealed class AvailablePluginsPageViewModelTests
         installer.Verify(
             service => service.InstallOrUpdateRepositoryPluginAsync(
                 "alpha-plugin",
-                null,
+                It.IsAny<IProgress<PluginDownloadProgress>?>(),
                 It.IsAny<CancellationToken>()),
             Times.Once);
     }
@@ -351,9 +395,11 @@ public sealed class AvailablePluginsPageViewModelTests
         IPluginRepositoryService repositoryService,
         IPluginLibrary? pluginLibrary = null,
         IPluginSubscriptionService? subscriptionService = null,
-        IPluginInstaller? installer = null)
+        IPluginInstaller? installer = null,
+        IPluginAcquisitionService? acquisitionService = null)
     {
         var library = pluginLibrary ?? CreatePluginLibrary().Object;
+        var effectiveInstaller = installer ?? Mock.Of<IPluginInstaller>();
         var configService = new Mock<IConfigService>();
         configService.SetupGet(service => service.Config).Returns(new AppConfig());
         var subscriptions = subscriptionService ?? CreateSubscriptionService().Object;
@@ -363,7 +409,12 @@ public sealed class AvailablePluginsPageViewModelTests
             Mock.Of<IEventBus>(),
             repositoryService,
             subscriptions,
-            installer ?? Mock.Of<IPluginInstaller>(),
+            effectiveInstaller,
+            acquisitionService ??
+            new PluginAcquisitionService(
+                repositoryService,
+                effectiveInstaller,
+                library),
             configService.Object);
     }
 
@@ -407,6 +458,11 @@ public sealed class AvailablePluginsPageViewModelTests
             .Setup(service => service.SaveSettings(
                 It.IsAny<PluginRepositorySettings>()))
             .Returns(Result.Success());
+        repositoryService
+            .Setup(service => service.InitializeAsync(
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(
+                Result<PluginRepositorySnapshot>.Success(snapshot));
         return repositoryService;
     }
 
